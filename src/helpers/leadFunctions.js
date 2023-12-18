@@ -37,8 +37,10 @@ function extractLeadData(body, files) {
         creName,
         name,
         phone,
+        futureClient,
         visitCharge,
         nextMsgData,
+        nextCallData,
         remark,
         meetingData,
         address,
@@ -65,11 +67,13 @@ function extractLeadData(body, files) {
         meetingData,
         address,
         nextMsgData,
+        nextCallData,
         positive,
         projectStatus,
         projectLocation,
         workScope,
         fileNames,
+        futureClient,
     };
 }
 

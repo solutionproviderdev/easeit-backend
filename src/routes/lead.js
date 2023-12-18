@@ -90,11 +90,13 @@ leadRouter.post('/comment/:id', upload.array('images'), async (req, res) => {
 leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
   try {
     const { id } = req.params;
+
     const {
         time,
         date,
         status,
         source,
+        futureClient,
         creName,
         name,
         phone,
@@ -114,7 +116,33 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
     await addCommentToLead(id, fileNames, remark, creName);
 
     switch (status) {
-        case 'need-support':
+        case 'Need Support':
+            try {
+                // Update Lead Status
+                const savedChangedStatus = await Lead.findOneAndUpdate(
+                    { _id: id },
+                    {
+                        $set: {
+                            status,
+                        },
+                    },
+                    { upsert: true, new: true, runValidators: true }
+                );
+
+                // Send response
+                    res.status(200).json({
+                        message: 'Status Updated Successfully',
+                        updatedLead: savedChangedStatus,
+                    });
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({
+                    error: 'There was a server side error',
+                    message: error.message,
+                });
+            }
+            break;
+        case 'No Response':
             try {
                 // Update Lead Status
                 const savedChangedStatus = await Lead.findOneAndUpdate(
@@ -142,35 +170,8 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'no-response':
-            try {
-                // Update Lead Status
-                const savedChangedStatus = await Lead.findOneAndUpdate(
-                    { _id: id },
-                    {
-                        $set: {
-                            status,
-                        },
-                    },
-                    { upsert: true, new: true, runValidators: true }
-                );
-
-                // Send response
-                if (!res.headersSent) {
-                    res.status(200).json({
-                        message: 'Status Updated Successfully',
-                        updatedLead: savedChangedStatus,
-                    });
-                }
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({
-                    error: 'There was a server side error',
-                    message: error.message,
-                });
-            }
-            break;
-        case 'msg-reschedule':
+        case 'Message Rescheduled':
+            console.log(nextMsgData, status);
             try {
                 // Update Lead with data
                 const msgRescheduleResult = await Lead.findOneAndUpdate(
@@ -200,7 +201,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'number-collected':
+        case 'Number Collected':
             try {
                 // Use findById to get the lead data by ID
                 const lead = await Lead.findById(id);
@@ -236,7 +237,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'call-rescheduled':
+        case 'Call Reschedule':
             try {
                 // Use findById to get the lead data by ID
                 const lead = await Lead.findById(id);
@@ -273,7 +274,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'future-client':
+        case 'Future Client':
             try {
                 // Use findById to get the lead data by ID
                 const lead = await Lead.findById(id);
@@ -310,7 +311,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'meeting-fixed':
+        case 'Meeting Fixed':
             try {
                 // if call is complete tnen update Lead and make a new customer collection
                 if (address && projectStatus && projectLocation && positive && workScope) {
@@ -358,7 +359,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'meeting-rescheduled':
+        case 'Meeting Reschedule':
             try {
                 // Update Lead with data
                 const meetingRescheduleResult = await Lead.findOneAndUpdate(
@@ -387,7 +388,7 @@ leadRouter.put('/:id', upload.array('file', 3), async (req, res) => {
                 });
             }
             break;
-        case 'cancel-meeting-request':
+        case 'Cancel Meeting':
             try {
                 // Update Lead with data
                 const meetingRescheduleResult = await Lead.findOneAndUpdate(

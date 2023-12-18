@@ -45,7 +45,7 @@ const leadSchema = mongoose.Schema(
         nextMsgData: {
             type: {
                 time: String,
-                date: Date,
+                date: String,
             },
         },
         meetingData: {
