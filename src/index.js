@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -22,6 +23,8 @@ mongoose
     .connect(process.env.MONGO_CONNECTION_STRING, {})
     .then(() => console.log('Database connection successfull'))
     .catch((err) => console.log(err, 'Database connection Error'));
+
+console.log(process.env.MONGO_CONNECTION_STRING);
 
 // request process
 app.use(express.json());
