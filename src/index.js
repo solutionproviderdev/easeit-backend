@@ -8,11 +8,9 @@ const cors = require('cors');
 
 // internal Imports
 const { notFoundHandler, errorHandler } = require('./middlewares/common/errorHandler');
-const loginRouter = require('./routes/loginRouters');
 const settingsRouter = require('./routes/settings/settingsRouter');
-const webhookRouter = require('./routes/webhook');
 const leadRouter = require('./routes/lead');
-const commentRouter = require('./routes/commentRoute');
+const peopleRouter = require('./routes/people');
 
 // Initilize app
 const app = express();
@@ -33,10 +31,10 @@ app.use(express.urlencoded());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
     cors({
-        origin: '*',
-        // origin: 'http://localhost:3000',
-        // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        // credentials: true,
+        origin: 'http://localhost:3000', // Replace with the actual origin of your frontend
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+        optionsSuccessStatus: 204, // Some legacy browsers (IE11, various SmartTVs) choke on 204
     })
 );
 
@@ -47,11 +45,9 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, '../public')));
 
 // routing setup
-app.use('/login', loginRouter);
 app.use('/settings', settingsRouter);
-app.use('/webhook', webhookRouter);
 app.use('/lead', leadRouter);
-app.use('/comment', commentRouter);
+app.use('/people', peopleRouter);
 
 // 404 error handling
 app.use(notFoundHandler);

@@ -1,0 +1,560 @@
+/* eslint-disable no-return-await */
+const Customer = require('../schemas/CustomerSchema');
+const Lead = require('../schemas/LeadsSchema');
+const generateCustomerID = require('../helpers/CustomerIdGenerator');
+
+// Helper Functions
+const addCommentToLead = async (leadId, images, comment, name) => {
+    if (comment && name) {
+        try {
+            const lead = await Lead.findById(leadId);
+
+            if (!lead) {
+                throw new Error('Lead not found');
+            }
+
+            const newComment = {
+                images,
+                comment,
+                name,
+                date: new Date(),
+            };
+
+            lead.comment.push(newComment);
+            await lead.save();
+
+            return { success: true, lead };
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            return { success: false, error: error.message || 'Internal Server Error' };
+        }
+    }
+};
+
+function extractLeadData(body, files) {
+    const {
+        status,
+        source,
+        creName,
+        name,
+        phone,
+        futureClient,
+        visitCharge,
+        nextMsgData,
+        nextCallData,
+        remark,
+        meetingData,
+        address,
+        positive,
+        projectStatus,
+        projectLocation,
+        workScope,
+        time,
+        date,
+    } = body;
+
+    const fileNames = files?.map((file) => `${process.env.SERVER_URL}/images/${file.filename}`);
+
+    return {
+        time,
+        date,
+        status,
+        source,
+        creName,
+        name,
+        phone,
+        visitCharge,
+        remark,
+        meetingData,
+        address,
+        nextMsgData,
+        nextCallData,
+        positive,
+        projectStatus,
+        projectLocation,
+        workScope,
+        fileNames,
+        futureClient,
+    };
+}
+
+async function createLead(leadData) {
+    const newLead = new Lead({
+        CID: leadData.phone ? generateCustomerID(leadData.name, leadData.phone) : '',
+        status: leadData.status,
+        source: leadData.source,
+        creName: leadData.creName,
+        name: leadData.name,
+        phone: leadData.phone,
+        visitCharge: leadData.visitCharge,
+        meetingData: {
+            time: leadData.time,
+            date: leadData.date,
+        },
+    });
+
+    return await newLead.save();
+}
+
+async function createCustomer(lead, leadData) {
+    // Create customer data
+    const customerData = {
+        CID: lead.CID || generateCustomerID(leadData.name, leadData.phone),
+        name: leadData.name,
+        address: leadData.address,
+        phone: leadData.phone,
+        projectStatus: leadData.projectStatus,
+        projectLocation: leadData.projectLocation,
+        workScope: leadData.workScope,
+        positive: leadData.positive,
+    };
+
+    // Create a new customer
+    const newCustomer = new Customer(customerData);
+
+    // Save the customer
+    const savedCustomer = await newCustomer.save();
+
+    // Update the Lead document with the new customer reference
+    await Lead.findByIdAndUpdate(lead._id, { $set: { cData: savedCustomer._id } });
+
+    return savedCustomer;
+}
+
+const getLeads = async (req, res) => {
+    try {
+        const leads = await Lead.find({});
+        res.status(200).json(leads);
+    } catch (error) {
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
+const addLeads = async (req, res) => {
+    try {
+        const leadData = extractLeadData(req.body, req.files);
+
+        // Perform any necessary validation checks
+        // ...
+
+        const newLead = new Lead({
+            CID: leadData.phone ? generateCustomerID(leadData.name, leadData.phone) : '',
+            status: leadData.status,
+            source: leadData.source,
+            creName: leadData.creName,
+            name: leadData.name,
+            phone: leadData.phone,
+            visitCharge: leadData.visitCharge,
+            meetingData: {
+                time: leadData.time,
+                date: leadData.date,
+            },
+            address: leadData.address,
+            projectStatus: leadData.projectStatus,
+            projectLocation: leadData.projectLocation,
+            workScope: leadData.workScope,
+            positive: leadData.positive,
+        });
+
+        const savedLead = await newLead.save();
+
+        res.status(200).json({
+            message: 'New Lead Added Successfully',
+            lead: savedLead,
+        });
+    } catch (error) {
+        console.error(error);
+
+        // Provide a more specific error message based on the nature of the error
+        let errorMessage = 'There was a server side error';
+        if (error.name === 'ValidationError') {
+            errorMessage = 'Validation error. Please check your input.';
+        }
+
+        res.status(500).json({ error: errorMessage });
+    }
+};
+
+const addComment = async (req, res) => {
+    try {
+        const leadData = extractLeadData(req.body, req.files);
+        const { id } = req.params;
+
+        const { comment: savedComment } = await addCommentToLead(
+            id,
+            leadData.fileNames,
+            leadData.remark,
+            leadData.creName
+        );
+
+        res.status(200).json({ message: 'Comment added successfully', savedComment });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
+const updateLead = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            // name,
+            // time,
+            // date,
+            // source,
+            // futureClient,
+            creName,
+            status,
+            phone,
+            visitCharge,
+            remark,
+            meetingData,
+            address,
+            positive,
+            projectStatus,
+            projectLocation,
+            workScope,
+            fileNames,
+            nextMsgData,
+            nextCallData,
+        } = extractLeadData(req.body, req.files);
+
+        await addCommentToLead(id, fileNames, remark, creName);
+
+        switch (status) {
+            case 'Need Support':
+                try {
+                    // Update Lead Status
+                    const savedChangedStatus = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    res.status(200).json({
+                        message: 'Status Updated Successfully',
+                        updatedLead: savedChangedStatus,
+                    });
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'No Response':
+                try {
+                    // Update Lead Status
+                    const savedChangedStatus = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Status Updated Successfully',
+                            updatedLead: savedChangedStatus,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Message Rescheduled':
+                console.log(nextMsgData, status);
+                try {
+                    // Update Lead with data
+                    const msgRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                nextMsgData,
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Message rescheduled Successfully',
+                            updatedLead: msgRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Number Collected':
+                try {
+                    // Use findById to get the lead data by ID
+                    const lead = await Lead.findById(id);
+
+                    if (!lead) {
+                        return res.status(404).json({ error: 'Lead not found' });
+                    }
+                    // Update Lead with data
+                    const meetingRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                CID: lead.CID || generateCustomerID(lead.name, phone),
+                                phone,
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Phone number added Successfully',
+                            updatedLead: meetingRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Call Reschedule':
+                try {
+                    // Use findById to get the lead data by ID
+                    const lead = await Lead.findById(id);
+
+                    if (!lead) {
+                        return res.status(404).json({ error: 'Lead not found' });
+                    }
+
+                    // Update Lead with data
+                    const callRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                status,
+                                CID: lead.CID || generateCustomerID(lead.name, phone),
+                                nextCallData,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Call rescheduled Successfully',
+                            updatedLead: callRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Future Client':
+                try {
+                    // Use findById to get the lead data by ID
+                    const lead = await Lead.findById(id);
+
+                    if (!lead) {
+                        return res.status(404).json({ error: 'Lead not found' });
+                    }
+
+                    // Update Lead with data
+                    const callRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                CID: lead.CID || generateCustomerID(lead.name, phone),
+                                status,
+                                nextCallData,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Call rescheduled Successfully',
+                            updatedLead: callRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Meeting Fixed':
+                try {
+                    // if call is complete tnen update Lead and make a new customer collection
+                    if (address && projectStatus && projectLocation && positive && workScope) {
+                        // Use findById to get the lead data by ID
+                        const lead = await Lead.findById(id);
+
+                        if (!lead) {
+                            return res.status(404).json({ error: 'Lead not found' });
+                        }
+
+                        // Update Lead with data
+                        const meetingSetData = await Lead.findOneAndUpdate(
+                            { _id: id },
+                            {
+                                $set: {
+                                    phone: phone || lead.phone,
+                                    status,
+                                    meetingData,
+                                    visitCharge,
+                                    projectLocation,
+                                    projectStatus,
+                                    workScope,
+                                    address,
+                                    positive,
+                                },
+                            },
+                            { upsert: true, new: true, runValidators: true }
+                        );
+
+                        // Send response
+                        if (!res.headersSent) {
+                            res.status(200).json({
+                                message: 'Meeting Scheduled Successfully',
+                                updatedLead: meetingSetData,
+                            });
+                        }
+                    } else {
+                        // Send response saying data missing in request
+                        res.status(400).json({ message: 'Data missing in request' });
+                    }
+                } catch (error) {
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Meeting Reschedule':
+                try {
+                    // Update Lead with data
+                    const meetingRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                meetingData,
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Meeting rescheduled Successfully',
+                            updatedLead: meetingRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            case 'Cancel Meeting':
+                try {
+                    // Update Lead with data
+                    const meetingRescheduleResult = await Lead.findOneAndUpdate(
+                        { _id: id },
+                        {
+                            $set: {
+                                meetingData: {
+                                    time: '',
+                                    date: '',
+                                },
+                                status,
+                            },
+                        },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+
+                    // Send response
+                    if (!res.headersSent) {
+                        res.status(200).json({
+                            message: 'Meeting cencel request submitted Successfully',
+                            updatedLead: meetingRescheduleResult,
+                        });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({
+                        error: 'There was a server side error',
+                        message: error.message,
+                    });
+                }
+                break;
+            default:
+                break;
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'There was a server side error',
+            message: error.message,
+        });
+    }
+};
+
+const deleteLead = async (req, res) => {
+    try {
+        await Lead.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: 'Lead Deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
+module.exports = {
+    createCustomer,
+    createLead,
+    extractLeadData,
+    addCommentToLead,
+    addLeads,
+    addComment,
+    updateLead,
+    deleteLead,
+    getLeads,
+};
