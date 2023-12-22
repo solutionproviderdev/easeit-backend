@@ -24,7 +24,7 @@ peopleRouter.get('/:id', checkLogin, getPeopleDetails);
 // Signup or add new User
 peopleRouter.post(
     '/signup',
-    // checkLogin,
+    checkLogin,
     upload.fields([
         { name: 'avater', maxCount: 1 },
         { name: 'nid', maxCount: 1 },
