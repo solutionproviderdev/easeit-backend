@@ -31,7 +31,7 @@ app.use(express.urlencoded());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
     cors({
-        origin: 'http://localhost:3000', // Replace with the actual origin of your frontend
+        origin: '*', // Replace with the actual origin of your frontend
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true, // Allow credentials (cookies, authorization headers, etc.)
         optionsSuccessStatus: 204, // Some legacy browsers (IE11, various SmartTVs) choke on 204
