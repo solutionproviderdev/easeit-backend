@@ -29,13 +29,18 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded());
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(
-    cors({
-        origin: '*', // Replace with the actual origin of your frontend
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        credentials: true, // Allow credentials (cookies, authorization headers, etc.)
-    })
-);
+app.use(cors({
+    origin: (origin, callback) => {
+        const allowedOrigins = ['http://localhost:3000', 'https://easeit.vercel.app']; // Replace with your allowed origins
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+}));
 
 // set up EJS
 app.set('view engine', 'ejs');
