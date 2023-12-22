@@ -4,14 +4,15 @@ const jwt = require('jsonwebtoken');
 const checkLogin = async (req, res, next) => {
     try {
         // Check if the authorization header is present
-        const token = req.signedCookies[process.env.COOKIE_NAME];
+        // const token = req.signedCookies[process.env.COOKIE_NAME]; // from cookie
+        const authHeader = req.headers?.authorization; // from cookie
 
-        if (!token) {
+        if (!authHeader) {
             throw new Error('You must Log in before reading data');
         }
 
         // Extract the token from the Bearer token format
-        // const token = authHeader?.split(' ')[1];
+        const token = authHeader?.split(' ')[1];
 
         // Verify the JWT
         const decoded = await jwt.verify(token, process.env.JWT_SECRET);
