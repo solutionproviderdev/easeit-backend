@@ -15,11 +15,11 @@ const People = require('../schemas/PeopleSchema');
 //     "role": "Sales Head"
 // }
 
-// Get all Peoples
+// Get all Peoples without the password field
 const getPeople = async (req, res) => {
     try {
-        // Retrieve all users from the database
-        const allPeople = await People.find();
+        // Retrieve all users from the database without the password field
+        const allPeople = await People.find().select('-password');
 
         return res.status(200).json(allPeople);
     } catch (err) {
@@ -36,7 +36,7 @@ const getPeopleDetails = async (req, res) => {
         const { id } = req.params;
 
         // Retrieve user details from the database by ID
-        const user = await People.findById(id);
+        const user = await People.findById(id).select('-password');
 
         if (!user) {
             return res.status(404).json({
