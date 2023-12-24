@@ -11,6 +11,7 @@ const { notFoundHandler, errorHandler } = require('./middlewares/common/errorHan
 const settingsRouter = require('./routes/settings/settingsRouter');
 const leadRouter = require('./routes/lead');
 const peopleRouter = require('./routes/people');
+const webhookRouter = require('./routes/webhook');
 
 // Initilize app
 const app = express();
@@ -52,6 +53,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/settings', settingsRouter);
 app.use('/lead', leadRouter);
 app.use('/people', peopleRouter);
+app.use('/webhook', webhookRouter);
 
 // 404 error handling
 app.use(notFoundHandler);

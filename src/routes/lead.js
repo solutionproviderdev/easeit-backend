@@ -13,12 +13,12 @@ const leadRouter = express.Router();
 
 leadRouter.get('/', checkLogin, getLeads);
 
-leadRouter.post('/', upload.array('images'), addLeads);
+leadRouter.post('/', checkLogin, upload.array('images'), addLeads);
 
-leadRouter.post('/comment/:id', upload.array('images'), addComment);
+leadRouter.post('/comment/:id', checkLogin, upload.array('images'), addComment);
 
-leadRouter.put('/:id', upload.array('file', 3), updateLead);
+leadRouter.put('/:id', checkLogin, upload.array('file', 3), updateLead);
 
-leadRouter.delete('/:id', deleteLead);
+leadRouter.delete('/:id', checkLogin, deleteLead);
 
 module.exports = leadRouter;
