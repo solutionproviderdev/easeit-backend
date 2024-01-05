@@ -1,5 +1,4 @@
 /* eslint-disable no-return-await */
-const Customer = require('../schemas/CustomerSchema');
 const Lead = require('../schemas/LeadsSchema');
 const generateCustomerID = require('../helpers/CustomerIdGenerator');
 
@@ -96,31 +95,6 @@ async function createLead(leadData) {
     return await newLead.save();
 }
 
-async function createCustomer(lead, leadData) {
-    // Create customer data
-    const customerData = {
-        CID: lead.CID || generateCustomerID(leadData.name, leadData.phone),
-        name: leadData.name,
-        address: leadData.address,
-        phone: leadData.phone,
-        projectStatus: leadData.projectStatus,
-        projectLocation: leadData.projectLocation,
-        workScope: leadData.workScope,
-        positive: leadData.positive,
-    };
-
-    // Create a new customer
-    const newCustomer = new Customer(customerData);
-
-    // Save the customer
-    const savedCustomer = await newCustomer.save();
-
-    // Update the Lead document with the new customer reference
-    await Lead.findByIdAndUpdate(lead._id, { $set: { cData: savedCustomer._id } });
-
-    return savedCustomer;
-}
-
 const getLeads = async (req, res) => {
     try {
         const leads = await Lead.find({});
@@ -199,11 +173,6 @@ const updateLead = async (req, res) => {
         const { id } = req.params;
 
         const {
-            // name,
-            // time,
-            // date,
-            // source,
-            // futureClient,
             creName,
             status,
             phone,
@@ -548,7 +517,6 @@ const deleteLead = async (req, res) => {
 };
 
 module.exports = {
-    createCustomer,
     createLead,
     extractLeadData,
     addCommentToLead,
