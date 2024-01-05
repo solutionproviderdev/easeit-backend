@@ -36,7 +36,7 @@ const getPeopleDetails = async (req, res) => {
         const { id } = req.params;
 
         // Retrieve user details from the database by ID
-        const user = await People.findById(id).select('-password');
+        const user = await People.findById(id).select('-password').select('-startDate');
 
         if (!user) {
             return res.status(404).json({

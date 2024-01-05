@@ -55,7 +55,7 @@ app.use('/people', peopleRouter);
 app.use('/settings', settingsRouter);
 app.use('/lead', leadRouter);
 app.use('/webhook', webhookRouter);
-app.use('/meterials', meterialsRouter);
+app.use('/materials', meterialsRouter);
 
 // 404 error handling
 app.use(notFoundHandler);
