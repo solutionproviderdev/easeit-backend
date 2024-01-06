@@ -13,6 +13,7 @@ const leadRouter = require('./routes/lead');
 const peopleRouter = require('./routes/people');
 const webhookRouter = require('./routes/webhook');
 const meterialsRouter = require('./routes/meterials');
+const productRouter = require('./routes/products');
 
 // Initilize app
 const app = express();
@@ -56,6 +57,7 @@ app.use('/settings', settingsRouter);
 app.use('/lead', leadRouter);
 app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
+app.use('/product', productRouter);
 
 // 404 error handling
 app.use(notFoundHandler);

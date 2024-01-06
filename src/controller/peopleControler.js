@@ -2,19 +2,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const People = require('../schemas/PeopleSchema');
 
-// const dammyData = {
-//     "name": "Himu Nazmul",
-//     "phone": "01957795943",
-//     "NIDNumber": "87321671273",
-//     "address": "Al hera Pump Rd, Board Bazar",
-//     "email": "0himu1@gmail.com",
-//     "password": "amikewna",
-//     "startDate": "2023-12-01",
-//     "status": "Internship",
-//     "department": "Sales",
-//     "role": "Sales Head"
-// }
-
 // Get all Peoples without the password field
 const getPeople = async (req, res) => {
     try {
