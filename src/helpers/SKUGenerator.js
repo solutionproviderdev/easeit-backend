@@ -67,7 +67,7 @@ async function generateSKU(body) {
     const forntSutterEdgingCode = await getMaterialSkuCodeByName(frontSutterEdging);
 
     // Construct the final SKU Code
-    const finalSKUCode = `${seriesCodeFound}-${locationCodeFound}-${applicationCodeFound}-${glassCodeFound}-${fsBoardCode}-${forntSutterEdgingCode}-${bodyBoardCode}-${bodyEdgingCode}`;
+    const finalSKUCode = `${seriesCodeFound}-${locationCodeFound}-${applicationCodeFound}${glassCodeFound ? `-${glassCodeFound}` : ''}-${fsBoardCode}-${forntSutterEdgingCode}-${bodyBoardCode}-${bodyEdgingCode}`;
     return finalSKUCode;
 }
 
