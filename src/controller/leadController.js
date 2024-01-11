@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable no-return-await */
 const Lead = require('../schemas/LeadsSchema');
 const generateCustomerID = require('../helpers/CustomerIdGenerator');
@@ -50,10 +51,16 @@ function extractLeadData(body, files) {
         workScope,
         time,
         date,
+        salesExqName,
     } = body;
 
     const fileNames = files?.map((file) => `${process.env.SERVER_URL}/images/${file.filename}`);
-
+    let workScopes = [];
+    if (Array.isArray(workScope)) {
+        workScopes = workScope.map((scope) => ({
+            scope,
+        }));
+    }
     return {
         time,
         date,
@@ -69,9 +76,10 @@ function extractLeadData(body, files) {
         nextMsgData,
         nextCallData,
         positive,
+        salesExqName,
         projectStatus,
         projectLocation,
-        workScope,
+        workScopes,
         fileNames,
         futureClient,
     };
@@ -119,14 +127,14 @@ const addLeads = async (req, res) => {
             name: leadData.name,
             phone: leadData.phone,
             visitCharge: leadData.visitCharge,
-            meetingData: {
+            meetingData: [{
                 time: leadData.time,
                 date: leadData.date,
-            },
+            }],
             address: leadData.address,
             projectStatus: leadData.projectStatus,
             projectLocation: leadData.projectLocation,
-            workScope: leadData.workScope,
+            workScope: leadData.workScopes,
             positive: leadData.positive,
         });
 
@@ -154,7 +162,7 @@ const addComment = async (req, res) => {
         const leadData = extractLeadData(req.body, req.files);
         const { id } = req.params;
 
-        const { comment: savedComment } = await addCommentToLead(
+        const savedComment = await addCommentToLead(
             id,
             leadData.fileNames,
             leadData.remark,
@@ -168,7 +176,7 @@ const addComment = async (req, res) => {
     }
 };
 
-const updateLead = async (req, res) => {
+const updateLeadold = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -500,6 +508,86 @@ const updateLead = async (req, res) => {
         }
     } catch (error) {
         console.error(error);
+        res.status(500).json({
+            error: 'There was a server side error',
+            message: error.message,
+        });
+    }
+};
+
+const updateLead = async (req, res) => {
+    const { id } = req.params;
+    const {
+ status, workScops, fileNames, remark, creName, meetingData, ...updateData
+} = extractLeadData(req.body, req.files);
+
+    try {
+        await addCommentToLead(id, fileNames, remark, creName);
+
+        // Use findById to get the lead data by ID
+        const lead = await Lead.findById(id);
+
+        const update = { $set: { status } };
+
+        switch (status) {
+            case 'No Response':
+            case 'Need Support':
+                // If status is 'No Response' or 'Need Support', no additional data is needed
+                break;
+            case 'Message Rescheduled':
+                update.$set.nextMsgData = updateData.nextMsgData;
+                break;
+            case 'Number Collected':
+                update.$set.phone = updateData.phone;
+                update.$set.CID = generateCustomerID(lead.name, updateData.phone);
+                break;
+            case 'Call Reschedule':
+                update.$set.nextCallData = updateData.nextCallData;
+                break;
+            case 'Future Client':
+                update.$set.nextCallData = updateData.nextCallData;
+                break;
+            case 'Meeting Fixed':
+                if (
+                    !updateData.address
+                    || !updateData.projectStatus
+                    || !updateData.projectLocation
+                ) {
+                    return res
+                        .status(400)
+                        .json({ message: 'Missing required fields for scheduling a meeting.' });
+                }
+
+                // Include all fields for 'Meeting Fixed' status
+                update.$set = { ...update.$set, ...updateData };
+                update.$push = {
+                    meetingData,
+                    workScope: { $each: updateData.workScopes }
+                };
+                break;
+            case 'Meeting Reschedule':
+                update.$push.meetingData = updateData.meetingData;
+                break;
+            case 'Cancel Meeting':
+                // Just Status will be change so no need to update anything
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid status provided.' });
+        }
+
+        const updatedLead = await Lead.findByIdAndUpdate(id, update, {
+            new: true,
+            runValidators: true,
+        });
+        if (!updatedLead) {
+            return res.status(404).json({ message: 'Lead not found.' });
+        }
+        res.status(200).json({
+            message: `Lead status updated to '${status}'.`,
+            updatedLead,
+        });
+    } catch (error) {
+        console.error('Error updating lead:', error);
         res.status(500).json({
             error: 'There was a server side error',
             message: error.message,

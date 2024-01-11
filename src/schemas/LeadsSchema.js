@@ -1,15 +1,9 @@
-/* eslint-disable new-cap */
 const mongoose = require('mongoose');
 
 const leadSchema = mongoose.Schema(
     {
-        CID: {
-            type: String,
-        },
-        name: {
-            type: String,
-            required: true,
-        },
+        CID: String,
+        name: { type: String, required: true },
         status: {
             type: String,
             enum: [
@@ -24,8 +18,21 @@ const leadSchema = mongoose.Schema(
                 'Meeting Reschedule',
                 'Cancel Meeting',
             ],
+            required: true,
             default: 'unread',
-            require: true,
+        },
+        meetingStatus: {
+            type: String,
+            enum: [
+                'Fixed',
+                'Cancel Meeting',
+                'Rescheduled',
+                'In Progress',
+                'Complete',
+                'Follow up',
+                'Success',
+                'Need Approval',
+            ],
         },
         lastMsg: String,
         fbSenderID: String,
@@ -34,31 +41,23 @@ const leadSchema = mongoose.Schema(
             enum: ['Facebook', 'WhatsApp', 'Web', 'By Phone'],
             required: true,
         },
-
         nextCallData: {
-            type: {
-                time: String,
-                date: Date,
-            },
+            time: String,
+            date: Date,
         },
         nextMsgData: {
-            type: {
-                time: String,
-                date: String,
-            },
+            time: String,
+            date: String,
         },
-        meetingData: {
-            type: {
+        meetingData: [
+            {
                 time: String,
                 date: Date,
             },
-        },
-        phone: {
-            type: String,
-        },
-        visitCharge: {
-            type: Number,
-        },
+        ],
+        salesExqName: String,
+        phone: String,
+        visitCharge: Number,
         comment: [
             {
                 images: [String],
@@ -67,14 +66,16 @@ const leadSchema = mongoose.Schema(
                 date: Date,
             },
         ],
-        creName: {
-            type: String,
-            require: true,
-        },
-        // Customer details
-        address: {
-            type: String,
-        },
+        workScope: [
+            {
+                scope: String,
+                sku: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
+                sqft: Number,
+                price: Number,
+            },
+        ],
+        creName: { type: String, required: true },
+        address: String,
         projectStatus: {
             type: String,
             enum: ['Ready', 'Ongoing', 'Recently'],
@@ -83,62 +84,18 @@ const leadSchema = mongoose.Schema(
             type: String,
             enum: ['Inside', 'Outside'],
         },
-        workScope: {
-            type: String,
-        },
-        meetingDone: {
-            type: Boolean,
-        },
-        positive: {
-            type: Boolean,
-        },
-        projectConfirmation: {
-            type: String,
-            enum: ['pending', 'confirm', 'cancel'],
-        },
-        reschedule: {
-            type: {
-                time: String,
-                date: Date,
-            },
-        },
-        sqft: {
-            type: Number,
-        },
-        rate: {
-            type: Number,
-        },
-        discount: {
-            type: Number,
-        },
-        totalAmount: {
-            type: Number,
-            default: 0,
-            validate: {
-                validator() {
-                    return this.sqft && this.rate;
-                },
-                message: 'Both sqft and rate are required to calculate totalAmount.',
-            },
-            set(value) {
-                if (this.sqft && this.rate) {
-                    return this.sqft * this.rate * ((100 - this.discount) / 100);
-                }
-                return value;
-            },
-        },
-        mbSheetNo: {
-            type: String,
-        },
-        transportCost: {
-            type: Number,
-        },
+        positive: Boolean,
+        discount: Number,
+        projectValue: Number,
+        mbSheetNo: String,
+        transportCost: Number,
+        proposals: [{ client: Number, proposal: Number }],
     },
     {
         timestamps: true,
     }
 );
 
-const Lead = new mongoose.model('lead', leadSchema);
+const Lead = mongoose.model('lead', leadSchema);
 
 module.exports = Lead;

@@ -14,6 +14,7 @@ const peopleRouter = require('./routes/people');
 const webhookRouter = require('./routes/webhook');
 const meterialsRouter = require('./routes/meterials');
 const productRouter = require('./routes/products');
+const meetingsRouter = require('./routes/meeting');
 
 // Initilize app
 const app = express();
@@ -33,14 +34,15 @@ app.use(express.static('public'));
 app.use(express.urlencoded());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors({
-    origin: (origin, callback) => {
-        const allowedOrigins = ['http://localhost:3000', 'https://easeit.vercel.app']; // Replace with your allowed origins
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    // origin: (origin, callback) => {
+    //     const allowedOrigins = ['http://localhost:3000', 'https://easeit.vercel.app']; // Replace with your allowed origins
+    //     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    //         callback(null, true);
+    //     } else {
+    //         callback(new Error('Not allowed by CORS'));
+    //     }
+    // },
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 }));
@@ -58,6 +60,7 @@ app.use('/lead', leadRouter);
 app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
 app.use('/product', productRouter);
+app.use('/meetings', meetingsRouter);
 
 // 404 error handling
 app.use(notFoundHandler);
