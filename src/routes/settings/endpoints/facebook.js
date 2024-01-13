@@ -33,6 +33,7 @@ facebookRouter.post('/', async (req, res) => {
 // put facebook settings
 facebookRouter.put('/', async (req, res) => {
     const { name, settingsData } = req.body;
+    console.log(req.body);
 
     try {
         // Use findOneAndUpdate with upsert: true to update or insert a document
@@ -41,7 +42,7 @@ facebookRouter.put('/', async (req, res) => {
             { $set: { settingsData } },
             { upsert: true, new: true, runValidators: true }
         );
-
+        console.log(result);
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: 'There was a server side error' });
