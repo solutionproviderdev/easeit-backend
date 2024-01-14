@@ -5,6 +5,7 @@
 	"main": "index.js",
 	"scripts": {
 		"start": "node src/index",
+		"nodemon": "nodemon src/index",
 		"ngrok": "ngrok http http://localhost:5000"
 	},
 	"repository": {

@@ -95,7 +95,7 @@ const leadSchema = mongoose.Schema(
                 content: String,
                 senderId: String,
                 sentByMe: { type: Boolean, default: false },
-                date: { type: Date, default: Date.now },
+                date: { type: Date },
             },
         ],
         proposals: [{ client: Number, proposal: Number }],

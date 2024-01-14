@@ -16,6 +16,7 @@ const meterialsRouter = require('./routes/meterials');
 const productRouter = require('./routes/products');
 const meetingsRouter = require('./routes/meeting');
 const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpdateLeads');
+const messageRouter = require('./routes/Messege');
 
 // Initilize app
 const app = express();
@@ -61,6 +62,7 @@ app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
 app.use('/product', productRouter);
 app.use('/meetings', meetingsRouter);
+app.use('/message', messageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
