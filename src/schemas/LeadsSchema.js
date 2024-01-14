@@ -89,6 +89,15 @@ const leadSchema = mongoose.Schema(
         projectValue: Number,
         mbSheetNo: String,
         transportCost: Number,
+        messages: [
+            {
+                messageId: String,
+                content: String,
+                senderId: String,
+                sentByMe: { type: Boolean, default: false },
+                date: { type: Date, default: Date.now },
+            },
+        ],
         proposals: [{ client: Number, proposal: Number }],
     },
     {

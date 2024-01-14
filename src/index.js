@@ -15,6 +15,7 @@ const webhookRouter = require('./routes/webhook');
 const meterialsRouter = require('./routes/meterials');
 const productRouter = require('./routes/products');
 const meetingsRouter = require('./routes/meeting');
+const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpdateLeads');
 
 // Initilize app
 const app = express();
@@ -60,6 +61,11 @@ app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
 app.use('/product', productRouter);
 app.use('/meetings', meetingsRouter);
+
+// Get Lead Repetedly
+setInterval(() => {
+    getConversationsAndUpdateLeads();
+}, 5000);
 
 // 404 error handling
 app.use(notFoundHandler);
