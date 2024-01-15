@@ -7,7 +7,8 @@ const getConversationsAndUpdateLeads = async () => {
     try {
         // Fetch data from Messenger Platform API
         const response = await axios.get(
-            `https://graph.facebook.com/2078095355564923/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${process.env.PAGE_ACCESS_TOKEN}`
+            `https://graph.facebook.com/2078095355564923/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${process.env.PAGE_ACCESS_TOKEN}`,
+            { timeout: 10000 }
         );
 
         const conversations = response.data.data;
