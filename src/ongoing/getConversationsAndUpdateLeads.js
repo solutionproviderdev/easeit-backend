@@ -62,7 +62,7 @@ const getConversationsAndUpdateLeads = async () => {
             }
         }
     } catch (error) {
-        console.error('Error fetching or processing data:', error);
+        console.error('Error fetching or processing data:');
     }
 };
 
