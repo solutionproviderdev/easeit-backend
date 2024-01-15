@@ -42,7 +42,7 @@ const getConversationsAndUpdateLeads = async () => {
                 }
                 // Update lastMsg if new messages were added
                 if (isNewMessageAdded) {
-                    lead.lastMsg = messages[0].content;
+                    lead.lastMsg = messages[messages.length - 1].content;
                 }
                 await lead.save();
             } else {
@@ -50,7 +50,7 @@ const getConversationsAndUpdateLeads = async () => {
                 const newLead = new Lead({
                     CID: '', // Set this as needed
                     name: otherParticipant.name, // Set to the other participant's name
-                    lastMsg: messages[0].content,
+                    lastMsg: messages[messages.length - 1].content,
                     status: 'unread', // Default status, adjust as needed
                     fbSenderID,
                     messages,
