@@ -20,7 +20,8 @@ const getConversationsAndUpdateLeads = async () => {
             );
 
             const fbSenderID = otherParticipant.id;
-            const messages = conversation.messages.data.map((msg) => ({
+            const reversedMessages = [...conversation.messages.data].reverse();
+            const messages = reversedMessages.map((msg) => ({
                 messageId: msg.id,
                 content: msg.message,
                 senderId: msg.from.id,
