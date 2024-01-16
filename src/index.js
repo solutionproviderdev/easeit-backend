@@ -28,8 +28,6 @@ mongoose
     .then(() => console.log('Database connection successfull'))
     .catch((err) => console.log(err, 'Database connection Error'));
 
-console.log(process.env.MONGO_CONNECTION_STRING);
-
 // request process
 app.use(express.json());
 app.use(express.static('public'));
@@ -77,5 +75,12 @@ app.use(errorHandler);
 
 // Start the server
 app.listen(process.env.PORT, () => {
-    console.log(`App listening to port ${process.env.PORT}`);
+    const environment = process.env.NODE_ENV || 'development';
+    const nodeVersion = process.version;
+    const currentTime = new Date().toLocaleString();
+
+    console.log(`🚀 Server started in ${environment} mode 🌟`);
+    console.log(`💻 Node version: ${nodeVersion}`);
+    console.log(`🕒 Current Time: ${currentTime}`);
+    console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
 });

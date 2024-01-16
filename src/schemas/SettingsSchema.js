@@ -1,3 +1,4 @@
+/* eslint-disable new-cap */
 const mongoose = require('mongoose');
 
 const settingsSchema = mongoose.Schema(
@@ -25,4 +26,6 @@ settingsSchema.path('name').validate({
     message: 'The name must be unique within the enum values.',
 });
 
-module.exports = settingsSchema;
+const Settings = new mongoose.model('setting', settingsSchema);
+
+module.exports = Settings;

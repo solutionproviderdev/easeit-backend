@@ -2,13 +2,21 @@
 /* eslint-disable no-restricted-syntax */
 const axios = require('axios');
 const Lead = require('../schemas/LeadsSchema');
+const Settings = require('../schemas/SettingsSchema');
 
 const getConversationsAndUpdateLeads = async () => {
     try {
-        // Fetch data from Messenger Platform API
+        // Fetch the settings document for Facebook
+        const fbSettings = await Settings.findOne({ name: 'facebook' });
+        if (!fbSettings || !fbSettings.settingsData.page[0].pageAccessToken) {
+            throw new Error('Facebook settings or access token not found');
+        }
+        const { pageAccessToken } = fbSettings.settingsData.page[0];
+
+        // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
-            `https://graph.facebook.com/2078095355564923/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${process.env.PAGE_ACCESS_TOKEN}`,
-            { timeout: 10000 }
+            `https://graph.facebook.com/2078095355564923/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            { timeout: 5000 }
         );
 
         const conversations = response.data.data;
@@ -62,7 +70,8 @@ const getConversationsAndUpdateLeads = async () => {
             }
         }
     } catch (error) {
-        console.error('Error fetching or processing data:');
+        const currentTime = new Date().toLocaleString();
+        console.error(`${currentTime} => Error fetching or processing data`);
     }
 };
 
