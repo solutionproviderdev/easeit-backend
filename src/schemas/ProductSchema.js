@@ -9,7 +9,7 @@ const productSchema = new mongoose.Schema({
     class: {
         type: String,
         required: true,
-        enum: ['Basic', 'Standard', 'Premium', 'Platinum'],
+        enum: ['Economy', 'Standard', 'Premium', 'Platinum'],
     },
     application: {
         type: String,

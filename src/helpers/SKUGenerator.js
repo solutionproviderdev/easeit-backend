@@ -3,7 +3,7 @@ const Meterials = require('../schemas/MeterialsSchema');
 
 // Declear SKU code for series, location, glass, application
 const seriesCode = [
-    { name: 'Basic', code: 'BS' },
+    { name: 'Economy', code: 'EC' },
     { name: 'Standard', code: 'SS' },
     { name: 'Premium', code: 'PR' },
     { name: 'Platinum', code: 'PL' },
