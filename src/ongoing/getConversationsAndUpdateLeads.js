@@ -3,6 +3,7 @@
 const axios = require('axios');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
+const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 
 const getConversationsAndUpdateLeads = async () => {
     try {
@@ -54,6 +55,8 @@ const getConversationsAndUpdateLeads = async () => {
                 }
                 await lead.save();
             } else {
+                const cre = await findCREWithLowestLeads();
+
                 // Create new Lead
                 const newLead = new Lead({
                     CID: '', // Set this as needed
@@ -63,7 +66,7 @@ const getConversationsAndUpdateLeads = async () => {
                     fbSenderID,
                     messages,
                     source: 'Facebook',
-                    creName: 'Un Assigned', // Default CRE name
+                    creName: cre || 'Un Assigned', // Default CRE name
                     // ... other fields ...
                 });
                 await newLead.save();
