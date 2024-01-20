@@ -43,7 +43,6 @@ const peopleSchema = new mongoose.Schema(
         status: {
             type: String,
             required: true,
-            enum: [],
         },
         role: {
             type: String,
@@ -54,24 +53,6 @@ const peopleSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
-
-// Define roles based on the selected department
-const rolesByDepartment = {
-    CRE: ['CRE Head', 'CRE'],
-    Sales: ['Sales Head', 'Seals Executive'],
-    IT: ['Graphics Designer', 'Developer'],
-    Management: ['Operation Manager', 'Manager', 'Assistant Manager'],
-};
-
-// Set roles based on the selected department
-// eslint-disable-next-line func-names
-peopleSchema.pre('save', function (next) {
-    if (this.isModified('department')) {
-        // eslint-disable-next-line prefer-destructuring
-        this.role = rolesByDepartment[this.department][0];
-    }
-    next();
-});
 
 // eslint-disable-next-line new-cap
 const People = new mongoose.model('people', peopleSchema);

@@ -2,11 +2,18 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const People = require('../schemas/PeopleSchema');
 
-// Get all Peoples without the password field
+// Get all Peoples, optionally filtered by department
 const getPeople = async (req, res) => {
     try {
-        // Retrieve all users from the database without the password field
-        const allPeople = await People.find().select('-password');
+        const query = {};
+
+        // Check if a department filter is provided in the query parameters
+        if (req.query.department) {
+            query.department = req.query.department;
+        }
+
+        // Retrieve users from the database based on the query
+        const allPeople = await People.find(query).select('-password').select('-startDate');
 
         return res.status(200).json(allPeople);
     } catch (err) {
@@ -91,6 +98,9 @@ const peopleSignup = async (req, res) => {
 
         // Hash password using bcrypt
         const password = await bcrypt.hash(req.body.password, 12);
+
+        console.log(req.body);
+
         // create a new user
         const newPeople = new People({
             ...req.body,
@@ -207,6 +217,7 @@ const updatePeopleDetails = async (req, res) => {
         });
     }
 };
+
 // do logout
 function peopleLogout(req, res) {
     res.clearCookie(process.env.COOKIE_NAME);

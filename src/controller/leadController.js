@@ -268,6 +268,28 @@ const updateLead = async (req, res) => {
     }
 };
 
+const updateCreName = async (req, res) => {
+    const { id } = req.params;
+    const { creName } = req.body;
+
+    try {
+        const updatedLead = await Lead.findByIdAndUpdate(
+            id,
+            { creName },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedLead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        res.status(200).json({ message: 'CRE name updated successfully', updatedLead });
+    } catch (error) {
+        // console.log(error);
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
 const deleteLead = async (req, res) => {
     try {
         await Lead.deleteOne({ _id: req.params.id });
@@ -283,6 +305,7 @@ module.exports = {
     addCommentToLead,
     addLeads,
     addComment,
+    updateCreName,
     updateLead,
     deleteLead,
     getLeads,
