@@ -105,14 +105,19 @@ async function createLead(leadData) {
 
 const getLeads = async (req, res) => {
     try {
-        // Extract creName from query parameters
-        const { creName } = req.query;
+        // Extract creName and limit from query parameters
+        const { creName, limit } = req.query;
 
         // Build the query
         let query = Lead.find({});
         if (creName) {
             // Filter by creName if provided
             query = query.where('creName').equals(creName);
+        }
+
+        // Apply limit if provided
+        if (limit) {
+            query = query.limit(Number(limit)); // Convert limit to a number
         }
 
         // Sort by creation date (newest first)
