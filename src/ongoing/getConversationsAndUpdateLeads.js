@@ -5,6 +5,14 @@ const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 
+const logError = (message, error) => {
+    const currentTime = new Date().toLocaleString();
+    console.error(`${currentTime} => ${message}`);
+
+    // Optionally, send the error to a logging service or notify via email/SMS
+    // sendErrorNotification(message, error);
+};
+
 const getConversationsAndUpdateLeads = async () => {
     try {
         // Fetch the settings document for Facebook
@@ -12,11 +20,11 @@ const getConversationsAndUpdateLeads = async () => {
         if (!fbSettings || !fbSettings.settingsData.page[0].pageAccessToken) {
             throw new Error('Facebook settings or access token not found');
         }
-        const { pageAccessToken } = fbSettings.settingsData.page[0];
+        const { pageAccessToken, pageId } = fbSettings.settingsData.page[0];
 
         // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
-            `https://graph.facebook.com/2078095355564923/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
             { timeout: 5000 }
         );
 
@@ -73,9 +81,13 @@ const getConversationsAndUpdateLeads = async () => {
             }
         }
     } catch (error) {
-        const currentTime = new Date().toLocaleString();
-        console.error(`${currentTime} => Error fetching or processing data`);
+        logError('Error fetching or processing data', error);
     }
+};
+
+// Example function for sending error notifications (implement as needed)
+const sendErrorNotification = (message, error) => {
+    // Logic to send an email/SMS or log to a service like Sentry, LogRocket, etc.
 };
 
 module.exports = getConversationsAndUpdateLeads;
