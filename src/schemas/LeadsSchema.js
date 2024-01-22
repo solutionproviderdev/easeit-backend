@@ -95,6 +95,7 @@ const leadSchema = mongoose.Schema(
                 content: String,
                 senderId: String,
                 sentByMe: { type: Boolean, default: false },
+                fileUrl: String,
                 date: { type: Date },
             },
         ],

@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-await-in-loop */
 const axios = require('axios');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
@@ -81,4 +83,79 @@ const sendMessege = async (req, res) => {
     }
 };
 
-module.exports = { getAllMessage, sendMessege };
+const sendFile = async (req, res) => {
+    const leadId = req.params.id;
+
+    try {
+        // Check if files were uploaded
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded.' });
+        }
+
+        // Retrieve the lead's Facebook ID
+        const lead = await Lead.findById(leadId);
+        if (!lead || !lead.fbSenderID) {
+            return res.status(404).json({ error: 'Lead not found or missing Facebook ID.' });
+        }
+
+        // Fetch Facebook Page Access Token from Settings
+        const settings = await Settings.findOne({ name: 'facebook' });
+        if (!settings || !settings.settingsData.page[0].pageAccessToken) {
+            return res.status(500).json({ error: 'Facebook settings or access token not found.' });
+        }
+        const { pageAccessToken, pageId } = settings.settingsData.page[0];
+
+        // Loop through each file and send it
+        const fbResponses = [];
+        for (const file of req.files) {
+            const fileUrl = `${process.env.SERVER_URL}/images/${file.filename}`;
+
+            const messagePayload = {
+                recipient: {
+                    id: lead.fbSenderID,
+                },
+                message: {
+                    attachment: {
+                        type: 'image',
+                        payload: {
+                            url: fileUrl,
+                            is_reusable: true,
+                        },
+                    },
+                },
+                messaging_type: 'RESPONSE',
+                access_token: pageAccessToken,
+            };
+
+            const fbResponse = await axios.post(
+                `https://graph.facebook.com/${pageId}/messages`,
+                messagePayload
+            );
+            fbResponses.push(fbResponse.data);
+
+            // If the message was sent successfully, add details to the lead document
+            if (fbResponse.data && fbResponse.data.message_id) {
+                lead.messages.push({
+                    messageId: fbResponse.data.message_id,
+                    content: 'File sent.',
+                    senderId: pageId,
+                    sentByMe: true,
+                    date: new Date(),
+                    fileUrl,
+                });
+            } else {
+                return res.status(500).json({ error: 'Failed to send message with file.' });
+            }
+        }
+
+        // Save the lead document after all files have been sent
+        await lead.save();
+
+        // Respond with the details of the messages sent
+        return res.status(200).json({ success: true, data: fbResponses });
+    } catch (error) {
+        console.error('Error sending files:', error);
+        return res.status(500).json({ error: error.message || 'Internal server error.' });
+    }
+};
+module.exports = { getAllMessage, sendMessege, sendFile };

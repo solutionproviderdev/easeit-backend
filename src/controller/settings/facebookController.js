@@ -29,7 +29,7 @@ const getPageNamePhoto = async (accessToken) => {
         const { name, id, picture } = response.data;
         return {
             name,
-            id,
+            pageId: id,
             picture: picture.data.url,
         };
     } catch (error) {
@@ -77,6 +77,7 @@ const addFacebookPage = async (req, res) => {
     try {
         // Get page details using the provided accessToken
         const pageDetails = await getPageNamePhoto(pageAccessToken);
+
         if (!pageDetails) {
             return res.status(404).json({ error: 'Unable to fetch page details' });
         }
