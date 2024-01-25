@@ -96,7 +96,7 @@ const leadSchema = mongoose.Schema(
                 senderId: String,
                 sentByMe: { type: Boolean, default: false },
                 fileUrl: String,
-                date: { type: Date },
+                date: { type: Date, require: true },
             },
         ],
         proposals: [{ client: Number, proposal: Number }],

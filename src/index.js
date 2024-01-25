@@ -5,6 +5,8 @@ const path = require('path');
 const { default: mongoose } = require('mongoose');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 
 // internal Imports
 const { notFoundHandler, errorHandler } = require('./middlewares/common/errorHandler');
@@ -16,16 +18,27 @@ const meterialsRouter = require('./routes/meterials');
 const productRouter = require('./routes/products');
 const meetingsRouter = require('./routes/meeting');
 const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpdateLeads');
-const messageRouter = require('./routes/Messege');
+const fbMessageRouter = require('./routes/FbMessege');
+const messageRouter = require('./routes/Message');
+const conversationRouter = require('./routes/conversation');
 
-// Initilize app
+// Initialize app
 const app = express();
 dotenv.config();
+const server = createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'https://easeit.vercel.app', 'https://crm.solutionprovider.com.bd'],
+    credentials: true,
+  },
+});
 
 // Database connection
 mongoose
     .connect(process.env.MONGO_CONNECTION_STRING, {})
-    .then(() => console.log('Database connection successfull'))
+    .then(() => console.log('🍀 Database connection successfull'))
     .catch((err) => console.log(err, 'Database connection Error'));
 
 // request process
@@ -52,6 +65,26 @@ app.set('view engine', 'ejs');
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
+// home Route
+app.get('/', (req, res) => {
+    res.send('Hello Solution Provider...!');
+});
+
+// io connection start
+io.on('connection', (socket) => {
+    console.log(`User connected ID: ${socket.id}`);
+
+    socket.on('disconnect', () => {
+        console.log('User Disconnected', socket.id);
+    });
+});
+
+  // Attach io instance to the req object to access it in routes
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+  });
+
 // routing setup
 app.use('/people', peopleRouter);
 app.use('/settings', settingsRouter);
@@ -60,7 +93,9 @@ app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
 app.use('/product', productRouter);
 app.use('/meetings', meetingsRouter);
-app.use('/message', messageRouter);
+app.use('/fbmessage', fbMessageRouter);
+app.use('/messages', messageRouter);
+app.use('/conversations', conversationRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
@@ -74,7 +109,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start the server
-app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
     const environment = process.env.NODE_ENV || 'development';
     const nodeVersion = process.version;
     const currentTime = new Date().toLocaleString();

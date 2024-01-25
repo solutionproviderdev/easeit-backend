@@ -48,7 +48,7 @@ const peopleSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        avater: String,
+        avatar: String,
         nid: String,
     },
     { timestamps: true }
