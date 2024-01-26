@@ -3,8 +3,10 @@ const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
 const { default: mongoose } = require('mongoose');
+const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const { Server } = require('socket.io');
 
 // internal Imports
 const { notFoundHandler, errorHandler } = require('./middlewares/common/errorHandler');
@@ -20,7 +22,13 @@ const messageRouter = require('./routes/Messege');
 
 // Initilize app
 const app = express();
+const server = createServer();
 dotenv.config();
+const io = new Server(server, {
+    cors: {
+        origin: '*',
+      }
+});
 
 // Database connection
 mongoose
