@@ -24,7 +24,7 @@ const conversationRouter = require('./routes/conversation');
 
 // Initialize app
 const app = express();
-const server = createServer();
+const server = createServer(app);
 dotenv.config();
 const io = new Server(server, {
     cors: {
