@@ -1,161 +1,42 @@
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-await-in-loop */
-const axios = require('axios');
-const Lead = require('../schemas/LeadsSchema');
-const Settings = require('../schemas/SettingsSchema');
+const path = require('path');
+const Conversation = require('../schemas/ConversationsSchema');
+const Message = require('../schemas/MessageSchema');
 
-// Function to get all messages for a specific lead
-const getAllMessage = async (req, res) => {
+const getAllMessages = async (req, res) => {
     try {
-        const { id } = req.params; // This assumes the ID in the URL is the lead's ID
-        const lead = await Lead.findById(id); // Finds the lead by its ID
-
-        if (!lead) {
-            return res.status(404).json({ error: 'Lead not found' });
-        }
-
-        // Respond with the customer's name and the messages array from the lead document
-        res.status(200).json({
-            customerName: lead.name,
-            messages: lead.messages,
+        const { conversationId } = req.params;
+        const messages = await Message.find({ conversation: conversationId }).populate({
+            path: 'sender',
+            select: 'name avatar',
         });
+        res.status(200).json(messages);
     } catch (error) {
-        // Handle possible errors
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ message: 'Error fetching messages', error: error.message });
     }
 };
 
-const sendMessege = async (req, res) => {
-    const leadId = req.params.id;
-    const messageText = req.body.message;
-
+const sendMessage = async (req, res) => {
     try {
-        // Retrieve the lead's Facebook ID
-        const lead = await Lead.findById(leadId);
-        if (!lead || !lead.fbSenderID) {
-            return res.status(404).json({ error: 'Lead not found or missing Facebook ID' });
-        }
+        const { conversationId } = req.params;
+        const { content } = req.body;
+        const attachments = req.files?.map((file) => ({
+            url: `${process.env.SERVER_URL}/images/${file.filename}`, // Adjust URL based on your public directory structure
+        }));
+        const newMessage = new Message({
+            sender: req.user._id, // Assuming req.user is populated with the logged-in user's info
+            content,
+            attachments,
+            conversation: conversationId,
+        });
+        await newMessage.save();
 
-        // Fetch Facebook Page Access Token from Settings
-        const settings = await Settings.findOne({ name: 'facebook' });
-        if (!settings || !settings.settingsData.page[0].pageAccessToken) {
-            return res.status(500).json({ error: 'Facebook settings or access token not found' });
-        }
-        const { pageAccessToken } = settings.settingsData.page[0];
+        // Update lastMessage in conversation
+        await Conversation.findByIdAndUpdate(conversationId, { lastMessage: newMessage._id });
 
-        // Construct the message payload
-        const messagePayload = {
-            recipient: { id: lead.fbSenderID },
-            message: { text: messageText },
-            messaging_type: 'RESPONSE',
-            access_token: pageAccessToken,
-        };
-
-        // Send the message via Facebook Graph API
-        const fbResponse = await axios.post(
-            'https://graph.facebook.com/2078095355564923/messages',
-            messagePayload
-        );
-
-        // Check if the message was sent successfully and update the Lead document
-        if (fbResponse.data && fbResponse.data.message_id) {
-            const newMessage = {
-                messageId: fbResponse.data.message_id,
-                content: messageText,
-                senderId: '2078095355564923', // Your Facebook Page ID
-                sentByMe: true,
-                date: new Date(),
-            };
-
-            lead.messages.push(newMessage);
-            await lead.save();
-
-            return res.status(200).json({ success: true, data: fbResponse.data });
-        }
-        return res.status(500).json({ error: 'Failed to send message' });
+        res.status(201).json(newMessage);
     } catch (error) {
-        if (error.response && error.response.data && error.response.data.error) {
-            // If the error is from Facebook API
-            return res.status(500).json({ error: error.response.data.error.message });
-        }
-        // Other errors
-        return res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ message: 'Error sending message', error: error.message });
     }
 };
 
-const sendFile = async (req, res) => {
-    const leadId = req.params.id;
-
-    try {
-        // Check if files were uploaded
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'No files uploaded.' });
-        }
-
-        // Retrieve the lead's Facebook ID
-        const lead = await Lead.findById(leadId);
-        if (!lead || !lead.fbSenderID) {
-            return res.status(404).json({ error: 'Lead not found or missing Facebook ID.' });
-        }
-
-        // Fetch Facebook Page Access Token from Settings
-        const settings = await Settings.findOne({ name: 'facebook' });
-        if (!settings || !settings.settingsData.page[0].pageAccessToken) {
-            return res.status(500).json({ error: 'Facebook settings or access token not found.' });
-        }
-        const { pageAccessToken, pageId } = settings.settingsData.page[0];
-
-        // Loop through each file and send it
-        const fbResponses = [];
-        for (const file of req.files) {
-            const fileUrl = `${process.env.SERVER_URL}/images/${file.filename}`;
-
-            const messagePayload = {
-                recipient: {
-                    id: lead.fbSenderID,
-                },
-                message: {
-                    attachment: {
-                        type: 'image',
-                        payload: {
-                            url: fileUrl,
-                            is_reusable: true,
-                        },
-                    },
-                },
-                messaging_type: 'RESPONSE',
-                access_token: pageAccessToken,
-            };
-
-            const fbResponse = await axios.post(
-                `https://graph.facebook.com/${pageId}/messages`,
-                messagePayload
-            );
-            fbResponses.push(fbResponse.data);
-
-            // If the message was sent successfully, add details to the lead document
-            if (fbResponse.data && fbResponse.data.message_id) {
-                lead.messages.push({
-                    messageId: fbResponse.data.message_id,
-                    content: 'File sent.',
-                    senderId: pageId,
-                    sentByMe: true,
-                    date: new Date(),
-                    fileUrl,
-                });
-            } else {
-                return res.status(500).json({ error: 'Failed to send message with file.' });
-            }
-        }
-
-        // Save the lead document after all files have been sent
-        await lead.save();
-
-        // Respond with the details of the messages sent
-        return res.status(200).json({ success: true, data: fbResponses });
-    } catch (error) {
-        console.error('Error sending files:', error);
-        return res.status(500).json({ error: error.message || 'Internal server error.' });
-    }
-};
-module.exports = { getAllMessage, sendMessege, sendFile };
+module.exports = { getAllMessages, sendMessage };

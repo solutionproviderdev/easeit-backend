@@ -44,6 +44,7 @@ const getConversationsAndUpdateLeads = async () => {
                 senderId: msg.from.id,
                 senderName: msg.from.name,
                 sentByMe: msg.from.name === 'Solution Provider',
+                date: Date.now(),
             }));
 
             const lead = await Lead.findOne({ fbSenderID });
@@ -75,7 +76,6 @@ const getConversationsAndUpdateLeads = async () => {
                     messages,
                     source: 'Facebook',
                     creName: cre || 'Un Assigned', // Default CRE name
-                    // ... other fields ...
                 });
                 await newLead.save();
             }
