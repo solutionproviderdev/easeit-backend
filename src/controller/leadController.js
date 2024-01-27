@@ -129,6 +129,21 @@ const getLeads = async (req, res) => {
     }
 };
 
+const getLeadDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        res.status(200).json(lead);
+    } catch (error) {
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
 const addLeads = async (req, res) => {
     try {
         const leadData = extractLeadData(req.body, req.files);
@@ -314,4 +329,5 @@ module.exports = {
     updateLead,
     deleteLead,
     getLeads,
+    getLeadDetails,
 };

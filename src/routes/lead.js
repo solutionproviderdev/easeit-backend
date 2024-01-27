@@ -7,12 +7,14 @@ const {
     deleteLead,
     updateCreName,
     getLeads,
+    getLeadDetails,
 } = require('../controller/leadController');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 
 const leadRouter = express.Router();
 
 leadRouter.get('/', checkLogin, getLeads);
+leadRouter.get('/:id', checkLogin, getLeadDetails);
 
 leadRouter.post('/', checkLogin, upload.array('images'), addLeads);
 

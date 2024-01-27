@@ -218,6 +218,16 @@ const updatePeopleDetails = async (req, res) => {
     }
 };
 
+// Get names and ids of all people
+const getPeopleNamesAndIds = async (req, res) => {
+    try {
+        const people = await People.find({}).select('name _id');
+        return res.status(200).json(people);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
 // do logout
 function peopleLogout(req, res) {
     res.clearCookie(process.env.COOKIE_NAME);
@@ -231,4 +241,5 @@ module.exports = {
     peopleLogout,
     getPeopleDetails,
     updatePeopleDetails,
+    getPeopleNamesAndIds,
 };

@@ -58,6 +58,7 @@ const createAGroupChat = async (req, res, next) => {
             isGroupChat: true,
             participants,
             admin: req.user._id,
+            avatar: `${process.env.SERVER_URL}/images/simple-group-user-icon.jpg`,
         });
         res.status(201).json(newConversation);
     } catch (error) {

@@ -24,6 +24,7 @@ const conversationSchema = new Schema(
                 ref: 'people',
             },
         ],
+        avatar: String,
         admin: {
             type: Schema.Types.ObjectId,
             ref: 'people', // Only needed for group chats

@@ -17,6 +17,7 @@ const getAllMessage = async (req, res) => {
         // Respond with the customer's name and the messages array from the lead document
         res.status(200).json({
             customerName: lead.name,
+            status: lead.status,
             messages: lead.messages,
         });
     } catch (error) {

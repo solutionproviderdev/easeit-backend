@@ -8,6 +8,7 @@ const {
     updatePeopleDetails,
     getPeopleDetails,
     getPeople,
+    getPeopleNamesAndIds,
 } = require('../controller/peopleControler');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 const upload = require('../config/multerconfig');
@@ -17,6 +18,9 @@ const peopleRouter = express.Router();
 
 // Get All Users
 peopleRouter.get('/', checkLogin, getPeople);
+
+// New route to get names and ids
+peopleRouter.get('/names-id', checkLogin, getPeopleNamesAndIds);
 
 // Get single User Details
 peopleRouter.get('/:id', checkLogin, getPeopleDetails);
