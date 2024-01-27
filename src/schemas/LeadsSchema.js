@@ -35,7 +35,10 @@ const leadSchema = mongoose.Schema(
             ],
         },
         lastMsg: String,
-        fbSenderID: String,
+        fbSenderID: {
+            type: String,
+            unique: true,
+        },
         source: {
             type: String,
             enum: ['Facebook', 'WhatsApp', 'Web', 'By Phone'],
