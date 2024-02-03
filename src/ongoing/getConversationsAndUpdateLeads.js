@@ -68,10 +68,12 @@ const getConversationsAndUpdateLeads = async (io) => {
                     const socketPayload = {
                         name: savedLead.name,
                         lastMessage: savedLead.lastMsg,
-                        lastMessageTime: savedLead.messages[0].date,
+                        lastMessageTime: savedLead.messages[messages.length - 1].date,
+                        sentByMe: savedLead.messages[messages.length - 1].sentByMe,
                         createdAt: savedLead.createdAt,
                         _id: savedLead._id,
                     };
+
                     // Emit socket io action
                     io.emit('conversation', socketPayload);
                 } else {
@@ -94,9 +96,11 @@ const getConversationsAndUpdateLeads = async (io) => {
                         name: savedNewLead.name,
                         lastMessage: savedNewLead.lastMsg,
                         lastMessageTime: savedNewLead.messages[0].date,
+                        sentByMe: savedNewLead.messages[0].sentByMe,
                         createdAt: savedNewLead.createdAt,
                         _id: savedNewLead._id,
                     };
+
                     // Emit socket io action
                     io.emit('conversation', socketPayload);
                 }
