@@ -33,6 +33,7 @@ const getPageNamePhoto = async (accessToken) => {
             picture: picture.data.url,
         };
     } catch (error) {
+        console.log(error);
         console.error('Error fetching page data:');
         return null; // or handle the error as needed
     }

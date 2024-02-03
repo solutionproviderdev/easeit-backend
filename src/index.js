@@ -45,7 +45,7 @@ app.use(express.urlencoded());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors({
     origin: (origin, callback) => {
-        const allowedOrigins = ['http://localhost:3000', 'https://easeit.vercel.app', 'https://crm.solutionprovider.com.bd'];
+        const allowedOrigins = ['http://localhost:3000', 'http://192.168.0.108:3000', 'https://easeit.vercel.app', 'https://crm.solutionprovider.com.bd'];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
