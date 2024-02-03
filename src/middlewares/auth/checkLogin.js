@@ -3,6 +3,9 @@ const People = require('../../schemas/PeopleSchema');
 
 const checkLogin = async (req, res, next) => {
     try {
+        // const cookietoken = req.headers.cookie;
+        // console.log(cookietoken);
+
         const authHeader = req.headers?.authorization;
         if (!authHeader) {
             throw new Error('You must Log in before reading data');

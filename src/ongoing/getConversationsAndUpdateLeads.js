@@ -12,7 +12,7 @@ const logError = (message, error) => {
     // sendErrorNotification(message, error);
 };
 
-const getConversationsAndUpdateLeads = async () => {
+const getConversationsAndUpdateLeads = async (io) => {
     try {
         // Fetch the settings document for Facebook
         const fbSettings = await Settings.findOne({ name: 'facebook' });
@@ -55,13 +55,25 @@ const getConversationsAndUpdateLeads = async () => {
                     for (const message of messages) {
                         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
                             lead.messages.push(message);
+
+                            // Emit socket io action
+                            io.emit(`fbMessage${lead._id}`, message);
                             isNewMessageAdded = true;
                         }
                     }
                     if (isNewMessageAdded) {
                         lead.lastMsg = messages[messages.length - 1].content;
                     }
-                    await lead.save();
+                    const savedLead = await lead.save();
+                    const socketPayload = {
+                        name: savedLead.name,
+                        lastMessage: savedLead.lastMsg,
+                        lastMessageTime: savedLead.messages[0].date,
+                        createdAt: savedLead.createdAt,
+                        _id: savedLead._id,
+                    };
+                    // Emit socket io action
+                    io.emit('conversation', socketPayload);
                 } else {
                     const cre = await findCREWithLowestLeads();
 
@@ -77,7 +89,16 @@ const getConversationsAndUpdateLeads = async () => {
                         source: 'Facebook',
                         creName: cre || 'Un Assigned',
                     });
-                    await newLead.save();
+                    const savedNewLead = await newLead.save();
+                    const socketPayload = {
+                        name: savedNewLead.name,
+                        lastMessage: savedNewLead.lastMsg,
+                        lastMessageTime: savedNewLead.messages[0].date,
+                        createdAt: savedNewLead.createdAt,
+                        _id: savedNewLead._id,
+                    };
+                    // Emit socket io action
+                    io.emit('conversation', socketPayload);
                 }
             } catch (innerError) {
                 logError('Error processing a single conversation', innerError);

@@ -8,6 +8,7 @@ const {
     sendFile,
     getSortedLeads,
     getAllLeads,
+    getLeadDetailsWithLastMessage,
 } = require('../controller/FbMessageController');
 const upload = require('../config/multerconfig');
 
@@ -19,6 +20,9 @@ fbMessageRouter.get('/all-leads', checkLogin, getAllLeads);
 
 // Get leads sorted by newest message or most recent leads
 fbMessageRouter.get('/sorted-conversations', checkLogin, getSortedLeads);
+
+// New route for getting leads with last message details
+fbMessageRouter.get('/conversations', checkLogin, getLeadDetailsWithLastMessage);
 
 // Get All Meterials
 fbMessageRouter.get('/:id', checkLogin, getAllMessage);
