@@ -68,10 +68,20 @@ const sendMessege = async (req, res) => {
                 date: new Date(),
             };
             lead.messages.push(newMessage);
-            await lead.save();
+            const savedLead = await lead.save();
 
             // Emit the new message to all clients listening on the 'message' event
             req.io.emit(`fbMessage${leadId}`, newMessage);
+
+            const socketPayload = {
+                name: savedLead.name,
+                lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+                lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+                sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
+                createdAt: savedLead.createdAt,
+                _id: savedLead._id,
+            };
+            req.io.emit('conversation', socketPayload);
 
             return res.status(200).json({ success: true, data: newMessage });
         }
