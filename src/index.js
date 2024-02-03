@@ -96,7 +96,7 @@ app.use('/conversations', conversationRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    getConversationsAndUpdateLeads();
+    getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // 404 error handling

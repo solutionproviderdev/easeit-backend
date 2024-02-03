@@ -31,55 +31,57 @@ const sendMessege = async (req, res) => {
     const messageText = req.body.message;
 
     try {
-        // Retrieve the lead's Facebook ID
         const lead = await Lead.findById(leadId);
         if (!lead || !lead.fbSenderID) {
             return res.status(404).json({ error: 'Lead not found or missing Facebook ID' });
         }
 
-        // Fetch Facebook Page Access Token from Settings
         const settings = await Settings.findOne({ name: 'facebook' });
         if (!settings || !settings.settingsData.page[0].pageAccessToken) {
             return res.status(500).json({ error: 'Facebook settings or access token not found' });
         }
-        const { pageAccessToken } = settings.settingsData.page[0];
+        const { pageAccessToken, pageId } = settings.settingsData.page[0];
 
-        // Construct the message payload
+        console.log(pageId);
+        // Determine the message type based on the time elapsed since the last message
+        const lastMessage = lead.messages[lead.messages.length - 1];
+        const timeElapsed = Date.now() - new Date(lastMessage.date).getTime();
+        const messagingType = timeElapsed > 24 * 60 * 60 * 1000 ? 'UPDATE' : 'RESPONSE';
+
         const messagePayload = {
             recipient: { id: lead.fbSenderID },
             message: { text: messageText },
-            messaging_type: 'RESPONSE',
+            messaging_type: messagingType,
             access_token: pageAccessToken,
         };
 
-        // Send the message via Facebook Graph API
         const fbResponse = await axios.post(
-            'https://graph.facebook.com/2078095355564923/messages',
+            `https://graph.facebook.com/${pageId}/messages`,
             messagePayload
         );
 
-        // Check if the message was sent successfully and update the Lead document
         if (fbResponse.data && fbResponse.data.message_id) {
             const newMessage = {
                 messageId: fbResponse.data.message_id,
                 content: messageText,
-                senderId: '2078095355564923', // Your Facebook Page ID
+                senderId: pageId,
                 sentByMe: true,
                 date: new Date(),
             };
-
             lead.messages.push(newMessage);
             await lead.save();
 
-            return res.status(200).json({ success: true, data: fbResponse.data });
+            // Emit the new message to all clients listening on the 'message' event
+            req.io.emit(`fbMessage${leadId}`, newMessage);
+
+            return res.status(200).json({ success: true, data: newMessage });
         }
         return res.status(500).json({ error: 'Failed to send message' });
     } catch (error) {
         if (error.response && error.response.data && error.response.data.error) {
-            // If the error is from Facebook API
             return res.status(500).json({ error: error.response.data.error.message });
         }
-        // Other errors
+        console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -88,40 +90,31 @@ const sendFile = async (req, res) => {
     const leadId = req.params.id;
 
     try {
-        // Check if files were uploaded
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded.' });
         }
 
-        // Retrieve the lead's Facebook ID
         const lead = await Lead.findById(leadId);
         if (!lead || !lead.fbSenderID) {
             return res.status(404).json({ error: 'Lead not found or missing Facebook ID.' });
         }
 
-        // Fetch Facebook Page Access Token from Settings
         const settings = await Settings.findOne({ name: 'facebook' });
         if (!settings || !settings.settingsData.page[0].pageAccessToken) {
             return res.status(500).json({ error: 'Facebook settings or access token not found.' });
         }
         const { pageAccessToken, pageId } = settings.settingsData.page[0];
 
-        // Loop through each file and send it
-        const fbResponses = [];
+        const newMessages = []; // Array to store new message objects
+
         for (const file of req.files) {
             const fileUrl = `${process.env.SERVER_URL}/images/${file.filename}`;
-
             const messagePayload = {
-                recipient: {
-                    id: lead.fbSenderID,
-                },
+                recipient: { id: lead.fbSenderID },
                 message: {
                     attachment: {
                         type: 'image',
-                        payload: {
-                            url: fileUrl,
-                            is_reusable: true,
-                        },
+                        payload: { url: fileUrl, is_reusable: true },
                     },
                 },
                 messaging_type: 'RESPONSE',
@@ -132,28 +125,30 @@ const sendFile = async (req, res) => {
                 `https://graph.facebook.com/${pageId}/messages`,
                 messagePayload
             );
-            fbResponses.push(fbResponse.data);
 
-            // If the message was sent successfully, add details to the lead document
             if (fbResponse.data && fbResponse.data.message_id) {
-                lead.messages.push({
+                const newMessage = {
                     messageId: fbResponse.data.message_id,
                     content: 'File sent.',
                     senderId: pageId,
                     sentByMe: true,
                     date: new Date(),
                     fileUrl,
-                });
+                };
+                lead.messages.push(newMessage);
+
+                // Emit the new message to all clients listening on the 'message' event
+                req.io.emit(`fbMessage${leadId}`, newMessage);
+
+                newMessages.push(newMessage); // Add the new message object to the array
             } else {
                 return res.status(500).json({ error: 'Failed to send message with file.' });
             }
         }
 
-        // Save the lead document after all files have been sent
-        await lead.save();
+        await lead.save(); // Save the lead document after all files have been sent
 
-        // Respond with the details of the messages sent
-        return res.status(200).json({ success: true, data: fbResponses });
+        return res.status(200).json({ success: true, data: newMessages[0] });
     } catch (error) {
         console.error('Error sending files:', error);
         return res.status(500).json({ error: error.message || 'Internal server error.' });
@@ -166,9 +161,8 @@ const getSortedLeads = async (req, res) => {
         const limit = parseInt(req.query.limit, 10) || 10;
 
         const leads = await Lead.find({})
-            .populate('messages') // Optional: Populate messages if needed
             .sort({ 'messages.date': -1, createdAt: -1 }) // Sort by newest message date and then by lead creation date
-            .limit(limit) // Limit the number of leads
+            .limit(limit)
             .exec();
 
         return res.status(200).json(leads);
@@ -191,11 +185,43 @@ const getAllLeads = async (req, res) => {
     }
 };
 
-// Don't forget to export the function
+const getLeadDetailsWithLastMessage = async (req, res) => {
+    try {
+        // Get the limit from query string, default to 10 if not provided
+        const limit = parseInt(req.query.limit, 10) || 10;
+
+        const leadsWithLastMessage = await Lead.aggregate([
+            {
+                $addFields: {
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    createdAt: 1,
+                },
+            },
+        ])
+            .sort({ 'messages.date': -1, createdAt: -1 })
+            .limit(limit);
+
+        res.status(200).json(leadsWithLastMessage);
+    } catch (error) {
+        console.error('Error getting leads with last message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Don't forget to export the new function
 module.exports = {
     getAllMessage,
     sendMessege,
     sendFile,
     getSortedLeads,
     getAllLeads,
+    getLeadDetailsWithLastMessage, // Add this line
 };
