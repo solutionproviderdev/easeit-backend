@@ -68,8 +68,8 @@ const getConversationsAndUpdateLeads = async (io) => {
                     const socketPayload = {
                         name: savedLead.name,
                         lastMessage: savedLead.lastMsg,
-                        lastMessageTime: savedLead.messages[messages.length - 1].date,
-                        sentByMe: savedLead.messages[messages.length - 1].sentByMe,
+                        lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+                        sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
                         createdAt: savedLead.createdAt,
                         _id: savedLead._id,
                     };
