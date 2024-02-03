@@ -42,7 +42,6 @@ const sendMessege = async (req, res) => {
         }
         const { pageAccessToken, pageId } = settings.settingsData.page[0];
 
-        console.log(pageId);
         // Determine the message type based on the time elapsed since the last message
         const lastMessage = lead.messages[lead.messages.length - 1];
         const timeElapsed = Date.now() - new Date(lastMessage.date).getTime();
@@ -195,6 +194,7 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                 $addFields: {
                     lastMessage: { $last: '$messages.content' },
                     lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
                 },
             },
             {
@@ -203,6 +203,7 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                     lastMessage: 1,
                     lastMessageTime: 1,
                     createdAt: 1,
+                    sentByMe: 1,
                 },
             },
         ])
