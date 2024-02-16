@@ -23,6 +23,7 @@ const messageRouter = require('./routes/Message');
 const conversationRouter = require('./routes/conversation');
 const mapDataRouter = require('./routes/mapDataRouters');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
+const teamRouter = require('./routes/team');
 
 // Initialize app
 const app = express();
@@ -96,10 +97,11 @@ app.use('/fbmessage', fbMessageRouter);
 app.use('/messages', messageRouter);
 app.use('/conversations', conversationRouter);
 app.use('/map', mapDataRouter);
+app.use('/teams', teamRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    getConversationsAndUpdateLeads(io);
+    // getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {
