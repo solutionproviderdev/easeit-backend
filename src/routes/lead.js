@@ -8,6 +8,7 @@ const {
     updateCreName,
     getLeads,
     getLeadDetails,
+    fixMeeting,
 } = require('../controller/leadController');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 
@@ -20,6 +21,7 @@ leadRouter.post('/', checkLogin, upload.array('images'), addLeads);
 
 leadRouter.post('/comment/:id', checkLogin, upload.array('images'), addComment);
 
+leadRouter.put('/fixMeeting/:id', fixMeeting);
 leadRouter.put('/:id', checkLogin, upload.array('file', 3), updateLead);
 
 // Route to update creName of a lead

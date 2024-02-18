@@ -2,6 +2,7 @@
 /* eslint-disable no-return-await */
 const Lead = require('../schemas/LeadsSchema');
 const generateCustomerID = require('../helpers/CustomerIdGenerator');
+const Team = require('../schemas/teamSchema');
 
 // Helper Functions
 const addCommentToLead = async (leadId, images, comment, name) => {
@@ -342,6 +343,97 @@ const deleteLead = async (req, res) => {
     }
 };
 
+const fixMeeting = async (req, res) => {
+    const {
+        division,
+        district,
+        area,
+        address: detailedAddress,
+        date,
+        slot,
+        team: teamId,
+        name,
+        phone,
+        visitCharge,
+        projectStatus,
+        workScope, // This is expected to be an array of strings representing the scope
+    } = req.body;
+
+    const { id } = req.params;
+
+    try {
+        // First, check if the lead exists and its status
+        const existingLead = await Lead.findById(id);
+        if (!existingLead) {
+            return res.status(404).send('Lead not found');
+        }
+
+        // If the lead's status is already "Meeting Fixed", return appropriate response
+        if (existingLead.status === 'Meeting Fixed') {
+            return res.status(400).json({ message: 'Meeting is already fixed for this lead' });
+        }
+
+        // Transform workScope array of strings into
+        // an array of objects with only the scope property
+        const workScopeObjects = workScope.map((scope) => ({ scope }));
+
+        // Proceed to update the lead with the provided details
+        const updatedLead = await Lead.findByIdAndUpdate(
+            id,
+            {
+                $set: {
+                    'address.division': division,
+                    'address.district': district,
+                    'address.area': area,
+                    'address.address': detailedAddress,
+                    'meetingDetails.date': date,
+                    'meetingDetails.slot': slot,
+                    'meetingDetails.team': teamId,
+                    name,
+                    status: 'Meeting Fixed', // Update status to "Meeting Fixed"
+                    phone,
+                    visitCharge,
+                    projectStatus,
+                    workScope: workScopeObjects, // Use the transformed workScopeObjects
+                },
+            },
+            { new: true, runValidators: true }
+        );
+
+        // Find the team and check if the slot on the given date is already booked
+        const team = await Team.findById(teamId);
+        if (!team) {
+            return res.status(404).send('Team not found');
+        }
+
+        const meetingIndex = team.dailyMeetings.findIndex(
+            (meeting) => meeting.date.toISOString() === new Date(date).toISOString()
+        );
+        if (meetingIndex !== -1) {
+            const slotExists = team.dailyMeetings[meetingIndex].timeSlots.some(
+                (ts) => ts.slot === slot
+            );
+            if (slotExists) {
+                return res.status(400).send('Slot is already booked');
+            }
+        }
+
+        // Add or update the meeting slot for the team
+        if (meetingIndex === -1) {
+            team.dailyMeetings.push({ date, timeSlots: [{ slot, meeting: updatedLead._id }] });
+        } else {
+            team.dailyMeetings[meetingIndex].timeSlots.push({ slot, meeting: updatedLead._id });
+        }
+
+        await team.save();
+
+        res.status(200).json({ message: 'Meeting fixed successfully', lead: updatedLead, team });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fixing meeting', error: error.message });
+    }
+};
+
 module.exports = {
     createLead,
     extractLeadData,
@@ -352,5 +444,6 @@ module.exports = {
     updateLead,
     deleteLead,
     getLeads,
+    fixMeeting,
     getLeadDetails,
 };

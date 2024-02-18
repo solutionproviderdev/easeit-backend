@@ -99,8 +99,6 @@ const peopleSignup = async (req, res) => {
         // Hash password using bcrypt
         const password = await bcrypt.hash(req.body.password, 12);
 
-        console.log(req.body);
-
         // create a new user
         const newPeople = new People({
             ...req.body,

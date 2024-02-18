@@ -101,7 +101,7 @@ app.use('/teams', teamRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    // getConversationsAndUpdateLeads(io);
+    getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {

@@ -185,54 +185,62 @@ const getMeetingsByDate = async (req, res) => {
 
 const swapMeetingBetweenTeams = async (req, res) => {
     const { sourceTeamId, destinationTeamId, slot } = req.body;
-    const { date } = req.params; // Extracting date from the request parameters
+    const { date } = req.params;
 
     try {
         const sourceTeam = await Team.findById(sourceTeamId);
-        const destinationTeam = await Team.findById(destinationTeamId);
+        let destinationTeam = await Team.findById(destinationTeamId);
 
         if (!sourceTeam || !destinationTeam) {
             return res.status(404).json({ message: 'One or both teams not found' });
         }
 
-        // Find the specific dailyMeeting for the given date
         const sourceDailyMeeting = sourceTeam.dailyMeetings.find((dm) => dm.date.toISOString().split('T')[0] === date);
-        const destinationDailyMeeting = destinationTeam.dailyMeetings.find((dm) => dm.date.toISOString().split('T')[0] === date);
+        let destinationDailyMeeting = destinationTeam.dailyMeetings.find((dm) => dm.date.toISOString().split('T')[0] === date);
 
-        if (!sourceDailyMeeting || !destinationDailyMeeting) {
-            return res.status(404).json({ message: 'Daily meeting not found for the given date' });
+        // If the destination team does not have a dailyMeeting for the given date,
+        // create it and save immediately
+        if (!destinationDailyMeeting) {
+            destinationDailyMeeting = { date: new Date(date), timeSlots: [] };
+            destinationTeam.dailyMeetings.push(destinationDailyMeeting);
+            await destinationTeam.save();
+
+            // Re-fetch the destination team to ensure we're working with the updated document
+            destinationTeam = await Team.findById(destinationTeamId);
+            destinationDailyMeeting = destinationTeam.dailyMeetings.find((dm) => dm.date.toISOString().split('T')[0] === date);
         }
 
-        // Find the specific slots for the given date
-        const sourceSlot = sourceDailyMeeting.timeSlots.find((ts) => ts.slot === slot);
-        const destinationSlot = destinationDailyMeeting.timeSlots.find((ts) => ts.slot === slot);
+        const sourceSlotIndex = sourceDailyMeeting ? sourceDailyMeeting.timeSlots.findIndex(
+            (ts) => ts.slot === slot
+        ) : -1;
+        const destinationSlotIndex = destinationDailyMeeting.timeSlots.findIndex(
+            (ts) => ts.slot === slot
+        );
 
-        // Swap meetings between slots
-        if (sourceSlot && destinationSlot) {
-            // Temporary storage for swap
-            const temp = sourceSlot.meeting;
-            sourceSlot.meeting = destinationSlot.meeting;
-            destinationSlot.meeting = temp;
-        } else if (sourceSlot && !destinationSlot) {
-            // Move meeting to destination if destination slot is empty
-            destinationDailyMeeting.timeSlots.push({ slot, meeting: sourceSlot.meeting });
-            sourceDailyMeeting.timeSlots = sourceDailyMeeting
-            .timeSlots.filter((ts) => ts.slot !== slot);
-        } else if (!sourceSlot && destinationSlot) {
-            // Move meeting to source if source slot is empty (completeness, might not be needed)
-            sourceDailyMeeting.timeSlots.push({ slot, meeting: destinationSlot.meeting });
-            destinationDailyMeeting.timeSlots = destinationDailyMeeting
-            .timeSlots.filter((ts) => ts.slot !== slot);
+        if (sourceSlotIndex > -1) {
+            const sourceSlotMeeting = sourceDailyMeeting.timeSlots[sourceSlotIndex].meeting;
+
+            if (destinationSlotIndex > -1) {
+                // Swap meetings between source and destination slots
+                // eslint-disable-next-line max-len
+                const destinationSlotMeeting = destinationDailyMeeting.timeSlots[destinationSlotIndex].meeting;
+                destinationDailyMeeting.timeSlots[destinationSlotIndex].meeting = sourceSlotMeeting;
+                sourceDailyMeeting.timeSlots[sourceSlotIndex].meeting = destinationSlotMeeting;
+            } else {
+                // Move the meeting to the destination slot
+                destinationDailyMeeting.timeSlots.push({ slot, meeting: sourceSlotMeeting });
+                sourceDailyMeeting.timeSlots.splice(sourceSlotIndex, 1);
+            }
+        } else {
+            if (destinationSlotIndex > -1) {
+                return res.status(400).json({ message: 'Cannot swap. The source slot is empty and the destination slot is already occupied.' });
+            }
         }
 
         await sourceTeam.save();
         await destinationTeam.save();
 
-        res.status(200).json({
-            message: 'Meeting swap/move completed successfully',
-            sourceTeam,
-            destinationTeam
-        });
+        res.status(200).json({ message: 'Meeting swap/move completed successfully', sourceTeam, destinationTeam });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });

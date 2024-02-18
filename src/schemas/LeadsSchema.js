@@ -1,5 +1,31 @@
 const mongoose = require('mongoose');
 
+const addressSchema = new mongoose.Schema(
+    {
+        division: String,
+        district: String,
+        area: String,
+        address: String,
+    },
+    { _id: false }
+);
+
+const meetingDetailsSchema = new mongoose.Schema(
+    {
+        date: Date,
+        slot: {
+            type: String,
+            enum: ['slot_1', 'slot_2', 'slot_3', 'slot_4'],
+            required: true,
+        },
+        team: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Team',
+        },
+    },
+    { _id: false }
+);
+
 const leadSchema = mongoose.Schema(
     {
         CID: String,
@@ -21,6 +47,8 @@ const leadSchema = mongoose.Schema(
             required: true,
             default: 'unread',
         },
+        address: addressSchema,
+        meetingDetails: meetingDetailsSchema,
         meetingStatus: {
             type: String,
             enum: [
@@ -78,7 +106,6 @@ const leadSchema = mongoose.Schema(
             },
         ],
         creName: { type: String, required: true },
-        address: String,
         projectStatus: {
             type: String,
             enum: ['Ready', 'Ongoing', 'Recently'],
