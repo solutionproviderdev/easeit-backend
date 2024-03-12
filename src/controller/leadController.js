@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-return-await */
+const { default: mongoose } = require('mongoose');
 const Lead = require('../schemas/LeadsSchema');
 const generateCustomerID = require('../helpers/CustomerIdGenerator');
 const Team = require('../schemas/teamSchema');
@@ -109,8 +110,15 @@ const getLeads = async (req, res) => {
         // Extract creName and limit from query parameters
         const { creName, limit } = req.query;
 
-        // Build the query
-        let query = Lead.find({});
+        // Build the query populate the crenames name, roal, avater
+        let query = Lead.find({}).populate({
+            path: 'creName',
+            select: 'name role avatar'
+        }).populate({
+            path: 'comment.from',
+            select: 'name role avatar' // Assuming you want to populate similar fields for commenters
+        });
+
         if (creName) {
             // Filter by creName if provided
             query = query.where('creName').equals(creName);
@@ -130,10 +138,25 @@ const getLeads = async (req, res) => {
     }
 };
 
+const getLeadsName = async (req, res) => {
+    try {
+        const leads = await Lead.find({}, 'name _id'); // Select only the name and _id fields
+        res.status(200).json(leads);
+    } catch (error) {
+        res.status(500).json({ error: 'There was a server side error' });
+    }
+};
+
 const getLeadDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        const lead = await Lead.findById(id);
+        const lead = await Lead.findById(id).populate({
+            path: 'creName',
+            select: 'name role avatar'
+        }).populate({
+            path: 'comment.from',
+            select: 'name role avatar' // Assuming you want to populate similar fields for commenters
+        });
 
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
@@ -191,21 +214,42 @@ const addLeads = async (req, res) => {
 };
 
 const addComment = async (req, res) => {
+    const leadId = req.params.id;
+    const { remark } = req.body;
+    // const images = req.files.map((file) => file.path);
+    const images = req.files?.map((file) => `${process.env.SERVER_URL}/images/${file.filename}`);
+
+    if (!mongoose.Types.ObjectId.isValid(leadId)) {
+        return res.status(400).send({ message: 'Invalid Lead ID' });
+    }
+
     try {
-        const leadData = extractLeadData(req.body, req.files);
-        const { id } = req.params;
+        const lead = await Lead.findById(leadId);
 
-        const savedComment = await addCommentToLead(
-            id,
-            leadData.fileNames,
-            leadData.remark,
-            leadData.creName
-        );
+        if (!lead) {
+            return res.status(404).send({ message: 'Lead not found' });
+        }
 
-        res.status(200).json({ message: 'Comment added successfully', savedComment });
+        const comment = {
+            comment: remark,
+            images,
+            from: req.user._id,
+            date: new Date(),
+        };
+
+        // Assuming "comment" is an array in your lead schema
+        lead.comment.push(comment);
+
+        await lead.save();
+
+        const savedComment = { ...comment, from: req.user };
+
+        req.io.emit('commentAdded', { leadId, savedComment });
+
+        res.status(200).send({ message: 'Comment added successfully', data: comment });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: 'There was a server side error' });
+        console.error('Error adding comment to lead:', error);
+        res.status(500).send({ message: 'Internal server error' });
     }
 };
 
@@ -314,12 +358,12 @@ const updateLead = async (req, res) => {
 
 const updateCreName = async (req, res) => {
     const { id } = req.params;
-    const { creName } = req.body;
+    const { creID } = req.body;
 
     try {
         const updatedLead = await Lead.findByIdAndUpdate(
             id,
-            { creName },
+            { creName: creID },
             { new: true } // Return the updated document
         );
 
@@ -446,4 +490,5 @@ module.exports = {
     getLeads,
     fixMeeting,
     getLeadDetails,
+    getLeadsName,
 };

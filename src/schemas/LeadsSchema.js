@@ -86,14 +86,16 @@ const leadSchema = mongoose.Schema(
                 date: Date,
             },
         ],
-        salesExqName: String,
         phone: String,
         visitCharge: Number,
         comment: [
             {
-                images: [String],
                 comment: String,
-                name: String,
+                images: [String],
+                from: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'people',
+                },
                 date: Date,
             },
         ],
@@ -105,7 +107,14 @@ const leadSchema = mongoose.Schema(
                 price: Number,
             },
         ],
-        creName: { type: String, required: true },
+        salesExqName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'people',
+        },
+        creName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'people',
+        },
         projectStatus: {
             type: String,
             enum: ['Ready', 'Ongoing', 'Recently'],
@@ -130,6 +139,7 @@ const leadSchema = mongoose.Schema(
             },
         ],
         proposals: [{ client: Number, proposal: Number }],
+        tags: [String],
     },
     {
         timestamps: true,
