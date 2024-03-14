@@ -1,3 +1,8 @@
+/**
+ * Defines Express routes for a team resource.
+ * Includes CRUD routes and other team-related routes.
+ * Uses team controller middleware functions for route handlers.
+ */
 const express = require('express');
 const {
     createTeam,

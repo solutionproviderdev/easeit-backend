@@ -128,15 +128,31 @@ const listTeams = async (req, res) => {
 const getMeetingsByDate = async (req, res) => {
     const { date } = req.params;
     try {
-        // Fetch all teams
+        // Fetch all teams and set the strict populate options to false
         const allTeams = await Team.find({})
+            .populate(
+                {
+                    path: 'dailyMeetings.timeSlots.meeting',
+                    model: 'lead', // Ensure this matches the name you've given your model
+                    select: 'name status phone address visitCharge workScope projectLocation'
+                }
+            )
             .populate({
                 path: 'dailyMeetings.timeSlots.meeting',
-                model: 'lead', // Ensure this matches the name you've given your model
-                select: 'name status phone address visitCharge workScope creName projectLocation'
+                populate: {
+                    path: 'creName',
+                    model: 'people', // Ensure this is the correct model name
+                    select: 'name avatar role'
+                }
             })
             .populate('leadMember.memberId', 'name')
             .populate('supportMember.memberId', 'name');
+            // .populate({
+            //     // this is not working need to populate crenames name and avater.
+            //     path: 'dailyMeetings.timeSlots.meeting.creName',
+            //     model: 'people',
+            //     select: 'name avatar role'
+            // });
 
         // Iterate through all teams to format the response
         const formattedResponse = allTeams.map((team) => {

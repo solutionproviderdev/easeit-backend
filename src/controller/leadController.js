@@ -28,7 +28,10 @@ const addCommentToLead = async (leadId, images, comment, name) => {
             return { success: true, lead };
         } catch (error) {
             console.error('Error adding comment:', error);
-            return { success: false, error: error.message || 'Internal Server Error' };
+            return {
+                success: false,
+                error: error.message || 'Internal Server Error',
+            };
         }
     }
 };
@@ -56,7 +59,9 @@ function extractLeadData(body, files) {
         salesExqName,
     } = body;
 
-    const fileNames = files?.map((file) => `${process.env.SERVER_URL}/images/${file.filename}`);
+    const fileNames = files?.map(
+        (file) => `${process.env.SERVER_URL}/images/${file.filename}`
+    );
     let workScopes = [];
     if (Array.isArray(workScope)) {
         workScopes = workScope.map((scope) => ({
@@ -89,7 +94,9 @@ function extractLeadData(body, files) {
 
 async function createLead(leadData) {
     const newLead = new Lead({
-        CID: leadData.phone ? generateCustomerID(leadData.name, leadData.phone) : '',
+        CID: leadData.phone
+            ? generateCustomerID(leadData.name, leadData.phone)
+            : '',
         status: leadData.status,
         source: leadData.source,
         creName: leadData.creName,
@@ -111,13 +118,15 @@ const getLeads = async (req, res) => {
         const { creName, limit } = req.query;
 
         // Build the query populate the crenames name, roal, avater
-        let query = Lead.find({}).populate({
-            path: 'creName',
-            select: 'name role avatar'
-        }).populate({
-            path: 'comment.from',
-            select: 'name role avatar' // Assuming you want to populate similar fields for commenters
-        });
+        let query = Lead.find({})
+            .populate({
+                path: 'creName',
+                select: 'name role avatar',
+            })
+            .populate({
+                path: 'comment.from',
+                select: 'name role avatar', // Assuming you want to populate similar fields for commenters
+            });
 
         if (creName) {
             // Filter by creName if provided
@@ -150,13 +159,15 @@ const getLeadsName = async (req, res) => {
 const getLeadDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        const lead = await Lead.findById(id).populate({
-            path: 'creName',
-            select: 'name role avatar'
-        }).populate({
-            path: 'comment.from',
-            select: 'name role avatar' // Assuming you want to populate similar fields for commenters
-        });
+        const lead = await Lead.findById(id)
+            .populate({
+                path: 'creName',
+                select: 'name role avatar',
+            })
+            .populate({
+                path: 'comment.from',
+                select: 'name role avatar', // Assuming you want to populate similar fields for commenters
+            });
 
         if (!lead) {
             return res.status(404).json({ message: 'Lead not found' });
@@ -176,17 +187,21 @@ const addLeads = async (req, res) => {
         // ...
 
         const newLead = new Lead({
-            CID: leadData.phone ? generateCustomerID(leadData.name, leadData.phone) : '',
+            CID: leadData.phone
+                ? generateCustomerID(leadData.name, leadData.phone)
+                : '',
             status: leadData.status,
             source: leadData.source,
             creName: leadData.creName,
             name: leadData.name,
             phone: leadData.phone,
             visitCharge: leadData.visitCharge,
-            meetingData: [{
-                time: leadData.time,
-                date: leadData.date,
-            }],
+            meetingData: [
+                {
+                    time: leadData.time,
+                    date: leadData.date,
+                },
+            ],
             address: leadData.address,
             projectStatus: leadData.projectStatus,
             projectLocation: leadData.projectLocation,
@@ -217,7 +232,9 @@ const addComment = async (req, res) => {
     const leadId = req.params.id;
     const { remark } = req.body;
     // const images = req.files.map((file) => file.path);
-    const images = req.files?.map((file) => `${process.env.SERVER_URL}/images/${file.filename}`);
+    const images = req.files?.map(
+        (file) => `${process.env.SERVER_URL}/images/${file.filename}`
+    );
 
     if (!mongoose.Types.ObjectId.isValid(leadId)) {
         return res.status(400).send({ message: 'Invalid Lead ID' });
@@ -246,7 +263,9 @@ const addComment = async (req, res) => {
 
         req.io.emit('commentAdded', { leadId, savedComment });
 
-        res.status(200).send({ message: 'Comment added successfully', data: comment });
+        res
+            .status(200)
+            .send({ message: 'Comment added successfully', data: comment });
     } catch (error) {
         console.error('Error adding comment to lead:', error);
         res.status(500).send({ message: 'Internal server error' });
@@ -256,8 +275,14 @@ const addComment = async (req, res) => {
 const updateLead = async (req, res) => {
     const { id } = req.params;
     const {
- status, workScops, fileNames, remark, creName, meetingData, ...updateData
-} = extractLeadData(req.body, req.files);
+        status,
+        workScops,
+        fileNames,
+        remark,
+        creName,
+        meetingData,
+        ...updateData
+    } = extractLeadData(req.body, req.files);
 
     try {
         await addCommentToLead(id, fileNames, remark, creName);
@@ -291,16 +316,16 @@ const updateLead = async (req, res) => {
                     || !updateData.projectStatus
                     || !updateData.projectLocation
                 ) {
-                    return res
-                        .status(400)
-                        .json({ message: 'Missing required fields for scheduling a meeting.' });
+                    return res.status(400).json({
+                        message: 'Missing required fields for scheduling a meeting.',
+                    });
                 }
 
                 // Include all fields for 'Meeting Fixed' status
                 update.$set = { ...update.$set, ...updateData };
                 update.$push = {
                     meetingData,
-                    workScope: { $each: updateData.workScopes }
+                    workScope: { $each: updateData.workScopes },
                 };
                 break;
             case 'Meeting Reschedule':
@@ -371,7 +396,9 @@ const updateCreName = async (req, res) => {
             return res.status(404).json({ message: 'Lead not found' });
         }
 
-        res.status(200).json({ message: 'CRE name updated successfully', updatedLead });
+        res
+            .status(200)
+            .json({ message: 'CRE name updated successfully', updatedLead });
     } catch (error) {
         // console.log(error);
         res.status(500).json({ error: 'There was a server side error' });
@@ -387,6 +414,20 @@ const deleteLead = async (req, res) => {
     }
 };
 
+/**
+ * Fixes a meeting for the lead with the given ID.
+ *
+ * Validates that the lead exists and meeting is not already fixed.
+ * Updates the lead with the provided meeting details.
+ * Checks if the team and time slot is available on the given date.
+ * Updates the team's schedule with the new meeting slot if available.
+ *
+ * Returns updated lead and team on success.
+ * Returns 404 if lead not found.
+ * Returns 400 if meeting already fixed for lead.
+ * Returns 400 if slot already booked for team.
+ * Returns 500 on any error.
+ */
 const fixMeeting = async (req, res) => {
     const {
         division,
@@ -400,6 +441,7 @@ const fixMeeting = async (req, res) => {
         phone,
         visitCharge,
         projectStatus,
+        projectLocation,
         workScope, // This is expected to be an array of strings representing the scope
     } = req.body;
 
@@ -414,7 +456,9 @@ const fixMeeting = async (req, res) => {
 
         // If the lead's status is already "Meeting Fixed", return appropriate response
         if (existingLead.status === 'Meeting Fixed') {
-            return res.status(400).json({ message: 'Meeting is already fixed for this lead' });
+            return res
+                .status(400)
+                .json({ message: 'Meeting is already fixed for this lead' });
         }
 
         // Transform workScope array of strings into
@@ -434,11 +478,12 @@ const fixMeeting = async (req, res) => {
                     'meetingDetails.slot': slot,
                     'meetingDetails.team': teamId,
                     name,
-                    status: 'Meeting Fixed', // Update status to "Meeting Fixed"
+                    status: 'Meeting Fixed',
                     phone,
                     visitCharge,
                     projectStatus,
-                    workScope: workScopeObjects, // Use the transformed workScopeObjects
+                    projectLocation,
+                    workScope: workScopeObjects,
                 },
             },
             { new: true, runValidators: true }
@@ -464,17 +509,63 @@ const fixMeeting = async (req, res) => {
 
         // Add or update the meeting slot for the team
         if (meetingIndex === -1) {
-            team.dailyMeetings.push({ date, timeSlots: [{ slot, meeting: updatedLead._id }] });
+            team.dailyMeetings.push({
+                date,
+                timeSlots: [{ slot, meeting: updatedLead._id }],
+            });
         } else {
-            team.dailyMeetings[meetingIndex].timeSlots.push({ slot, meeting: updatedLead._id });
+            team.dailyMeetings[meetingIndex].timeSlots.push({
+                slot,
+                meeting: updatedLead._id,
+            });
         }
 
         await team.save();
 
-        res.status(200).json({ message: 'Meeting fixed successfully', lead: updatedLead, team });
+        // make a socket emit to update the team's schedule
+
+        // Make the payload
+        const payload = { };
+
+        // populate crename in the saved Lead
+        await updatedLead.populate('creName', 'name avatar');
+
+        // add the meetingDetails to the payload
+        payload.meetingDetails = {
+            _id: updatedLead._id,
+            name: updatedLead.name,
+            status: updatedLead.status,
+            phone: updatedLead.phone,
+            address: updatedLead.address,
+            visitCharge: updatedLead.visitCharge,
+            workScope: updatedLead.workScope,
+            projectLocation: updatedLead.projectLocation,
+        };
+
+        // add the populated creNames name and avater
+        payload.meetingDetails.creName = {
+            _id: updatedLead.creName._id,
+            name: updatedLead.creName.name,
+            avatar: updatedLead.creName.avatar,
+        };
+
+        // add the date, slot and the team id to the payload
+        payload.date = date;
+        payload.slot = slot;
+        payload.teamId = teamId;
+
+        // emit the payload to all
+        req.io.emit('meeting-fixed', payload);
+
+        // Respond with the updated lead and team information
+        res
+            .status(200)
+            .json({ message: 'Meeting fixed successfully', lead: updatedLead, team });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error fixing meeting', error: error.message });
+        res
+            .status(500)
+            .json({ message: 'Error fixing meeting', error: error.message });
     }
 };
 
