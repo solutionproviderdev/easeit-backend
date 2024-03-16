@@ -256,6 +256,18 @@ const swapMeetingBetweenTeams = async (req, res) => {
         await sourceTeam.save();
         await destinationTeam.save();
 
+        // Make socket emit event to notify all clients of the swap
+        // make the payload object with desination team and source team id
+        const payload = {
+            sourceTeamId,
+            destinationTeamId,
+            date,
+            slot
+        };
+
+        // emit the event to all clients
+        req.io.emit('meeting-swap-between-teams', payload);
+
         res.status(200).json({ message: 'Meeting swap/move completed successfully', sourceTeam, destinationTeam });
     } catch (error) {
         console.error(error);
@@ -315,6 +327,19 @@ const swapSlotsWithinTeam = async (req, res) => {
         }
 
         await team.save();
+
+        // Make socket emit event to notify all clients of the swap
+        // make the payload object with desination slot with the team id
+        const payload = {
+            teamId,
+            date,
+            sourceSlot,
+            destinationSlot
+        };
+
+        // emit the event to all clients
+        req.io.emit('meeting-swap-within-team', payload);
+
         res.status(200).json({
             message: 'Slots swapped/moved successfully within the same team',
             team

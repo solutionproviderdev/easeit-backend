@@ -6,32 +6,28 @@ const generateCustomerID = require('../helpers/CustomerIdGenerator');
 const Team = require('../schemas/teamSchema');
 
 // Helper Functions
-const addCommentToLead = async (leadId, images, comment, name) => {
-    if (comment && name) {
+const addCommentToLead = async (leadId, images, comment, user, io) => {
+    if (comment && user) {
         try {
             const lead = await Lead.findById(leadId);
 
-            if (!lead) {
-                throw new Error('Lead not found');
-            }
-
             const newComment = {
-                images,
                 comment,
-                name,
+                images,
+                from: user._id,
                 date: new Date(),
             };
 
+            // Assuming "comment" is an array in your lead schema
             lead.comment.push(newComment);
+
             await lead.save();
 
-            return { success: true, lead };
+            const savedComment = { ...comment, from: user };
+
+            io.emit('commentAdded', { leadId, savedComment });
         } catch (error) {
-            console.error('Error adding comment:', error);
-            return {
-                success: false,
-                error: error.message || 'Internal Server Error',
-            };
+            console.error('Error adding comment to lead:', error);
         }
     }
 };
@@ -121,6 +117,9 @@ const getLeads = async (req, res) => {
         let query = Lead.find({})
             .populate({
                 path: 'creName',
+                select: 'name role avatar',
+            }).populate({
+                path: 'salesExqName',
                 select: 'name role avatar',
             })
             .populate({
@@ -272,7 +271,7 @@ const addComment = async (req, res) => {
     }
 };
 
-const updateLead = async (req, res) => {
+const updateLeadbyStatus = async (req, res) => {
     const { id } = req.params;
     const {
         status,
@@ -285,7 +284,7 @@ const updateLead = async (req, res) => {
     } = extractLeadData(req.body, req.files);
 
     try {
-        await addCommentToLead(id, fileNames, remark, creName);
+        await addCommentToLead(id, fileNames, remark, req.user, req.io);
 
         // Use findById to get the lead data by ID
         const lead = await Lead.findById(id);
@@ -341,10 +340,32 @@ const updateLead = async (req, res) => {
         const updatedLead = await Lead.findByIdAndUpdate(id, update, {
             new: true,
             runValidators: true,
+        }).populate({
+            path: 'creName',
+            select: 'name role avatar',
+        }).populate({
+            path: 'salesExqName',
+            select: 'name role avatar',
+        })
+        .populate({
+            path: 'comment.from',
+            select: 'name role avatar', // Assuming you want to populate similar fields for commenters
         });
+
         if (!updatedLead) {
             return res.status(404).json({ message: 'Lead not found.' });
         }
+
+        // prepare data for socket.io event
+        const socketPayload = {
+            leadId: id,
+            updatedLead,
+        };
+
+        // emit the event
+        req.io.emit('leadStatusUpdated', socketPayload);
+
+        // send response to client
         res.status(200).json({
             message: `Lead status updated to '${status}'.`,
             updatedLead,
@@ -576,7 +597,8 @@ module.exports = {
     addLeads,
     addComment,
     updateCreName,
-    updateLead,
+    // updateLead,
+    updateLeadbyStatus,
     deleteLead,
     getLeads,
     fixMeeting,

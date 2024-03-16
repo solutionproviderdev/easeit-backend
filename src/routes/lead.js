@@ -3,7 +3,7 @@ const upload = require('../config/multerconfig');
 const {
     addLeads,
     addComment,
-    updateLead,
+    updateLeadbyStatus,
     deleteLead,
     updateCreName,
     getLeads,
@@ -34,7 +34,7 @@ leadRouter.post('/comment/:id', checkLogin, upload.array('images'), addComment);
 leadRouter.put('/fixMeeting/:id', fixMeeting);
 
 // Update a lead's information by ID with optional file uploads (limited to 3 files)
-leadRouter.put('/:id', checkLogin, upload.array('file', 3), updateLead);
+leadRouter.put('/:id', checkLogin, upload.array('images', 3), updateLeadbyStatus);
 
 // Update the CRE name of a specific lead by ID
 leadRouter.put('/:id/creName', checkLogin, updateCreName);

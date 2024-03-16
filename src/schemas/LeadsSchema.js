@@ -72,14 +72,8 @@ const leadSchema = mongoose.Schema(
             enum: ['Facebook', 'WhatsApp', 'Web', 'By Phone'],
             required: true,
         },
-        nextCallData: {
-            time: String,
-            date: Date,
-        },
-        nextMsgData: {
-            time: String,
-            date: String,
-        },
+        nextCallData: Date,
+        nextMsgData: Date,
         meetingData: [
             {
                 time: String,
