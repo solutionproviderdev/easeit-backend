@@ -2,14 +2,15 @@ const express = require('express');
 const upload = require('../config/multerconfig');
 const {
     addLeads,
-    addComment,
-    updateLeadbyStatus,
-    deleteLead,
-    updateCreName,
     getLeads,
-    getLeadDetails,
     fixMeeting,
+    deleteLead,
+    addComment,
     getLeadsName,
+    updateCreName,
+    getLeadDetails,
+    rescheduleMeeting,
+    updateLeadbyStatus,
 } = require('../controller/leadController');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 
@@ -32,6 +33,9 @@ leadRouter.post('/comment/:id', checkLogin, upload.array('images'), addComment);
 
 // Update a lead to fix a meeting
 leadRouter.put('/fixMeeting/:id', fixMeeting);
+
+// Update a lead to Rescheduled Meeting
+leadRouter.put('/rescheduleMeeting/:id', rescheduleMeeting);
 
 // Update a lead's information by ID with optional file uploads (limited to 3 files)
 leadRouter.put('/:id', checkLogin, upload.array('images', 3), updateLeadbyStatus);

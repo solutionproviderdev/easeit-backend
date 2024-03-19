@@ -165,6 +165,7 @@ const getMeetingsByDate = async (req, res) => {
                     date: dailyMeeting.date,
                     timeSlots: dailyMeeting.timeSlots.map((timeSlot) => ({
                         slot: timeSlot.slot,
+                        status: timeSlot?.status,
                         meetingDetails: timeSlot.meeting ? {
                             _id: timeSlot.meeting._id,
                             name: timeSlot.meeting.name,
@@ -200,10 +201,19 @@ const getMeetingsByDate = async (req, res) => {
 };
 
 const swapMeetingBetweenTeams = async (req, res) => {
-    const { sourceTeamId, destinationTeamId, slot } = req.body;
+    const {
+ sourceTeamId, destinationTeamId, slot, leadId
+} = req.body;
     const { date } = req.params;
 
     try {
+        // Check if the lead exists
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found.' });
+        }
+
         const sourceTeam = await Team.findById(sourceTeamId);
         let destinationTeam = await Team.findById(destinationTeamId);
 
@@ -256,6 +266,10 @@ const swapMeetingBetweenTeams = async (req, res) => {
         await sourceTeam.save();
         await destinationTeam.save();
 
+        // update the leads meetingDetails objects last array
+        lead.meetingDetails[lead.meetingDetails.length - 1].team = destinationTeamId;
+        await lead.save();
+
         // Make socket emit event to notify all clients of the swap
         // make the payload object with desination team and source team id
         const payload = {
@@ -268,7 +282,12 @@ const swapMeetingBetweenTeams = async (req, res) => {
         // emit the event to all clients
         req.io.emit('meeting-swap-between-teams', payload);
 
-        res.status(200).json({ message: 'Meeting swap/move completed successfully', sourceTeam, destinationTeam });
+        res.status(200).json({
+            message: 'Meeting swap/move completed successfully',
+            sourceTeam,
+            destinationTeam,
+            meetingDetails: lead.meetingDetails
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -276,10 +295,15 @@ const swapMeetingBetweenTeams = async (req, res) => {
 };
 
 const swapSlotsWithinTeam = async (req, res) => {
-    const { teamId, sourceSlot, destinationSlot } = req.body;
+    const {
+ teamId, sourceSlot, destinationSlot, leadId
+} = req.body;
     const { date } = req.params; // Extracting date from the request parameters
-
+    console.log(leadId);
     try {
+        // Check if the lead exists
+        const lead = await Lead.findById(leadId);
+
         const team = await Team.findById(teamId);
         if (!team) {
             return res.status(404).json({ message: 'Team not found' });
@@ -328,6 +352,10 @@ const swapSlotsWithinTeam = async (req, res) => {
 
         await team.save();
 
+        // update the leads meetingDetails objects last array
+        lead.meetingDetails[lead.meetingDetails.length - 1].slot = destinationSlot;
+        await lead.save();
+
         // Make socket emit event to notify all clients of the swap
         // make the payload object with desination slot with the team id
         const payload = {
@@ -342,7 +370,8 @@ const swapSlotsWithinTeam = async (req, res) => {
 
         res.status(200).json({
             message: 'Slots swapped/moved successfully within the same team',
-            team
+            team,
+            meetingDetails: lead.meetingDetails,
         });
     } catch (error) {
         console.error(error);

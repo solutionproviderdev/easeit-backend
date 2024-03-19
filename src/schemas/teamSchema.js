@@ -36,6 +36,10 @@ const teamSchema = new mongoose.Schema(
                             required: true,
                             enum: ['slot_1', 'slot_2', 'slot_3', 'slot_4'],
                         },
+                        status: {
+                            type: String,
+                            enum: ['Scheduled', 'Rescheduled', 'Completed'],
+                        },
                         meeting: {
                             type: mongoose.Schema.Types.ObjectId,
                             ref: 'lead',

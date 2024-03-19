@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-return-await */
 const { default: mongoose } = require('mongoose');
@@ -346,8 +347,7 @@ const updateLeadbyStatus = async (req, res) => {
         }).populate({
             path: 'salesExqName',
             select: 'name role avatar',
-        })
-        .populate({
+        }).populate({
             path: 'comment.from',
             select: 'name role avatar', // Assuming you want to populate similar fields for commenters
         });
@@ -449,6 +449,7 @@ const deleteLead = async (req, res) => {
  * Returns 400 if slot already booked for team.
  * Returns 500 on any error.
  */
+
 const fixMeeting = async (req, res) => {
     const {
         division,
@@ -495,9 +496,7 @@ const fixMeeting = async (req, res) => {
                     'address.district': district,
                     'address.area': area,
                     'address.address': detailedAddress,
-                    'meetingDetails.date': date,
-                    'meetingDetails.slot': slot,
-                    'meetingDetails.team': teamId,
+                    meetingDetails: [{ date, slot, team: teamId }],
                     name,
                     status: 'Meeting Fixed',
                     phone,
@@ -523,6 +522,7 @@ const fixMeeting = async (req, res) => {
             const slotExists = team.dailyMeetings[meetingIndex].timeSlots.some(
                 (ts) => ts.slot === slot
             );
+
             if (slotExists) {
                 return res.status(400).send('Slot is already booked');
             }
@@ -590,6 +590,118 @@ const fixMeeting = async (req, res) => {
     }
 };
 
+const rescheduleMeeting = async (req, res) => {
+    const { id } = req.params; // Lead ID
+    const { date, slot, team: newTeamId } = req.body;
+
+    try {
+        // Check if the lead exists
+        const lead = await Lead.findById(id);
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found.' });
+        }
+
+        // Check if the team exists
+        const newTeam = await Team.findById(newTeamId);
+        if (!newTeam) {
+            return res.status(404).json({ message: 'New team not found.' });
+        }
+
+        // Validate if the new slot is available in the new team
+        const isSlotAvailable = newTeam.dailyMeetings
+        .every((meeting) => meeting.date.toISOString() !== new Date(date).toISOString()
+                   || !meeting.timeSlots.some((ts) => ts.slot === slot));
+
+        if (!isSlotAvailable) {
+            return res.status(400).json({ message: 'The requested slot is already booked in the new team.' });
+        }
+
+        // change the status of the lead to 'Meeting Rescheduled'
+        lead.status = 'Meeting Reschedule';
+
+        // Change the status of the old teams meeting slot to 'Rescheduled'.
+        const oldTeams = await Team.find({ 'dailyMeetings.timeSlots.meeting': id });
+        // Assuming you've found the oldTeams correctly before this section
+        if (oldTeams && oldTeams.length) {
+            const updates = oldTeams.map(async (team) => {
+                team.dailyMeetings.forEach((meeting) => {
+                    meeting.timeSlots.forEach((timeSlot) => {
+                        if (String(timeSlot.meeting) === String(id)) {
+                            timeSlot.status = 'Rescheduled'; // Update the status
+                        }
+                    });
+                });
+                return await team.save();
+            });
+
+            // Wait for all the save operations to complete
+            await Promise.all(updates);
+        }
+
+        // Add the lead to the new team's meeting slot
+        const meetingDate = new Date(date);
+        const existingMeetingIndex = newTeam.dailyMeetings
+        .findIndex((m) => m.date.toISOString() === meetingDate.toISOString());
+        if (existingMeetingIndex >= 0) {
+            newTeam.dailyMeetings[existingMeetingIndex].timeSlots.push({ slot, meeting: id });
+        } else {
+            newTeam.dailyMeetings.push({ date: meetingDate, timeSlots: [{ slot, meeting: id }] });
+        }
+        await newTeam.save();
+
+        // Update the lead's meeting details
+        lead.meetingDetails.push({ date: meetingDate, slot, team: newTeamId });
+        const updatedLead = await lead.save();
+
+        // make a socket emit to update the team's schedule
+        // Make the payload
+        const payload = { };
+
+        // populate crename in the saved Lead
+        await updatedLead.populate('creName', 'name avatar');
+
+        // add the meetingDetails to the payload
+        payload.meetingDetails = {
+            _id: updatedLead._id,
+            name: updatedLead.name,
+            status: updatedLead.status,
+            phone: updatedLead.phone,
+            address: updatedLead.address,
+            visitCharge: updatedLead.visitCharge,
+            workScope: updatedLead.workScope,
+            projectLocation: updatedLead.projectLocation,
+        };
+
+        // add the populated creNames name and avater
+        payload.meetingDetails.creName = {
+            _id: updatedLead.creName._id,
+            name: updatedLead.creName.name,
+            avatar: updatedLead.creName.avatar,
+        };
+
+        // add the date, slot and the team id to the payload
+        payload.date = date;
+        payload.slot = slot;
+        payload.teamId = newTeamId;
+
+        // emit the payload to all
+        req.io.emit('meeting-fixed', payload);
+
+        // send the old meting with status 'Rescheduled.
+
+        // make the payload by getting the last teamID and slot
+        const lastMeetingDetails = updatedLead
+        .meetingDetails[updatedLead.meetingDetails.length - 2];
+
+        req.io.emit('meeting-rescheduled', lastMeetingDetails);
+
+        res.json({ message: 'Meeting rescheduled successfully', lead, newTeam });
+    } catch (error) {
+        console.error('Error rescheduling meeting:', error);
+        res.status(500).json({ message: 'Error rescheduling meeting', error: error.toString() });
+    }
+};
+
 module.exports = {
     createLead,
     extractLeadData,
@@ -599,6 +711,7 @@ module.exports = {
     updateCreName,
     // updateLead,
     updateLeadbyStatus,
+    rescheduleMeeting,
     deleteLead,
     getLeads,
     fixMeeting,

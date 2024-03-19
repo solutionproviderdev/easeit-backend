@@ -48,7 +48,7 @@ const leadSchema = mongoose.Schema(
             default: 'unread',
         },
         address: addressSchema,
-        meetingDetails: meetingDetailsSchema,
+        meetingDetails: [meetingDetailsSchema],
         meetingStatus: {
             type: String,
             enum: [
