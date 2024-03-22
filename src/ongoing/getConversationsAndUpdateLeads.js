@@ -79,6 +79,8 @@ const getConversationsAndUpdateLeads = async (io) => {
                         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
                         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
                         createdAt: savedLead.createdAt,
+                        creName: savedLead.creName,
+                        status: savedLead.status,
                         _id: savedLead._id,
                     };
 
@@ -96,7 +98,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                         fbSenderID,
                         messages,
                         source: 'Facebook',
-                        creName: cre || 'Un Assigned',
+                        creName: cre,
                     });
                     const savedNewLead = await newLead.save();
                     const socketPayload = {
@@ -114,6 +116,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                     // Socket payload for new Lead with populated data
                     const socketPayloadNewLead = {
                         ...savedNewLead._doc,
+                        status: savedNewLead.status,
                         creName: await People.findOne({ _id: cre }).select('name roal avatar'),
                     };
 
@@ -122,6 +125,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                 }
             } catch (innerError) {
                 logError('Error processing a single conversation', innerError);
+                console.log(innerError);
                 // eslint-disable-next-line no-continue
                 continue; // Move to the next conversation
             }
