@@ -7,8 +7,10 @@ function generateCustomerID(name, phone) {
     // Get the first three letters of the name
     const namePrefix = name.substring(0, 3).toUpperCase();
 
+    console.log(phone.toString());
+
     // Extract the last three digits from the phone number (assuming phone is a string)
-    const phoneSuffix = phone.slice(-3);
+    const phoneSuffix = phone.toString().slice(-3);
 
     // Combine the name prefix and phone suffix to create the customer ID
     const id = `${namePrefix}${phoneSuffix}`;

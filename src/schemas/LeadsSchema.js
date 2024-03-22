@@ -1,5 +1,31 @@
 const mongoose = require('mongoose');
 
+const addressSchema = new mongoose.Schema(
+    {
+        division: String,
+        district: String,
+        area: String,
+        address: String,
+    },
+    { _id: false }
+);
+
+const meetingDetailsSchema = new mongoose.Schema(
+    {
+        date: Date,
+        slot: {
+            type: String,
+            enum: ['slot_1', 'slot_2', 'slot_3', 'slot_4'],
+            required: true,
+        },
+        team: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Team',
+        },
+    },
+    { _id: false }
+);
+
 const leadSchema = mongoose.Schema(
     {
         CID: String,
@@ -21,6 +47,8 @@ const leadSchema = mongoose.Schema(
             required: true,
             default: 'unread',
         },
+        address: addressSchema,
+        meetingDetails: [meetingDetailsSchema],
         meetingStatus: {
             type: String,
             enum: [
@@ -44,28 +72,24 @@ const leadSchema = mongoose.Schema(
             enum: ['Facebook', 'WhatsApp', 'Web', 'By Phone'],
             required: true,
         },
-        nextCallData: {
-            time: String,
-            date: Date,
-        },
-        nextMsgData: {
-            time: String,
-            date: String,
-        },
+        nextCallData: Date,
+        nextMsgData: Date,
         meetingData: [
             {
                 time: String,
                 date: Date,
             },
         ],
-        salesExqName: String,
         phone: String,
         visitCharge: Number,
         comment: [
             {
-                images: [String],
                 comment: String,
-                name: String,
+                images: [String],
+                from: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'people',
+                },
                 date: Date,
             },
         ],
@@ -77,8 +101,14 @@ const leadSchema = mongoose.Schema(
                 price: Number,
             },
         ],
-        creName: { type: String, required: true },
-        address: String,
+        salesExqName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'people',
+        },
+        creName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'people',
+        },
         projectStatus: {
             type: String,
             enum: ['Ready', 'Ongoing', 'Recently'],
@@ -103,6 +133,7 @@ const leadSchema = mongoose.Schema(
             },
         ],
         proposals: [{ client: Number, proposal: Number }],
+        tags: [String],
     },
     {
         timestamps: true,

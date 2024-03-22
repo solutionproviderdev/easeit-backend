@@ -21,6 +21,9 @@ const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpd
 const fbMessageRouter = require('./routes/FbMessege');
 const messageRouter = require('./routes/Message');
 const conversationRouter = require('./routes/conversation');
+const mapDataRouter = require('./routes/mapDataRouters');
+const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
+const teamRouter = require('./routes/team');
 
 // Initialize app
 const app = express();
@@ -100,11 +103,18 @@ app.use('/meetings', meetingsRouter);
 app.use('/fbmessage', fbMessageRouter);
 app.use('/messages', messageRouter);
 app.use('/conversations', conversationRouter);
+app.use('/map', mapDataRouter);
+app.use('/teams', teamRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
     getConversationsAndUpdateLeads(io);
 }, 8000);
+
+// const fetchAllMapData = async () => {
+//     console.log('Hii...!');
+//     await fetchAndStoreDarazData();
+// };
 
 // 404 error handling
 app.use(notFoundHandler);
@@ -122,4 +132,6 @@ server.listen(process.env.PORT, () => {
     console.log(`💻 Node version: ${nodeVersion}`);
     console.log(`🕒 Current Time: ${currentTime}`);
     console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
+
+    // fetchAllMapData();
 });

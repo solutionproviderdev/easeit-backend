@@ -2,9 +2,9 @@ const Lead = require('../schemas/LeadsSchema');
 
 const getAllMeetings = async (req, res) => {
     try {
-        const meetings = await Lead.find({ status: 'Meeting Fixed' }).select(
-            'meetingData name creName phone address visitCharge salesExqName workScope status'
-        );
+        const meetings = await Lead.find({ status: 'Meeting Fixed' })
+            .select('meetingData name phone address visitCharge salesExqName workScope status')
+            .populate({ path: 'creName', select: 'name avatar role' });
         res.status(200).json(meetings);
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving meetings', error: error.message });

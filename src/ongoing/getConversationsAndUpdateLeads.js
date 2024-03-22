@@ -1,9 +1,15 @@
+/**
+ * Fetches conversations from the Facebook Graph API using the provided page access token,
+ * updates existing leads or creates new leads with the conversation messages,
+ * and emits socket.io events when new messages are added.
+ */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const axios = require('axios');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
+const People = require('../schemas/PeopleSchema');
 
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
@@ -65,6 +71,8 @@ const getConversationsAndUpdateLeads = async (io) => {
                         lead.lastMsg = messages[messages.length - 1].content;
                     }
                     const savedLead = await lead.save();
+
+                    // Sockt Payload for new Conversation.
                     const socketPayload = {
                         name: savedLead.name,
                         lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
@@ -74,11 +82,10 @@ const getConversationsAndUpdateLeads = async (io) => {
                         _id: savedLead._id,
                     };
 
-                    // Emit socket io action
+                    // Emit socket io action for conversation.
                     io.emit('conversation', socketPayload);
                 } else {
                     const cre = await findCREWithLowestLeads();
-
                     // Create new Lead
                     const newLead = new Lead({
                         // ...new lead data
@@ -101,8 +108,17 @@ const getConversationsAndUpdateLeads = async (io) => {
                         _id: savedNewLead._id,
                     };
 
-                    // Emit socket io action
+                    // Emit socket io action for new Conversations.
                     io.emit('conversation', socketPayload);
+
+                    // Socket payload for new Lead with populated data
+                    const socketPayloadNewLead = {
+                        ...savedNewLead._doc,
+                        creName: await People.findOne({ _id: cre }).select('name roal avatar'),
+                    };
+
+                    // Emit socket io action for new Lead.
+                    io.emit('newLead', { newLead: socketPayloadNewLead });
                 }
             } catch (innerError) {
                 logError('Error processing a single conversation', innerError);
