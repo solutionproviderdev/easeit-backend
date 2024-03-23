@@ -205,6 +205,7 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                     lastMessage: { $last: '$messages.content' },
                     lastMessageTime: { $last: '$messages.date' },
                     sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
                 },
             },
             {
@@ -213,7 +214,9 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                     lastMessage: 1,
                     lastMessageTime: 1,
                     createdAt: 1,
+                    status: 1,
                     sentByMe: 1,
+                    creName: 1,
                 },
             },
         ])

@@ -404,12 +404,14 @@ const updateLeadbyStatus = async (req, res) => {
 
 const updateCreName = async (req, res) => {
     const { id } = req.params;
-    const { creID } = req.body;
+    const { creId } = req.body;
+
+    console.log(id, creId);
 
     try {
         const updatedLead = await Lead.findByIdAndUpdate(
             id,
-            { creName: creID },
+            { creName: creId },
             { new: true } // Return the updated document
         );
 
@@ -483,6 +485,15 @@ const fixMeeting = async (req, res) => {
                 .json({ message: 'Meeting is already fixed for this lead' });
         }
 
+        // Check if the lead is assigned to any cre if not assigned to the user
+        if (!existingLead.creName) {
+            // Assigned to the user
+            existingLead.creName = req.user.id;
+
+            // save the change
+            await existingLead.save();
+        }
+
         // Transform workScope array of strings into
         // an array of objects with only the scope property
         const workScopeObjects = workScope.map((scope) => ({ scope }));
@@ -551,6 +562,13 @@ const fixMeeting = async (req, res) => {
         // populate crename in the saved Lead
         await updatedLead.populate('creName', 'name avatar');
 
+        const populatedLead = await Lead.findById(id)
+            .populate('creName', 'name avatar')
+            .populate({
+                path: 'comment.from',
+                select: 'name role avatar', // Assuming you want to populate similar fields for commenters
+            });
+
         // add the meetingDetails to the payload
         payload.meetingDetails = {
             _id: updatedLead._id,
@@ -577,6 +595,7 @@ const fixMeeting = async (req, res) => {
 
         // emit the payload to all
         req.io.emit('meeting-fixed', payload);
+        req.io.emit('leadUpdate', { leadId: id, updatedLead: populatedLead });
 
         // Respond with the updated lead and team information
         res
