@@ -29,7 +29,7 @@ const getConversationsAndUpdateLeads = async (io) => {
 
         // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
             { timeout: 5000 }
         );
 
@@ -44,14 +44,26 @@ const getConversationsAndUpdateLeads = async (io) => {
 
                 const fbSenderID = otherParticipant.id;
                 const reversedMessages = [...conversation.messages.data].reverse();
-                const messages = reversedMessages.map((msg) => ({
-                    messageId: msg.id,
-                    content: msg.message,
-                    senderId: msg.from.id,
-                    senderName: msg.from.name,
-                    sentByMe: msg.from.name === 'Solution Provider',
-                    date: Date.now(),
-                }));
+                // Assuming this is part of the loop where you process each message
+                const messages = reversedMessages.map((msg) => {
+                    // Initialize an empty array to hold attachment URLs
+                    let fileUrl = [];
+
+                    // Check if the message has attachments and extract URLs
+                    if (msg.attachments && msg.attachments.data.length > 0) {
+                        fileUrl = msg.attachments.data.map((att) => att.image_data.url);
+                    }
+
+                    return {
+                        messageId: msg.id,
+                        content: msg.message,
+                        senderId: msg.from.id,
+                        senderName: msg.from.name,
+                        sentByMe: msg.from.name === 'Solution Provider',
+                        date: Date.now(),
+                        fileUrl,
+                    };
+                });
 
                 const lead = await Lead.findOne({ fbSenderID });
 

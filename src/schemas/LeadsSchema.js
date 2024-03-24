@@ -10,6 +10,19 @@ const addressSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const messageSchema = new mongoose.Schema(
+    {
+        messageId: String,
+        content: String,
+        senderId: String,
+        sentByMe: { type: Boolean, default: false },
+        fileUrl: [String],
+        isSticker: { type: Boolean, default: false },
+        date: { type: Date, require: true },
+    },
+    { _id: true }
+);
+
 const meetingDetailsSchema = new mongoose.Schema(
     {
         date: Date,
@@ -122,16 +135,7 @@ const leadSchema = mongoose.Schema(
         projectValue: Number,
         mbSheetNo: String,
         transportCost: Number,
-        messages: [
-            {
-                messageId: String,
-                content: String,
-                senderId: String,
-                sentByMe: { type: Boolean, default: false },
-                fileUrl: String,
-                date: { type: Date, require: true },
-            },
-        ],
+        messages: [messageSchema],
         proposals: [{ client: Number, proposal: Number }],
         tags: [String],
     },
