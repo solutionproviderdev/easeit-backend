@@ -5,6 +5,7 @@ const { default: mongoose } = require('mongoose');
 const Lead = require('../schemas/LeadsSchema');
 const generateCustomerID = require('../helpers/CustomerIdGenerator');
 const Team = require('../schemas/teamSchema');
+const People = require('../schemas/PeopleSchema');
 
 // Helper Functions
 const addCommentToLead = async (leadId, images, comment, user, io) => {
@@ -418,6 +419,22 @@ const updateCreName = async (req, res) => {
         if (!updatedLead) {
             return res.status(404).json({ message: 'Lead not found' });
         }
+
+        // prepare data for socket.io event
+        const cre = await People.findById(creId);
+
+        const socketPayload = {
+            leadId: id,
+            updatedCre: {
+                _id: creId,
+                name: cre.name,
+                role: cre.role,
+                avatar: cre.avatar,
+            },
+        };
+
+        // emit the event
+        req.io.emit('creNameUpdated', socketPayload);
 
         res
             .status(200)
