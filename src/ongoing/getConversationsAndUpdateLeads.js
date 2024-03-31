@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /**
  * Fetches conversations from the Facebook Graph API using the provided page access token,
  * updates existing leads or creates new leads with the conversation messages,
@@ -6,6 +7,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const axios = require('axios');
+const moment = require('moment');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
@@ -29,7 +31,7 @@ const getConversationsAndUpdateLeads = async (io) => {
 
         // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
             { timeout: 5000 }
         );
 
@@ -50,7 +52,11 @@ const getConversationsAndUpdateLeads = async (io) => {
                     let fileUrl = [];
 
                     // Check if the message has attachments and extract URLs
-                    if (msg.attachments && msg.attachments.data.length > 0) {
+                    if (
+                        msg.attachments
+                        && msg.attachments.data.length > 0
+                        && msg.attachments.data[0].image_data
+                    ) {
                         fileUrl = msg.attachments.data.map((att) => att.image_data.url);
                     }
 
@@ -60,7 +66,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                         senderId: msg.from.id,
                         senderName: msg.from.name,
                         sentByMe: msg.from.name === 'Solution Provider',
-                        date: Date.now(),
+                        date: moment(msg.created_time).format('LLL'),
                         fileUrl,
                     };
                 });
@@ -100,6 +106,9 @@ const getConversationsAndUpdateLeads = async (io) => {
                     io.emit('conversation', socketPayload);
                 } else {
                     const cre = await findCREWithLowestLeads();
+                    // First Message Time
+                    const firstMessageTime = messages[0].date;
+
                     // Create new Lead
                     const newLead = new Lead({
                         // ...new lead data
@@ -111,6 +120,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                         messages,
                         source: 'Facebook',
                         creName: cre,
+                        createdAt: new Date(firstMessageTime),
                     });
                     const savedNewLead = await newLead.save();
                     const socketPayload = {
