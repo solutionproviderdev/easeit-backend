@@ -8,6 +8,7 @@ const {
     sendFile,
     getSortedLeads,
     getAllLeads,
+    sendMessageWithAttachment,
     getLeadDetailsWithLastMessage,
 } = require('../controller/FbMessageController');
 const upload = require('../config/multerconfig');
@@ -26,6 +27,14 @@ fbMessageRouter.get('/conversations', checkLogin, getLeadDetailsWithLastMessage)
 
 // Get All Meterials
 fbMessageRouter.get('/:id', checkLogin, getAllMessage);
+
+// New route for sending a message with attachments
+fbMessageRouter.post(
+    '/:id/message-with-attachment',
+    checkLogin,
+    upload.array('messageAttachment', 6),
+    sendMessageWithAttachment
+);
 
 // send a message to lead
 fbMessageRouter.post('/:id', checkLogin, sendMessege);

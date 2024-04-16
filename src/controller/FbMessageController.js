@@ -4,6 +4,40 @@ const axios = require('axios');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 
+// reused Functions for only this files.
+function createNewMessageObject(messageId, content, senderId, sentByMe, fileUrl = null) {
+    const newMessage = {
+        messageId,
+        content,
+        senderId,
+        sentByMe,
+        date: new Date(),
+    };
+
+    if (fileUrl) {
+        newMessage.fileUrl = [fileUrl];
+    }
+
+    return newMessage;
+}
+
+function emitNewMessage(req, leadId, newMessage) {
+    req.io.emit(`fbMessage${leadId}`, newMessage);
+}
+
+function emitConversationUpdate(req, lead) {
+    const lastMessage = lead.messages[lead.messages.length - 1];
+    const socketPayload = {
+        name: lead.name,
+        lastMessage: lastMessage.content,
+        lastMessageTime: lastMessage.date,
+        sentByMe: lastMessage.sentByMe,
+        createdAt: lead.createdAt,
+        _id: lead._id,
+    };
+    req.io.emit('conversation', socketPayload);
+}
+
 // Function to get all messages for a specific lead
 const getAllMessage = async (req, res) => {
     try {
@@ -227,6 +261,113 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
     }
 };
 
+const sendMessageWithAttachment = async (req, res) => {
+    const leadId = req.params.id;
+    const { messageText } = req.body;
+
+    try {
+        const lead = await Lead.findById(leadId);
+        if (!lead || !lead.fbSenderID) {
+            return res.status(404).json({ error: 'Lead not found or missing Facebook ID' });
+        }
+
+        const settings = await Settings.findOne({ name: 'facebook' });
+        if (!settings || !settings.settingsData.page[0].pageAccessToken) {
+            return res.status(500).json({ error: 'Facebook settings or access token not found' });
+        }
+        const { pageAccessToken, pageId } = settings.settingsData.page[0];
+        const newMessages = []; // Array to store new message objects
+
+        // For text messages
+        if (messageText) {
+            const messagePayload = {
+                recipient: { id: lead.fbSenderID },
+                message: { text: messageText },
+                messaging_type: 'RESPONSE',
+                access_token: pageAccessToken,
+            };
+
+            const fbResponse = await axios.post(
+                `https://graph.facebook.com/${pageId}/messages`,
+                messagePayload
+            );
+
+            if (fbResponse.data && fbResponse.data.message_id) {
+                const newMessage = createNewMessageObject(
+                    fbResponse.data.message_id,
+                    messageText,
+                    pageId,
+                    true
+                );
+                lead.messages.push(newMessage);
+                await lead.save();
+
+                emitNewMessage(req, leadId, newMessage);
+                emitConversationUpdate(req, lead);
+                newMessages.push(newMessage);
+            }
+        }
+
+        // For file attachments
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                try {
+                    const fileUrl = `${process.env.SERVER_URL}/images/${file.filename}`;
+                    const messagePayload = {
+                        recipient: { id: lead.fbSenderID },
+                        message: {
+                            attachment: {
+                                type: 'image', // Note: Adjust this type based on the actual file type (e.g., 'file' for generic files)
+                                payload: { url: fileUrl, is_reusable: true },
+                            },
+                        },
+                        messaging_type: 'RESPONSE',
+                        access_token: pageAccessToken,
+                    };
+
+                    console.log(messagePayload);
+
+                    const fbResponse = await axios.post(
+                        `https://graph.facebook.com/${pageId}/messages`,
+                        messagePayload,
+                        3,
+                        10000
+                    );
+
+                    if (fbResponse.data && fbResponse.data.message_id) {
+                        const newMessage = createNewMessageObject(
+                            fbResponse.data.message_id,
+                            '',
+                            pageId,
+                            true,
+                            fileUrl
+                        );
+                        lead.messages.push(newMessage);
+                        await lead.save();
+
+                        emitNewMessage(req, leadId, newMessage);
+                        newMessages.push(newMessage);
+                    }
+                } catch (error) {
+                    console.error('Error sending file:', error);
+                    // eslint-disable-next-line no-continue
+                    continue;
+                }
+            }
+        }
+
+        if (newMessages.length > 0) {
+            return res.status(200).json({ messages: newMessages });
+        }
+
+        // If no messages were sent, consider this a failed operation
+        return res.status(500).json({ error: 'Failed to send message' });
+    } catch (error) {
+        console.error('Error sending message with attachment:', error);
+        return res.status(500).json({ error: error.toString() });
+    }
+};
+
 // Don't forget to export the new function
 module.exports = {
     getAllMessage,
@@ -234,5 +375,6 @@ module.exports = {
     sendFile,
     getSortedLeads,
     getAllLeads,
-    getLeadDetailsWithLastMessage, // Add this line
+    sendMessageWithAttachment,
+    getLeadDetailsWithLastMessage,
 };
