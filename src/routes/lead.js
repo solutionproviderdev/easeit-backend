@@ -9,6 +9,7 @@ const {
     getLeadsName,
     updateCreName,
     getLeadDetails,
+    updateLeadTags,
     rescheduleMeeting,
     updateLeadbyStatus,
 } = require('../controller/leadController');
@@ -42,6 +43,9 @@ leadRouter.put('/:id', checkLogin, upload.array('images', 3), updateLeadbyStatus
 
 // Update the CRE name of a specific lead by ID
 leadRouter.put('/:id/creName', checkLogin, updateCreName);
+
+// Route to handle lead tags
+leadRouter.put('/:id/tags', checkLogin, updateLeadTags);
 
 // Delete a specific lead by ID
 leadRouter.delete('/:id', checkLogin, deleteLead);

@@ -445,6 +445,30 @@ const updateCreName = async (req, res) => {
     }
 };
 
+// Update lead tags
+const updateLeadTags = async (req, res) => {
+    const { id } = req.params;
+    const { tags } = req.body;
+
+    const lead = await Lead.findById(id);
+
+    // Replace existing tags array with new one
+    lead.tags = tags;
+
+    await lead.save();
+
+    // make socket.io notification
+    const socketPayload = {
+        leadId: id,
+        updatedTags: tags
+    };
+
+    // emit the event
+    req.io.emit('leadTagsUpdated', socketPayload);
+
+    res.send({ message: 'Tags updated' });
+};
+
 const deleteLead = async (req, res) => {
     try {
         await Lead.deleteOne({ _id: req.params.id });
@@ -747,6 +771,7 @@ module.exports = {
     updateCreName,
     // updateLead,
     updateLeadbyStatus,
+    updateLeadTags,
     rescheduleMeeting,
     deleteLead,
     getLeads,

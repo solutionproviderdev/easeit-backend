@@ -197,7 +197,6 @@ const getAllLeads = async (req, res) => {
 const getLeadDetailsWithLastMessage = async (req, res) => {
     try {
         // Get the limit from query string, default to 10 if not provided
-        const limit = parseInt(req.query.limit, 10) || 10;
 
         const leadsWithLastMessage = await Lead.aggregate([
             {
@@ -219,9 +218,7 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                     creName: 1,
                 },
             },
-        ])
-            .sort({ 'messages.date': -1, createdAt: -1 })
-            .limit(limit);
+        ]).sort({ lastMessageTime: -1 });
 
         res.status(200).json(leadsWithLastMessage);
     } catch (error) {
