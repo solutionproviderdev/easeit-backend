@@ -51,6 +51,7 @@ app.use(cors({
         const allowedOrigins = [
              'http://localhost:3000',
              'http://localhost:3001',
+             'http://192.168.0.118:3000',
              'http://103.49.202.214:3000',
              'https://easeit.vercel.app',
              'https://crm.solutionprovider.com.bd'
