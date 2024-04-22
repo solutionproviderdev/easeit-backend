@@ -53,11 +53,11 @@ const getConversationsAndUpdateLeads = async (io) => {
 
                     // Check if the message has attachments and extract URLs
                     if (
-                        msg.attachments
-                        && msg.attachments.data.length > 0
-                        && msg.attachments.data[0].image_data
+                        msg?.attachments
+                        && msg?.attachments?.data?.length > 0
+                        && msg?.attachments?.data[0]?.image_data
                     ) {
-                        fileUrl = msg.attachments.data.map((att) => att.image_data.url);
+                        fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
                     }
 
                     return {
