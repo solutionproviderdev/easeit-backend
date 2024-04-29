@@ -1,3 +1,4 @@
+/* eslint-disable no-loop-func */
 /* eslint-disable prettier/prettier */
 /**
  * Fetches conversations from the Facebook Graph API using the provided page access token,
@@ -8,6 +9,7 @@
 /* eslint-disable no-restricted-syntax */
 const axios = require('axios');
 const moment = require('moment');
+const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
@@ -46,10 +48,25 @@ const getConversationsAndUpdateLeads = async (io) => {
 
                 const fbSenderID = otherParticipant.id;
                 const reversedMessages = [...conversation.messages.data].reverse();
+
+                let phoneNumber = '';
+
                 // Assuming this is part of the loop where you process each message
                 const messages = reversedMessages.map((msg) => {
                     // Initialize an empty array to hold attachment URLs
                     let fileUrl = [];
+
+                    // if the message is from lead then extract the phone number from the message
+                    if (msg.from.name !== 'Solution Provider') {
+                        const content = msg.message || '';
+                         const potentialNumber = content.replace(/[^0-9]+/g, '');
+                         if (potentialNumber) { // Ensure there's a number to parse
+                            const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
+                            if (parsedNumber && parsedNumber.isValid()) {
+                                phoneNumber = parsedNumber; // Update phoneNumber only if valid
+                            }
+                        }
+                        }
 
                     // Check if the message has attachments and extract URLs
                     if (
@@ -88,6 +105,13 @@ const getConversationsAndUpdateLeads = async (io) => {
                     if (isNewMessageAdded) {
                         lead.lastMsg = messages[messages.length - 1].content;
                     }
+
+                    // if there is a phone number, change the status to ''Number Collected''
+                    if (phoneNumber?.number?.length === 14) {
+                        lead.phone = phoneNumber.formatInternational();
+                        lead.status = 'Number Collected';
+                    }
+
                     const savedLead = await lead.save();
 
                     // Sockt Payload for new Conversation.
