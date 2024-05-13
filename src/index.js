@@ -24,6 +24,7 @@ const conversationRouter = require('./routes/conversation');
 const mapDataRouter = require('./routes/mapDataRouters');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const teamRouter = require('./routes/team');
+const WaMessageRouter = require('./routes/WhatsAppMessage');
 
 // Initialize app
 const app = express();
@@ -105,6 +106,7 @@ app.use('/messages', messageRouter);
 app.use('/conversations', conversationRouter);
 app.use('/map', mapDataRouter);
 app.use('/teams', teamRouter);
+app.use('/wamessage', WaMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {

@@ -1,5 +1,4 @@
-/* eslint-disable no-loop-func */
-/* eslint-disable prettier/prettier */
+/* eslint-disable no-loop-func *//* eslint-disable prettier/prettier */
 /**
  * Fetches conversations from the Facebook Graph API using the provided page access token,
  * updates existing leads or creates new leads with the conversation messages,
@@ -34,7 +33,7 @@ const getConversationsAndUpdateLeads = async (io) => {
         // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
             `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-            { timeout: 5000 }
+            { timeout: 10000 }
         );
 
         const conversations = response.data.data;
