@@ -27,7 +27,7 @@ const msgEventPostBody = {
     ],
 };
 // facebook webhook route
-webhookRouter.get(['/facebook', '/instagram'], (req, res) => {
+webhookRouter.get(['/facebook', '/instagram', '/whatsapp'], (req, res) => {
     console.log(req.body);
     if (req.query['hub.mode'] == 'subscribe' && req.query['hub.verify_token'] == token) {
         res.send(req.query['hub.challenge']);
@@ -48,7 +48,7 @@ webhookRouter.get('/whatsapp', (req, res) => {
     if (mode && watoken && challenge) {
         if (mode === 'subscribe' && watoken === VERIFY_TOKEN) {
             console.log('WEBHOOK_VERIFIED');
-            res.status(200).send(challenge);
+            res.send(challenge);
             console.log(challenge);
         } else {
             console.log(

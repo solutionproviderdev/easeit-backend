@@ -12,6 +12,7 @@ const sendTextWaMessage = async (req, res) => {
             body: req.body.message,
         },
     };
+
     const config = {
         headers: {
             'Content-Type': 'application/json',
@@ -98,6 +99,7 @@ const sendTemplateWaMessage = async (req, res) => {
         { message: req.body.templateName },
         { image: req.body.image }
     );
+
     const data = {
         messaging_product: 'whatsapp',
         to: req.body.number,
@@ -147,12 +149,14 @@ const sendTemplateWaMessage = async (req, res) => {
             ],
         },
     };
+
     const config = {
         headers: {
             'Content-Type': 'application/json',
             Authorization: req.headers.authorization,
         },
     };
+
     try {
         const response = await axios.post(
             'https://graph.facebook.com/v19.0/254356777772230/messages',
