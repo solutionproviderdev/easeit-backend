@@ -52,7 +52,7 @@ app.use(cors({
             'http://localhost:3000',
             'http://192.168.0.155:3000',
             'http://192.168.0.155:5000',
-            'http://103.49.202.214:3000',
+            'http://103.122.143.63:3000',
             'https://easeit.vercel.app',
             'https://crm.solutionprovider.com.bd'
         ];
