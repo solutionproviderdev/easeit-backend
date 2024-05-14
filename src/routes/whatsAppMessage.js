@@ -7,6 +7,12 @@ const { sendTemplateToLead } = require('../controller/whatsAppMessageController'
 // Router Declearation
 const wpMessageRouter = express.Router();
 
+// send text message to lead
+wpMessageRouter.post('/text', (req, res) => {
+    // send text message logic
+    console.log('Request Body: ', req.body);
+});
+
 // send template message to a custommer
 wpMessageRouter.post('/:id', sendTemplateToLead);
 
