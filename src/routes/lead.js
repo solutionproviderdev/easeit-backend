@@ -21,6 +21,7 @@ const {
 } = require('../controller/leadController');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 const Lead = require('../schemas/LeadsSchema');
+const People = require('../schemas/PeopleSchema');
 
 const leadRouter = express.Router();
 
@@ -57,6 +58,55 @@ leadRouter.put('/:id/tags', checkLogin, updateLeadTags);
 // Delete a specific lead by ID
 leadRouter.delete('/:id', checkLogin, deleteLead);
 
+// Function to reassign leads to the correct CRE based on message content
+const reAssignToRightCRE = async () => {
+    try {
+        // Fetch all CREs
+        const cres = await People.find({ role: 'CRE' });
+        // Fetch all leads
+        const leads = await Lead.find({}).populate('messages');
+
+        // Prepare a mapping from names to CRE ids
+        const nameToCreId = cres.reduce((map, cre) => {
+            // Assume cre has a 'name' field you can split to get the last name part
+            const lastName = cre.name.split(' ').pop();
+            map[lastName] = cre._id;
+            return map;
+        }, {});
+
+        console.log(nameToCreId);
+
+        // For each lead, check every message
+        leads.forEach(async (lead) => {
+            for (const message of lead.messages) {
+                const { content } = message;
+                let found = false;
+
+                // Check against each CRE name part
+                for (const [lastName, creId] of Object.entries(nameToCreId)) {
+                    if (content.includes(lastName)) {
+                        console.log('Found a match:', lastName);
+                        // Update the lead's CRE if a match is found
+                        lead.creName = creId;
+                        await lead.save();
+                        found = true;
+                        break;
+                    }
+                }
+
+                // Stop checking if a CRE is assigned
+                if (found) break;
+            }
+        });
+
+        console.log('All leads have been reassigned appropriately.');
+    } catch (error) {
+        console.error('Failed to reassign leads:', error);
+    }
+};
+// reAssignToRightCRE();
+
+// Helper function to extract last names from messages
 const getMessages = async () => {
     try {
         const messages = await Lead.aggregate([

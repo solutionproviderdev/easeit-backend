@@ -15,6 +15,11 @@ const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
 
+const crenamesAndIds = {
+    Wony: '65fd2080bfd74c2344970d1a',
+    Ritu: '65fd2104bfd74c234497173f'
+  };
+
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
     console.error(`${currentTime} => ${message}`);
@@ -29,6 +34,7 @@ const getConversationsAndUpdateLeads = async (io) => {
         if (!fbSettings || !fbSettings.settingsData.page[0].pageAccessToken) {
             throw new Error('Facebook settings or access token not found');
         }
+
         const { pageAccessToken, pageId } = fbSettings.settingsData.page[0];
 
         // Fetch data from Messenger Platform API using the retrieved token
@@ -93,9 +99,18 @@ const getConversationsAndUpdateLeads = async (io) => {
                 if (lead) {
                     // Update existing Lead
                     let isNewMessageAdded = false;
+                    let newCreId = lead.creName;
+
                     for (const message of messages) {
                         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
                             lead.messages.push(message);
+
+                            // Update CRE based on message content
+                            Object.entries(crenamesAndIds).forEach(([name, id]) => {
+                                if (message.content.includes(name)) {
+                                    newCreId = id;
+                                }
+                            });
 
                             // Emit socket io action
                             io.emit(`fbMessage${lead._id}`, message);
@@ -104,6 +119,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                     }
                     if (isNewMessageAdded) {
                         lead.lastMsg = messages[messages.length - 1].content;
+                        lead.creName = newCreId;
                     }
 
                     // if there is a phone number, change the status to ''Number Collected''
