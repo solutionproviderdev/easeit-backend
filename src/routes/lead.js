@@ -130,7 +130,6 @@ const parseAndExportLeadsWithPhoneNumbers = async () => {
         console.error('Error processing leads:', error);
     }
 };
-
-parseAndExportLeadsWithPhoneNumbers();
+// parseAndExportLeadsWithPhoneNumbers();
 
 module.exports = leadRouter;
