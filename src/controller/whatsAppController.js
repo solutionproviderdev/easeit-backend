@@ -62,7 +62,7 @@ const sendImageWaMessage = async (req, res) => {
     };
     try {
         const response = await axios.post(
-            'https://graph.facebook.com/v19.0/319212377938164/messages',
+            'https://graph.facebook.com/v19.0/254356777772230/messages',
             data,
             config
         );
