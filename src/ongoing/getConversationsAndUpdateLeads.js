@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-loop-func */
 /* eslint-disable prettier/prettier */
 /**
@@ -34,6 +35,17 @@ const getConversationsAndUpdateLeads = async (io) => {
         if (!fbSettings || !fbSettings.settingsData.page[0].pageAccessToken) {
             throw new Error('Facebook settings or access token not found');
         }
+
+        // Fetch all CREs
+        const cres = await People.find({ role: 'CRE' });
+
+        // Prepare a mapping from names to CRE ids
+        const nameToCreId = cres.reduce((map, cre) => {
+            // Assume cre has a 'name' field you can split to get the last name part
+            const lastName = cre.name.split(' ').pop();
+            map[lastName] = cre._id;
+            return map;
+        }, {});
 
         const { pageAccessToken, pageId } = fbSettings.settingsData.page[0];
 
@@ -106,7 +118,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                             lead.messages.push(message);
 
                             // Update CRE based on message content
-                            Object.entries(crenamesAndIds).forEach(([name, id]) => {
+                            Object.entries(nameToCreId).forEach(([name, id]) => {
                                 if (message.content.includes(name)) {
                                     newCreId = id;
                                 }
