@@ -193,6 +193,8 @@ const updatePeopleDetails = async (req, res) => {
             }
         }
 
+        console.log(updates);
+
         // Validate the updates if needed
 
         // Update the user details in the database
