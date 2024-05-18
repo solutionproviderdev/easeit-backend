@@ -13,10 +13,10 @@ const {
 const wpMessageRouter = express.Router();
 
 // send text message to lead
-wpMessageRouter.post('/text', (req, res) => {
-    // send text message logic
-    console.log('Request Body: ', req.body);
-});
+// wpMessageRouter.post('/text', (req, res) => {
+//     // send text message logic
+//     console.log('Request Body: ', req.body);
+// });
 wpMessageRouter.post('/text', sendTextWaMessage);
 wpMessageRouter.post('/image', sendImageWaMessage);
 wpMessageRouter.post('/template', sendTemplateWaMessage);

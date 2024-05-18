@@ -45,7 +45,8 @@ mongoose
 // request process
 app.use(express.json());
 app.use(express.static('public'));
-app.use(express.urlencoded());
+// app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors({
     origin: (origin, callback) => {
@@ -110,7 +111,7 @@ app.use('/wamessage', WaMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    getConversationsAndUpdateLeads(io);
+    // getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {
