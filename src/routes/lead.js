@@ -131,6 +131,6 @@ const parseAndExportLeadsWithPhoneNumbers = async () => {
     }
 };
 
-parseAndExportLeadsWithPhoneNumbers();
+// parseAndExportLeadsWithPhoneNumbers();
 
 module.exports = leadRouter;
