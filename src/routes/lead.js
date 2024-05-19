@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-restricted-syntax */
 const express = require('express');
@@ -104,7 +105,8 @@ const reAssignToRightCRE = async () => {
         console.error('Failed to reassign leads:', error);
     }
 };
-// reAssignToRightCRE();
+
+reAssignToRightCRE();
 
 // Helper function to extract last names from messages
 const getMessages = async () => {

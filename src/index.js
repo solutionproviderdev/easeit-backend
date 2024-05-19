@@ -24,6 +24,7 @@ const conversationRouter = require('./routes/conversation');
 const mapDataRouter = require('./routes/mapDataRouters');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const teamRouter = require('./routes/team');
+const WaMessageRouter = require('./routes/WhatsAppMessage');
 
 // Initialize app
 const app = express();
@@ -54,7 +55,8 @@ app.use(cors({
             'http://192.168.0.155:5000',
             'http://103.122.143.63:3000',
             'https://easeit.vercel.app',
-            'https://crm.solutionprovider.com.bd'
+            'https://crm.solutionprovider.com.bd',
+            'https://www.crm.solutionprovider.com.bd'
         ];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
@@ -105,6 +107,7 @@ app.use('/messages', messageRouter);
 app.use('/conversations', conversationRouter);
 app.use('/map', mapDataRouter);
 app.use('/teams', teamRouter);
+app.use('/wamessage', WaMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {

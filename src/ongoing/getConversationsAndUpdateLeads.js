@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-loop-func */
 /* eslint-disable prettier/prettier */
 /**
@@ -22,7 +23,7 @@ const crenamesAndIds = {
 
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
-    console.error(`${currentTime} => ${message}`);
+    console.error(`${currentTime} => ${message}`, error);
     // Optionally, send the error to a logging service or notify via email/SMS
     // sendErrorNotification(message, error);
 };
@@ -35,12 +36,23 @@ const getConversationsAndUpdateLeads = async (io) => {
             throw new Error('Facebook settings or access token not found');
         }
 
+        // Fetch all CREs
+        const cres = await People.find({ role: 'CRE' });
+
+        // Prepare a mapping from names to CRE ids
+        const nameToCreId = cres.reduce((map, cre) => {
+            // Assume cre has a 'name' field you can split to get the last name part
+            const lastName = cre.name.split(' ').pop();
+            map[lastName] = cre._id;
+            return map;
+        }, {});
+
         const { pageAccessToken, pageId } = fbSettings.settingsData.page[0];
 
         // Fetch data from Messenger Platform API using the retrieved token
         const response = await axios.get(
             `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-            { timeout: 8000 }
+            { timeout: 10000 }
         );
 
 
@@ -107,7 +119,7 @@ const getConversationsAndUpdateLeads = async (io) => {
                             lead.messages.push(message);
 
                             // Update CRE based on message content
-                            Object.entries(crenamesAndIds).forEach(([name, id]) => {
+                            Object.entries(nameToCreId).forEach(([name, id]) => {
                                 if (message.content.includes(name)) {
                                     newCreId = id;
                                 }
