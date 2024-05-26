@@ -26,7 +26,7 @@ const crenamesAndIds = {
 
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
-    console.error(`${currentTime} => ${message}`);
+    console.error(`${currentTime} => ${message}`, error);
     // Optionally, send the error to a logging service or notify via email/SMS
     // sendErrorNotification(message, error);
 };
