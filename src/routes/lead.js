@@ -1,4 +1,5 @@
 /* eslint-disable no-await-in-loop */
+/* eslint-disable no-param-reassign */
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-restricted-syntax */
 const express = require('express');
@@ -106,7 +107,7 @@ const reAssignToRightCRE = async () => {
     }
 };
 
-reAssignToRightCRE();
+// reAssignToRightCRE();
 
 // Helper function to extract last names from messages
 const getMessages = async () => {
@@ -133,6 +134,7 @@ const getMessages = async () => {
         console.error('Error fetching messages:', error);
     }
 };
+
 // getMessages();
 
 const parseAndExportLeadsWithPhoneNumbers = async () => {
@@ -182,6 +184,7 @@ const parseAndExportLeadsWithPhoneNumbers = async () => {
         console.error('Error processing leads:', error);
     }
 };
+
 // parseAndExportLeadsWithPhoneNumbers();
 
 module.exports = leadRouter;

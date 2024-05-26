@@ -114,6 +114,9 @@ const leadSchema = mongoose.Schema(
                 price: Number,
             },
         ],
+        sourcePageName: String,
+        sourcePageId: String,
+        sourcePageProfilePicture: String,
         salesExqName: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'people',

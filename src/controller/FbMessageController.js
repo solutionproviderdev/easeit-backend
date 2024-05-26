@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 const axios = require('axios');
@@ -29,6 +30,9 @@ function emitConversationUpdate(req, lead) {
     const lastMessage = lead.messages[lead.messages.length - 1];
     const socketPayload = {
         name: lead.name,
+        sourcePageName: lead.sourcePageName,
+        sourcePageId: lead.sourcePageId,
+        sourcePageProfilePicture: lead.sourcePageProfilePicture,
         lastMessage: lastMessage.content,
         lastMessageTime: lastMessage.date,
         sentByMe: lastMessage.sentByMe,
@@ -248,6 +252,9 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
                     lastMessageTime: 1,
                     createdAt: 1,
                     status: 1,
+                    sourcePageName: 1,
+                    sourcePageId: 1,
+                    sourcePageProfilePicture: 1,
                     sentByMe: 1,
                     creName: 1,
                 },
@@ -267,15 +274,25 @@ const sendMessageWithAttachment = async (req, res) => {
 
     try {
         const lead = await Lead.findById(leadId);
-        if (!lead || !lead.fbSenderID) {
-            return res.status(404).json({ error: 'Lead not found or missing Facebook ID' });
+        if (!lead || !lead.fbSenderID || !lead.sourcePageId) {
+            return res
+                .status(404)
+                .json({ error: 'Lead not found or missing Facebook ID or Page ID' });
         }
 
         const settings = await Settings.findOne({ name: 'facebook' });
-        if (!settings || !settings.settingsData.page[0].pageAccessToken) {
+        if (!settings || !settings.settingsData.page) {
             return res.status(500).json({ error: 'Facebook settings or access token not found' });
         }
-        const { pageAccessToken, pageId } = settings.settingsData.page[0];
+
+        const pageSettings = settings.settingsData.page.find(
+            (page) => page.pageId === lead.sourcePageId
+        );
+        if (!pageSettings) {
+            return res.status(404).json({ error: 'Facebook page settings not found' });
+        }
+
+        const { pageAccessToken, pageId } = pageSettings;
         const newMessages = []; // Array to store new message objects
 
         // For text messages
@@ -325,13 +342,9 @@ const sendMessageWithAttachment = async (req, res) => {
                         access_token: pageAccessToken,
                     };
 
-                    console.log(messagePayload);
-
                     const fbResponse = await axios.post(
                         `https://graph.facebook.com/${pageId}/messages`,
-                        messagePayload,
-                        3,
-                        10000
+                        messagePayload
                     );
 
                     if (fbResponse.data && fbResponse.data.message_id) {
@@ -350,7 +363,6 @@ const sendMessageWithAttachment = async (req, res) => {
                     }
                 } catch (error) {
                     console.error('Error sending file:', error);
-                    // eslint-disable-next-line no-continue
                     continue;
                 }
             }

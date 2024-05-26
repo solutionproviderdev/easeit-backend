@@ -34,12 +34,12 @@ fbMessageRouter.post(
     checkLogin,
     upload.array('messageAttachment', 6),
     sendMessageWithAttachment
-);
+); // active
 
 // send a message to lead
-fbMessageRouter.post('/:id', checkLogin, sendMessege);
+fbMessageRouter.post('/:id', checkLogin, sendMessege); // inactive
 
 // send a file
-fbMessageRouter.post('/:id/attachment', checkLogin, upload.array('messageAttachment', 6), sendFile);
+fbMessageRouter.post('/:id/attachment', checkLogin, upload.array('messageAttachment', 6), sendFile); // inactive
 
 module.exports = fbMessageRouter;

@@ -1,3 +1,6 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable no-continue */
+/* eslint-disable max-len */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-loop-func */
 /* eslint-disable prettier/prettier */
@@ -29,184 +32,179 @@ const logError = (message, error) => {
 };
 
 const getConversationsAndUpdateLeads = async (io) => {
+    console.time('getConversationsAndUpdateLeads');
     try {
-        // Fetch the settings document for Facebook
         const fbSettings = await Settings.findOne({ name: 'facebook' });
-        if (!fbSettings || !fbSettings.settingsData.page[0].pageAccessToken) {
-            throw new Error('Facebook settings or access token not found');
+        if (!fbSettings || !fbSettings.settingsData.page) {
+            throw new Error('Facebook settings or access tokens not found');
         }
 
-        // Fetch all CREs
         const cres = await People.find({ role: 'CRE' });
 
-        // Prepare a mapping from names to CRE ids
         const nameToCreId = cres.reduce((map, cre) => {
-            // Assume cre has a 'name' field you can split to get the last name part
             const lastName = cre.name.split(' ').pop();
             map[lastName] = cre._id;
             return map;
         }, {});
 
-        const { pageAccessToken, pageId } = fbSettings.settingsData.page[0];
+        for (const page of fbSettings.settingsData.page) {
+            const {
+ pageAccessToken, pageId, name: pageName, picture: pageProfilePicture
+} = page;
 
-        // Fetch data from Messenger Platform API using the retrieved token
-        const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-            { timeout: 10000 }
-        );
-
-        const conversations = response.data.data;
-
-        for (const conversation of conversations) {
             try {
-                // Find the participant who is not 'Solution Provider'
-                const otherParticipant = conversation.participants.data.find(
-                    (p) => p.name !== 'Solution Provider'
+                const response = await axios.get(
+                    `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+                    { timeout: 10000 }
                 );
 
-                const fbSenderID = otherParticipant.id;
-                const reversedMessages = [...conversation.messages.data].reverse();
+                const conversations = response.data.data;
 
-                let phoneNumber = '';
+                for (const conversation of conversations) {
+                    try {
+                        const otherParticipant = conversation.participants.data.find(
+                            (p) => p.name !== 'Solution Provider'
+                        );
 
-                // Assuming this is part of the loop where you process each message
-                const messages = reversedMessages.map((msg) => {
-                    // Initialize an empty array to hold attachment URLs
-                    let fileUrl = [];
+                        const fbSenderID = otherParticipant.id;
+                        const reversedMessages = [...conversation.messages.data].reverse();
 
-                    // if the message is from lead then extract the phone number from the message
-                    if (msg.from.name !== 'Solution Provider') {
-                        const content = msg.message || '';
-                         const potentialNumber = content.replace(/[^0-9]+/g, '');
-                         if (potentialNumber) { // Ensure there's a number to parse
-                            const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
-                            if (parsedNumber && parsedNumber.isValid()) {
-                                phoneNumber = parsedNumber; // Update phoneNumber only if valid
-                            }
-                        }
-                        }
+                        let phoneNumber = '';
 
-                    // Check if the message has attachments and extract URLs
-                    if (
-                        msg?.attachments
-                        && msg?.attachments?.data?.length > 0
-                        && msg?.attachments?.data[0]?.image_data
-                    ) {
-                        fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
-                    }
+                        const messages = reversedMessages.map((msg) => {
+                            let fileUrl = [];
 
-                    return {
-                        messageId: msg.id,
-                        content: msg.message,
-                        senderId: msg.from.id,
-                        senderName: msg.from.name,
-                        sentByMe: msg.from.name === 'Solution Provider',
-                        date: moment(msg.created_time).format('LLL'),
-                        fileUrl,
-                    };
-                });
-
-                const lead = await Lead.findOne({ fbSenderID });
-
-                if (lead) {
-                    // Update existing Lead
-                    let isNewMessageAdded = false;
-                    let newCreId = lead.creName;
-
-                    for (const message of messages) {
-                        if (!lead.messages.find((m) => m.messageId === message.messageId)) {
-                            lead.messages.push(message);
-
-                            // Update CRE based on message content
-                            Object.entries(nameToCreId).forEach(([name, id]) => {
-                                if (message.content.includes(name)) {
-                                    newCreId = id;
+                            if (msg.from.name !== 'Solution Provider') {
+                                const content = msg.message || '';
+                                const potentialNumber = content.replace(/[^0-9]+/g, '');
+                                if (potentialNumber) {
+                                    const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
+                                    if (parsedNumber && parsedNumber.isValid()) {
+                                        phoneNumber = parsedNumber; // Update phoneNumber only if valid
+                                    }
                                 }
+                            }
+
+                            if (msg?.attachments && msg?.attachments?.data?.length > 0 && msg?.attachments?.data[0]?.image_data) {
+                                fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
+                            }
+
+                            return {
+                                messageId: msg.id,
+                                content: msg.message,
+                                senderId: msg.from.id,
+                                senderName: msg.from.name,
+                                sentByMe: msg.from.name === 'Solution Provider',
+                                date: moment(msg.created_time).format('LLL'),
+                                fileUrl,
+                            };
+                        });
+
+                        const lead = await Lead.findOne({ fbSenderID });
+
+                        if (lead) {
+                            let isNewMessageAdded = false;
+                            let newCreId = lead.creName;
+
+                            for (const message of messages) {
+                                if (!lead.messages.find((m) => m.messageId === message.messageId)) {
+                                    lead.messages.push(message);
+
+                                    Object.entries(nameToCreId).forEach(([name, id]) => {
+                                        if (message.content.includes(name)) {
+                                            newCreId = id;
+                                        }
+                                    });
+
+                                    io.emit(`fbMessage${lead._id}`, message);
+                                    isNewMessageAdded = true;
+                                }
+                            }
+                            if (isNewMessageAdded) {
+                                lead.lastMsg = messages[messages.length - 1].content;
+                                lead.creName = newCreId;
+                            }
+
+                            if (phoneNumber?.number?.length === 14) {
+                                lead.phone = phoneNumber.formatInternational();
+                                lead.status = 'Number Collected';
+                            }
+
+                            const savedLead = await lead.save();
+
+                            const socketPayload = {
+                                name: savedLead.name,
+                                lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+                                lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+                                sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
+                                createdAt: savedLead.createdAt,
+                                creName: savedLead.creName,
+                                sourcePageName: pageName,
+                                sourcePageId: pageId,
+                                sourcePageProfilePicture: pageProfilePicture,
+                                status: savedLead.status,
+                                _id: savedLead._id,
+                            };
+
+                            io.emit('conversation', socketPayload);
+                        } else {
+                            const cre = await findCREWithLowestLeads();
+                            const firstMessageTime = messages[0].date;
+
+                            const newLead = new Lead({
+                                CID: '',
+                                name: otherParticipant.name,
+                                lastMsg: messages[messages.length - 1].content,
+                                status: 'unread',
+                                fbSenderID,
+                                messages,
+                                source: 'Facebook',
+                                sourcePageName: pageName,
+                                sourcePageId: pageId,
+                                sourcePageProfilePicture: pageProfilePicture,
+                                creName: cre,
+                                createdAt: new Date(firstMessageTime),
                             });
+                            const savedNewLead = await newLead.save();
+                            const socketPayload = {
+                                name: savedNewLead.name,
+                                lastMessage: savedNewLead.lastMsg,
+                                sourcePageName: pageName,
+                                sourcePageId: pageId,
+                                sourcePageProfilePicture: pageProfilePicture,
+                                lastMessageTime: savedNewLead.messages[0].date,
+                                sentByMe: savedNewLead.messages[0].sentByMe,
+                                createdAt: savedNewLead.createdAt,
+                                _id: savedNewLead._id,
+                            };
 
-                            // Emit socket io action
-                            io.emit(`fbMessage${lead._id}`, message);
-                            isNewMessageAdded = true;
+                            io.emit('conversation', socketPayload);
+
+                            const socketPayloadNewLead = {
+                                ...savedNewLead._doc,
+                                sourcePageName: pageName,
+                                sourcePageId: pageId,
+                                sourcePageProfilePicture: pageProfilePicture,
+                                status: savedNewLead.status,
+                                creName: await People.findOne({ _id: cre }).select('name roal avatar'),
+                            };
+
+                            io.emit('newLead', { newLead: socketPayloadNewLead });
                         }
+                    } catch (innerError) {
+                        logError('Error processing a single conversation', innerError);
+                        console.log(innerError);
+                        continue;
                     }
-                    if (isNewMessageAdded) {
-                        lead.lastMsg = messages[messages.length - 1].content;
-                        lead.creName = newCreId;
-                    }
-
-                    // if there is a phone number, change the status to ''Number Collected''
-                    if (phoneNumber?.number?.length === 14) {
-                        lead.phone = phoneNumber.formatInternational();
-                        lead.status = 'Number Collected';
-                    }
-
-                    const savedLead = await lead.save();
-
-                    // Sockt Payload for new Conversation.
-                    const socketPayload = {
-                        name: savedLead.name,
-                        lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
-                        lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
-                        sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
-                        createdAt: savedLead.createdAt,
-                        creName: savedLead.creName,
-                        status: savedLead.status,
-                        _id: savedLead._id,
-                    };
-
-                    // Emit socket io action for conversation.
-                    io.emit('conversation', socketPayload);
-                } else {
-                    const cre = await findCREWithLowestLeads();
-                    // First Message Time
-                    const firstMessageTime = messages[0].date;
-
-                    // Create new Lead
-                    const newLead = new Lead({
-                        // ...new lead data
-                        CID: '',
-                        name: otherParticipant.name,
-                        lastMsg: messages[messages.length - 1].content,
-                        status: 'unread',
-                        fbSenderID,
-                        messages,
-                        source: 'Facebook',
-                        creName: cre,
-                        createdAt: new Date(firstMessageTime),
-                    });
-                    const savedNewLead = await newLead.save();
-                    const socketPayload = {
-                        name: savedNewLead.name,
-                        lastMessage: savedNewLead.lastMsg,
-                        lastMessageTime: savedNewLead.messages[0].date,
-                        sentByMe: savedNewLead.messages[0].sentByMe,
-                        createdAt: savedNewLead.createdAt,
-                        _id: savedNewLead._id,
-                    };
-
-                    // Emit socket io action for new Conversations.
-                    io.emit('conversation', socketPayload);
-
-                    // Socket payload for new Lead with populated data
-                    const socketPayloadNewLead = {
-                        ...savedNewLead._doc,
-                        status: savedNewLead.status,
-                        creName: await People.findOne({ _id: cre }).select('name roal avatar'),
-                    };
-
-                    // Emit socket io action for new Lead.
-                    io.emit('newLead', { newLead: socketPayloadNewLead });
                 }
-            } catch (innerError) {
-                logError('Error processing a single conversation', innerError);
-                console.log(innerError);
-                // eslint-disable-next-line no-continue
-                continue; // Move to the next conversation
+            } catch (error) {
+                logError(`Error fetching or processing data for page ${pageId}`, error);
             }
         }
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
+    console.timeEnd('getConversationsAndUpdateLeads');
 };
 
 module.exports = getConversationsAndUpdateLeads;

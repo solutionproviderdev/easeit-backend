@@ -87,7 +87,7 @@ const addFacebookPage = async (req, res) => {
         const updatedSettings = await Settings.findOneAndUpdate(
             { name: 'facebook' }, // Filter to find the document
             { $push: { 'settingsData.page': { ...pageDetails, pageAccessToken } } }, // Update operation
-            { new: true } // Return the updated document
+            { new: true }
         );
 
         if (!updatedSettings) {
