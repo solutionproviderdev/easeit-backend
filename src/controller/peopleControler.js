@@ -257,17 +257,43 @@ function peopleLogout(req, res) {
     res.status(200).json({ message: 'Logged out successfully' });
 }
 
-function updateProfilePic(req, res) {
+async function updateProfilePic(req, res) {
     const { ID } = req.params;
-    const updates = req.body;
+    const updates = {};
+
     // Handle file updates
     if (req.file) {
         updates.image = `${process.env.SERVER_URL}/images/${req.file.filename}`;
     }
 
-    console.log('profilepic id', ID);
-    console.log('picture', req.file);
-    res.send('hello');
+    try {
+        const updatedPeople = await People.findByIdAndUpdate(ID, updates, { new: true });
+
+        if (!updatedPeople) {
+            return res.status(404).json({
+                message: 'User not found',
+            });
+        }
+
+        console.log('Updated image URL:', updates.image);
+        console.log('Profile pic ID:', ID);
+        console.log('Uploaded picture:', req.file);
+
+        // Send only the necessary data in response
+        res.status(200).json({
+            message: 'Profile picture updated successfully',
+            user: {
+                _id: updatedPeople._id,
+                name: updatedPeople.name,
+                image: updatedPeople.image,
+            },
+        });
+    } catch (err) {
+        console.error('Error updating profile picture:', err);
+        res.status(500).json({
+            message: `${err.message}`,
+        });
+    }
 }
 
 module.exports = {

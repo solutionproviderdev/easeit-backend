@@ -48,7 +48,10 @@ const peopleSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        avatar: String,
+        image: {
+            type: String,
+            required: true,
+        },
         nid: String,
     },
     { timestamps: true }
