@@ -24,6 +24,7 @@ const {
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 const Lead = require('../schemas/LeadsSchema');
 const People = require('../schemas/PeopleSchema');
+const Settings = require('../schemas/SettingsSchema');
 
 const leadRouter = express.Router();
 
@@ -186,5 +187,42 @@ const parseAndExportLeadsWithPhoneNumbers = async () => {
 };
 
 // parseAndExportLeadsWithPhoneNumbers();
+
+const updateLeadsProfilePictures = async () => {
+    try {
+        const settings = await Settings.findOne({ name: 'facebook' });
+        if (!settings || !settings.settingsData.page) {
+            console.error('Facebook settings or access token not found');
+            return;
+        }
+
+        const pages = settings.settingsData.page;
+
+        const leads = await Lead.find({});
+
+        for (const lead of leads) {
+            const pageSettings = pages.find((page) => page.pageId === lead.sourcePageId);
+            if (pageSettings) {
+                const { pageId } = pageSettings;
+                // const pageDetails = await getPageNamePhoto(pageAccessToken, pageId);
+                const sourcePageProfilePicture = `${process.env.SERVER_URL}/profile_pictures/${pageId}.jpg`;
+
+                if (sourcePageProfilePicture) {
+                    lead.sourcePageProfilePicture = sourcePageProfilePicture;
+
+                    await lead.save();
+                    console.log(`Updated lead ${lead._id} with new profile picture.`);
+                }
+            }
+        }
+
+        console.log('All leads have been updated.');
+    } catch (error) {
+        console.error('Error updating leads:', error);
+    }
+};
+
+// Call the function to update the leads
+// updateLeadsProfilePictures();
 
 module.exports = leadRouter;

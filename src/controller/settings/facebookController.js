@@ -1,5 +1,50 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const Settings = require('../../schemas/SettingsSchema');
+
+const downloadProfilePicture = async (url, pageId) => {
+    const publicDir = path.join(__dirname, '../../../public/profile_pictures');
+    if (!fs.existsSync(publicDir)) {
+        fs.mkdirSync(publicDir, { recursive: true });
+    }
+    const filePath = path.join(publicDir, `${pageId}.jpg`);
+    const outputFilepath = `${process.env.SERVER_URL}/profile_pictures/${pageId}.jpg`;
+    const writer = fs.createWriteStream(filePath);
+
+    const response = await axios({
+        url,
+        responseType: 'stream',
+    });
+
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+        writer.on('finish', () => resolve(outputFilepath));
+        writer.on('error', reject);
+    });
+};
+
+const getPageNamePhoto = async (accessToken) => {
+    try {
+        const url = `https://graph.facebook.com/me?fields=name,id,picture.type(large)&access_token=${accessToken}`;
+        const response = await axios.get(url);
+
+        const { name, id, picture } = response.data;
+
+        // Download the profile picture
+        const picturePath = await downloadProfilePicture(picture.data.url, id);
+
+        return {
+            name,
+            pageId: id,
+            picture: picturePath,
+        };
+    } catch (error) {
+        console.error('Error fetching page data:', error);
+        return null;
+    }
+};
 
 const getFacebookSettings = async (req, res) => {
     try {
@@ -18,24 +63,6 @@ const getFacebookSettings = async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ error: 'There was a server side error' });
-    }
-};
-
-const getPageNamePhoto = async (accessToken) => {
-    try {
-        const url = `https://graph.facebook.com/me?fields=name,id,picture&access_token=${accessToken}`;
-        const response = await axios.get(url);
-
-        const { name, id, picture } = response.data;
-        return {
-            name,
-            pageId: id,
-            picture: picture.data.url,
-        };
-    } catch (error) {
-        console.log(error);
-        console.error('Error fetching page data:');
-        return null; // or handle the error as needed
     }
 };
 
