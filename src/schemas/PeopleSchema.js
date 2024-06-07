@@ -1,3 +1,4 @@
+// models/People.js
 const mongoose = require('mongoose');
 
 const peopleSchema = new mongoose.Schema(
@@ -16,7 +17,7 @@ const peopleSchema = new mongoose.Schema(
         },
         active: {
             type: Boolean,
-            require: true,
+            required: true,
             default: true,
         },
         address: {
@@ -57,6 +58,5 @@ const peopleSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// eslint-disable-next-line new-cap
-const People = new mongoose.model('people', peopleSchema);
+const People = mongoose.model('People', peopleSchema);
 module.exports = People;

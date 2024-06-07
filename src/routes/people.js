@@ -10,6 +10,7 @@ const {
     getPeople,
     getPeopleNamesAndIds,
     updateProfilePic,
+    addUser,
 } = require('../controller/peopleControler');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
 const upload = require('../config/multerconfig');
@@ -36,6 +37,8 @@ peopleRouter.post(
     ]),
     peopleSignup
 );
+
+peopleRouter.post('/adduser', upload.single('image'), addUser);
 
 // Log in
 peopleRouter.post('/login', peopleLogin);

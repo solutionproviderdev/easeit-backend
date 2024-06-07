@@ -174,43 +174,51 @@ const peopleLogin = async (req, res) => {
         success: false,
     });
 };
+// add User
+const addUser = async (req, res) => {
+    console.log('Backend reached');
+    // console.log('req.body:', req.body); // Log to check the received body
+    // console.log('req.file:', req.file); // Log to check the received file
+    const {
+        name,
+        email,
+        phone,
+        address,
+        department,
+        status,
+        role,
+        createdAt,
+        password,
+        NIDNumber,
+        startDate,
+    } = req.body;
+    const image = `${process.env.SERVER_URL}/images/${req.file.filename}`;
+    console.log(image);
+
+    try {
+        const newUser = new People({
+            name,
+            email,
+            phone,
+            address,
+            department,
+            status,
+            role,
+            createdAt,
+            image,
+            password,
+            NIDNumber,
+            startDate,
+        });
+
+        await newUser.save();
+        res.status(201).json({ message: 'User added successfully!', user: newUser });
+    } catch (error) {
+        res.status(400).json({ message: 'Error adding user', error });
+    }
+};
 
 // Update User details
-// const updatePeopleDetails = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const updates = req.body;
-
-//         // Handle file updates
-//         if (req.files) {
-//             // Assuming that 'avater' and 'nid' are the field names
-//             if (req.files.avater) {
-//                 updates.avater = `${process.env.SERVER_URL}/images/${req.files.avater[0].filename}`;
-//             }
-
-//             if (req.files.nid) {
-//                 updates.nid = `${process.env.SERVER_URL}/images/${req.files.nid[0].filename}`;
-//             }
-//         }
-//         // Update the user details in the database
-//         const updatedPeople = await People.findByIdAndUpdate(id, updates, { new: true });
-
-//         if (!updatedPeople) {
-//             return res.status(404).json({
-//                 message: 'User not found',
-//             });
-//         }
-//         return res.status(200).json({
-//             message: 'User details updated successfully',
-//             updatedPeople,
-//         });
-//     } catch (err) {
-//         // Implement logger function if any
-//         return res.status(500).json({
-//             message: `${err.message}`,
-//         });
-//     }
-// };
 
 const updatePeopleDetails = async (req, res) => {
     try {
@@ -301,6 +309,7 @@ module.exports = {
     updateProfilePic,
     getPeople,
     peopleLogin,
+    addUser,
     peopleLogout,
     getPeopleDetails,
     updatePeopleDetails,
