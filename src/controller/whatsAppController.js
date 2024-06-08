@@ -2,6 +2,7 @@ const { default: axios } = require('axios');
 
 const sendTextWaMessage = async (req, res) => {
     // Extract the entire payload from the request body
+    console.log('its me salman');
     const data = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
@@ -23,7 +24,7 @@ const sendTextWaMessage = async (req, res) => {
     try {
         // Making the POST request to the WhatsApp API
         const response = await axios.post(
-            'https://graph.facebook.com/v19.0/319212377938164/messages',
+            'https://graph.facebook.com/v19.0/254356777772230/messages',
             data,
             config
         );
@@ -62,6 +63,7 @@ const sendImageWaMessage = async (req, res) => {
     };
     try {
         const response = await axios.post(
+            // 'https://graph.facebook.com/v19.0/254356777772230/messages',
             'https://graph.facebook.com/v19.0/254356777772230/messages',
             data,
             config
