@@ -11,7 +11,7 @@ const {
     getPeopleNamesAndIds,
 } = require('../controller/peopleControler');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
-const upload = require('../config/multerconfig');
+const { upload } = require('../config/multerconfig');
 
 // Router Declearation
 const peopleRouter = express.Router();

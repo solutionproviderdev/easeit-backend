@@ -1,6 +1,6 @@
 const express = require('express');
 const { checkLogin } = require('../middlewares/auth/checkLogin');
-const upload = require('../config/multerconfig');
+const { upload } = require('../config/multerconfig');
 const { getAllMessages, sendMessage } = require('../controller/messageController');
 
 const messageRouter = express.Router();

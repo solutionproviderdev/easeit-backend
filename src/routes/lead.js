@@ -7,7 +7,7 @@ const { parse } = require('json2csv');
 const fs = require('fs');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const moment = require('moment');
-const upload = require('../config/multerconfig');
+const { upload } = require('../config/multerconfig');
 const {
     addLeads,
     getLeads,

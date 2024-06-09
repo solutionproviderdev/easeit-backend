@@ -25,6 +25,10 @@ const mapDataRouter = require('./routes/mapDataRouters');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const teamRouter = require('./routes/team');
 const wpMessageRouter = require('./routes/whatsAppMessage');
+const userRouter = require('./routes/user');
+const uploadRouter = require('./routes/upload');
+const departmentRouter = require('./routes/department');
+const activityLogRouter = require('./routes/activityLog');
 
 // Initialize app
 const app = express();
@@ -94,6 +98,10 @@ app.use((req, res, next) => {
   });
 
 // routing setup
+app.use('/users', userRouter);
+app.use('/upload', uploadRouter);
+app.use('/departments', departmentRouter);
+app.use('/activity-logs', activityLogRouter);
 app.use('/people', peopleRouter);
 app.use('/settings', settingsRouter);
 app.use('/lead', leadRouter);
@@ -110,7 +118,7 @@ app.use('/wamessage', wpMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    getConversationsAndUpdateLeads(io);
+    // getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {

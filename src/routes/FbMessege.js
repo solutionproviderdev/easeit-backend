@@ -11,7 +11,7 @@ const {
     sendMessageWithAttachment,
     getLeadDetailsWithLastMessage,
 } = require('../controller/FbMessageController');
-const upload = require('../config/multerconfig');
+const { upload } = require('../config/multerconfig');
 
 // Router Declearation
 const fbMessageRouter = express.Router();
