@@ -229,6 +229,8 @@ const addLeads = async (req, res) => {
     }
 };
 
+const addPhoneLeads = async (req, res) => {};
+
 const addComment = async (req, res) => {
     const leadId = req.params.id;
     const { remark } = req.body;

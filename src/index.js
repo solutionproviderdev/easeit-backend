@@ -118,7 +118,7 @@ app.use('/wamessage', wpMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    // getConversationsAndUpdateLeads(io);
+    getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {
