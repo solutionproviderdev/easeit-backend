@@ -3,6 +3,7 @@
 /* eslint-disable max-len */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-loop-func */
+/* eslint-disable prettier/prettier */
 /**
  * Fetches conversations from the Facebook Graph API using the provided page access token,
  * updates existing leads or creates new leads with the conversation messages,
@@ -60,7 +61,7 @@ const processMessages = (messages) => {
 };
 
 const getConversationsAndUpdateLeads = async (io) => {
-    console.time('getConversationsAndUpdateLeads 1');
+    console.time('getConversationsAndUpdateLeads 2');
     try {
         const fbSettings = await Settings.findOne({ name: 'facebook' });
         if (!fbSettings || !fbSettings.settingsData.page) {
@@ -202,7 +203,7 @@ const getConversationsAndUpdateLeads = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeads 1');
+    console.timeEnd('getConversationsAndUpdateLeads 2');
 };
 
 module.exports = getConversationsAndUpdateLeads;

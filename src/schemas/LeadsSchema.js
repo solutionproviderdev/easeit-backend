@@ -52,7 +52,7 @@ const leadSchema = mongoose.Schema(
                 'Need Support',
                 'Number Collected',
                 'Call Reschedule',
-                'Future Client',
+                'Follow Up',
                 'Meeting Fixed',
                 'Meeting Reschedule',
                 'Cancel Meeting',
@@ -123,7 +123,7 @@ const leadSchema = mongoose.Schema(
         },
         creName: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'People',
+            ref: 'user',
         },
         projectStatus: {
             type: String,

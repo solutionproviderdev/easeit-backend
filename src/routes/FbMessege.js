@@ -11,7 +11,7 @@ const {
     sendMessageWithAttachment,
     getLeadDetailsWithLastMessage,
 } = require('../controller/FbMessageController');
-const upload = require('../config/multerconfig');
+const { upload } = require('../config/multerconfig');
 
 // Router Declearation
 const fbMessageRouter = express.Router();
@@ -23,7 +23,7 @@ fbMessageRouter.get('/all-leads',  getAllLeads);
 fbMessageRouter.get('/sorted-conversations', getSortedLeads);
 
 // New route for getting leads with last message details
-fbMessageRouter.get('/conversations' , getLeadDetailsWithLastMessage);
+fbMessageRouter.get('/conversations', getLeadDetailsWithLastMessage);
 
 // Get All Meterials
 fbMessageRouter.get('/:id', getAllMessage);
