@@ -47,6 +47,7 @@ const validateUser = [
     body('guardian.name').notEmpty().withMessage('Guardian name is required'),
     body('guardian.phone').notEmpty().withMessage('Guardian phone is required'),
     body('guardian.relation').notEmpty().withMessage('Guardian relation is required'),
+    body('type').isIn(['Admin', 'Operator']).withMessage('Type must be Admin or Operator'),
 
     // Middleware to handle validation result
     (req, res, next) => {
@@ -196,6 +197,7 @@ const validateUserUpdate = [
     body('guardian.name').optional().notEmpty().withMessage('Guardian name is required'),
     body('guardian.phone').optional().notEmpty().withMessage('Guardian phone is required'),
     body('guardian.relation').optional().notEmpty().withMessage('Guardian relation is required'),
+    body('type').isIn(['Admin', 'Operator']).withMessage('Type must be Admin or Operator'),
 
     // Middleware to handle validation result
     (req, res, next) => {

@@ -24,6 +24,7 @@ exports.createUser = async (req, res) => {
             documents,
             socialLinks,
             guardian,
+            type,
         } = req.body;
 
         // Check if user already exists
@@ -53,6 +54,7 @@ exports.createUser = async (req, res) => {
             documents,
             socialLinks,
             guardian,
+            type,
         });
 
         // Save the user
@@ -350,6 +352,7 @@ exports.updateUser = async (req, res) => {
             workingProcedure: req.body.workingProcedure,
             socialLinks: req.body.socialLinks,
             guardian: req.body.guardian,
+            type: req.body.type, // Added type property
         };
 
         // Update user fields
@@ -379,7 +382,6 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// Delete user function
 // Delete user function
 exports.deleteUser = async (req, res) => {
     try {

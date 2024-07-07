@@ -23,7 +23,7 @@ fbMessageRouter.get('/all-leads', checkLogin, getAllLeads);
 fbMessageRouter.get('/sorted-conversations', checkLogin, getSortedLeads);
 
 // New route for getting leads with last message details
-fbMessageRouter.get('/conversations', checkLogin, getLeadDetailsWithLastMessage);
+fbMessageRouter.get('/conversations', getLeadDetailsWithLastMessage);
 
 // Get All Meterials
 fbMessageRouter.get('/:id', checkLogin, getAllMessage);

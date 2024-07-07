@@ -17,6 +17,7 @@ const userSchema = new Schema({
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
     roleId: { type: Schema.Types.ObjectId, ref: 'Role' },
     departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
+    type: { type: String, enum: ['Admin', 'Operator'], required: true },
     accessLevel: { type: [String] },
     joiningDate: { type: Date },
     currentSalary: { type: Number },

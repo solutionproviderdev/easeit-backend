@@ -21,27 +21,29 @@ const {
     rescheduleMeeting,
     updateLeadbyStatus,
 } = require('../controller/leadController');
-const { checkLogin } = require('../middlewares/auth/checkLogin');
 const Lead = require('../schemas/LeadsSchema');
 const People = require('../schemas/PeopleSchema');
 const Settings = require('../schemas/SettingsSchema');
+const leadConversationRouter = require('./native-routes/lead-center/leadConversation');
 
 const leadRouter = express.Router();
 
+leadRouter.use('/conversation', leadConversationRouter);
+
 // Retrieve a list of all leads
-leadRouter.get('/', checkLogin, getLeads);
+leadRouter.get('/', getLeads);
 
 // Retrieve names and IDs of all leads for dropdown or autocomplete options
-leadRouter.get('/names', checkLogin, getLeadsName);
+leadRouter.get('/names', getLeadsName);
 
 // Retrieve details of a specific lead by ID
-leadRouter.get('/:id', checkLogin, getLeadDetails);
+leadRouter.get('/:id', getLeadDetails);
 
 // Create a new lead with optional image uploads
-leadRouter.post('/', checkLogin, upload.array('images'), addLeads);
+leadRouter.post('/', upload.array('images'), addLeads);
 
 // Add a comment to a specific lead by ID with optional image uploads
-leadRouter.post('/comment/:id', checkLogin, upload.array('images'), addComment);
+leadRouter.post('/comment/:id', upload.array('images'), addComment);
 
 // Update a lead to fix a meeting
 leadRouter.put('/fixMeeting/:id', fixMeeting);
@@ -50,16 +52,16 @@ leadRouter.put('/fixMeeting/:id', fixMeeting);
 leadRouter.put('/rescheduleMeeting/:id', rescheduleMeeting);
 
 // Update a lead's information by ID with optional file uploads (limited to 3 files)
-leadRouter.put('/:id', checkLogin, upload.array('images', 3), updateLeadbyStatus);
+leadRouter.put('/:id', upload.array('images', 3), updateLeadbyStatus);
 
 // Update the CRE name of a specific lead by ID
-leadRouter.put('/:id/creName', checkLogin, updateCreName);
+leadRouter.put('/:id/creName', updateCreName);
 
 // Route to handle lead tags
-leadRouter.put('/:id/tags', checkLogin, updateLeadTags);
+leadRouter.put('/:id/tags', updateLeadTags);
 
 // Delete a specific lead by ID
-leadRouter.delete('/:id', checkLogin, deleteLead);
+leadRouter.delete('/:id', deleteLead);
 
 // Function to reassign leads to the correct CRE based on message content
 const reAssignToRightCRE = async () => {

@@ -105,7 +105,6 @@ app.use('/activity-logs', activityLogRouter);
 app.use('/people', peopleRouter);
 app.use('/settings', settingsRouter);
 app.use('/lead', leadRouter);
-app.use('/webhook', webhookRouter);
 app.use('/materials', meterialsRouter);
 app.use('/product', productRouter);
 app.use('/meetings', meetingsRouter);
