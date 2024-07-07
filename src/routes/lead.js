@@ -29,13 +29,14 @@ const Settings = require('../schemas/SettingsSchema');
 const leadRouter = express.Router();
 
 // Retrieve a list of all leads
-leadRouter.get('/', checkLogin, getLeads);
+// leadRouter.get('/', checkLogin, getLeads);
+leadRouter.get('/', getLeads);
 
 // Retrieve names and IDs of all leads for dropdown or autocomplete options
-leadRouter.get('/names', checkLogin, getLeadsName);
+leadRouter.get('/names', getLeadsName);
 
 // Retrieve details of a specific lead by ID
-leadRouter.get('/:id', checkLogin, getLeadDetails);
+leadRouter.get('/:id', getLeadDetails);
 
 // Create a new lead with optional image uploads
 leadRouter.post('/', checkLogin, upload.array('images'), addLeads);

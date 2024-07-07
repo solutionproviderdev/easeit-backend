@@ -44,7 +44,7 @@ const leadSchema = mongoose.Schema(
         CID: String,
         name: { type: String, required: true },
         status: {
-            type: String,
+            type: String,  
             enum: [
                 'unread',
                 'No Response',
@@ -101,7 +101,7 @@ const leadSchema = mongoose.Schema(
                 images: [String],
                 from: {
                     type: mongoose.Schema.Types.ObjectId,
-                    ref: 'people',
+                    ref: 'People',
                 },
                 date: Date,
             },
@@ -119,11 +119,11 @@ const leadSchema = mongoose.Schema(
         sourcePageProfilePicture: String,
         salesExqName: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'people',
+            ref: 'People',
         },
         creName: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'people',
+            ref: 'People',
         },
         projectStatus: {
             type: String,

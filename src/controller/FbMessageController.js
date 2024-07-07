@@ -67,7 +67,7 @@ const getAllMessage = async (req, res) => {
 const sendMessege = async (req, res) => {
     const leadId = req.params.id;
     const messageText = req.body.message;
-
+    console.log('70 message id:', leadId, 'message content', messageText);
     try {
         const lead = await Lead.findById(leadId);
         if (!lead || !lead.fbSenderID) {
@@ -79,7 +79,6 @@ const sendMessege = async (req, res) => {
             return res.status(500).json({ error: 'Facebook settings or access token not found' });
         }
         const { pageAccessToken, pageId } = settings.settingsData.page[0];
-
         // Determine the message type based on the time elapsed since the last message
         const lastMessage = lead.messages[lead.messages.length - 1];
         const timeElapsed = Date.now() - new Date(lastMessage.date).getTime();
@@ -89,13 +88,14 @@ const sendMessege = async (req, res) => {
             recipient: { id: lead.fbSenderID },
             message: { text: messageText },
             messaging_type: messagingType,
-            access_token: pageAccessToken,
+            access_token: pageAccessToken,   
         };
 
         const fbResponse = await axios.post(
-            `https://graph.facebook.com/${pageId}/messages`,
+			`https://graph.facebook.com/${pageId}/messages`,
             messagePayload
         );
+		console.log('95 er --fbResponse ashche :', fbResponse)
 
         if (fbResponse.data && fbResponse.data.message_id) {
             const newMessage = {
@@ -127,11 +127,82 @@ const sendMessege = async (req, res) => {
     } catch (error) {
         if (error.response && error.response.data && error.response.data.error) {
             return res.status(500).json({ error: error.response.data.error.message });
+			console.log('123 error:', error.response.data.error.message)
         }
         console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
+		console.log('123 error:', error.response.data.error.message)
     }
 };
+
+// const sendMessege = async (req, res) => {
+//     const leadId = req.params.id;
+//     const messageText = req.body.message;
+//     console.log('70 message id:', leadId, 'message content', messageText);
+//     try {
+//         const lead = await Lead.findById(leadId);
+//         if (!lead || !lead.fbSenderID) {
+//             return res.status(404).json({ error: 'Lead not found or missing Facebook ID' });
+//         }
+
+//         const settings = await Settings.findOne({ name: 'facebook' });
+//         if (!settings || !settings.settingsData.page[0].pageAccessToken) {
+//             return res.status(500).json({ error: 'Facebook settings or access token not found' });
+//         }
+//         const { pageAccessToken, pageId } = settings.settingsData.page[0];
+//         // Determine the message type based on the time elapsed since the last message
+//         const lastMessage = lead.messages[lead.messages.length - 1];
+//         const timeElapsed = Date.now() - new Date(lastMessage.date).getTime();
+//         const messagingType = timeElapsed > 24 * 60 * 60 * 1000 ? 'UPDATE' : 'RESPONSE';
+
+//         const messagePayload = {
+//             recipient: { id: lead.fbSenderID },
+//             message: { text: messageText },
+//             messaging_type: messagingType,
+//             access_token: pageAccessToken,
+//         };
+
+//         const fbResponse = await axios.post(
+// 			`https://graph.facebook.com/${pageId}/messages`,
+//             messagePayload
+//         );
+// 		console.log('95 er --fbResponse ashche :', fbResponse)
+
+//         if (fbResponse.data && fbResponse.data.message_id) {
+//             const newMessage = {
+//                 messageId: fbResponse.data.message_id,
+//                 content: messageText,
+//                 senderId: pageId,
+//                 sentByMe: true,
+//                 date: new Date(),
+//             };
+//             lead.messages.push(newMessage);
+//             const savedLead = await lead.save();
+
+//             // Emit the new message to all clients listening on the 'message' event
+//             req.io.emit(`fbMessage${leadId}`, newMessage);
+
+//             const socketPayload = {
+//                 name: savedLead.name,
+//                 lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+//                 lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+//                 sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
+//                 createdAt: savedLead.createdAt,
+//                 _id: savedLead._id,
+//             };
+//             req.io.emit('conversation', socketPayload);
+
+//             return res.status(200).json({ success: true, data: newMessage });
+//         }
+//         return res.status(500).json({ error: 'Failed to send message' });
+//     } catch (error) {
+//         if (error.response && error.response.data && error.response.data.error) {
+//             return res.status(500).json({ error: error.response.data.error.message });
+//         }
+//         console.log(error);
+//         return res.status(500).json({ error: 'Internal server error' });
+//     }
+// };
 
 const sendFile = async (req, res) => {
     const leadId = req.params.id;

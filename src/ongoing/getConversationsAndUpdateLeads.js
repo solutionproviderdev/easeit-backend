@@ -145,7 +145,6 @@ const getConversationsAndUpdateLeads = async (io) => {
                                 status: savedLead.status,
                                 _id: savedLead._id,
                             };
-
                             io.emit('conversation', socketPayload);
                         } else {
                             const cre = await findCREWithLowestLeads();

@@ -110,43 +110,87 @@ async function createLead(leadData) {
     return await newLead.save();
 }
 
+// get leads er 2 ta endpoind baniyechi 1 for web 1 for app
+
+// const getLeads = async (req, res) => {
+//     try {
+//         // Extract creName and limit from query parameters
+//         const { creName, limit } = req.query;
+
+//         // Build the query populate the crenames name, roal, avater
+//         let query = Lead.find({})
+//             .populate({
+//                 path: 'creName',
+//                 select: 'name role avatar',
+//             }).populate({
+//                 path: 'salesExqName',
+//                 select: 'name role avatar',
+//             })
+//             .populate({
+//                 path: 'comment.from',
+//                 select: 'name role avatar', // Assuming you want to populate similar fields for commenters
+//             });
+
+//         if (creName) {
+//             // Filter by creName if provided
+//             query = query.where('creName').equals(creName);
+//         }
+
+//         // Apply limit if provided
+//         if (limit) {
+//             query = query.limit(Number(limit)); // Convert limit to a number
+//         }
+
+//         // Sort by creation date (newest first)
+//         const leads = await query.sort({ createdAt: -1 });
+
+//         res.status(200).json(leads);
+//     } catch (error) {
+//         res.status(500).json({ error: 'There was a server side error' });
+//     }
+// };
+
 const getLeads = async (req, res) => {
     try {
-        // Extract creName and limit from query parameters
-        const { creName, limit } = req.query;
+        const { creName, limit, page } = req.query;
 
-        // Build the query populate the crenames name, roal, avater
+        // Default limit and page values
+        const limitValue = parseInt(limit, 10) || 20; // default to 20 if limit is not provided
+        const pageValue = parseInt(page, 10) || 1;    // default to 1 if page is not provided
+        const skip = (pageValue - 1) * limitValue;    // calculate the number of items to skip
+
         let query = Lead.find({})
             .populate({
                 path: 'creName',
                 select: 'name role avatar',
-            }).populate({
+            })
+            .populate({
                 path: 'salesExqName',
                 select: 'name role avatar',
             })
             .populate({
                 path: 'comment.from',
-                select: 'name role avatar', // Assuming you want to populate similar fields for commenters
+                select: 'name role avatar',
             });
 
         if (creName) {
-            // Filter by creName if provided
             query = query.where('creName').equals(creName);
         }
 
-        // Apply limit if provided
-        if (limit) {
-            query = query.limit(Number(limit)); // Convert limit to a number
-        }
-
-        // Sort by creation date (newest first)
-        const leads = await query.sort({ createdAt: -1 });
+        const leads = await query
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitValue);
 
         res.status(200).json(leads);
     } catch (error) {
         res.status(500).json({ error: 'There was a server side error' });
     }
 };
+
+
+
+
 
 const getLeadsName = async (req, res) => {
     try {
@@ -176,6 +220,7 @@ const getLeadDetails = async (req, res) => {
 
         res.status(200).json(lead);
     } catch (error) {
+        console.log(error);
         res.status(500).json({ error: 'There was a server side error' });
     }
 };
