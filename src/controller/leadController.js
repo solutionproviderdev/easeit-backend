@@ -189,9 +189,6 @@ const getLeads = async (req, res) => {
 };
 
 
-
-
-
 const getLeadsName = async (req, res) => {
     try {
         const leads = await Lead.find({}, 'name _id'); // Select only the name and _id fields
@@ -202,6 +199,7 @@ const getLeadsName = async (req, res) => {
 };
 
 const getLeadDetails = async (req, res) => {
+    console("get leads being exicuted hare is id",req.params)
     try {
         const { id } = req.params;
         const lead = await Lead.findById(id)

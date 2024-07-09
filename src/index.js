@@ -32,6 +32,7 @@ const userRouter = require('./routes/user');
 const uploadRouter = require('./routes/upload');
 const departmentRouter = require('./routes/department');
 const activityLogRouter = require('./routes/activityLog');
+const leadConversationRouter = require('./routes/native-routes/lead-center/leadConversation');
 
 // Initialize app
 const app = express();
@@ -127,10 +128,14 @@ app.use('/map', mapDataRouter);
 app.use('/teams', teamRouter);
 app.use('/wamessage', wpMessageRouter);
 
+
+// Native Route
+app.use('/nativeLeads', leadConversationRouter);
+
 // Get Lead Repetedly
 setInterval(() => {
 	getConversationsAndUpdateLeads(io);
-}, 8000);
+}, 1000);
 
 // const fetchAllMapData = async () => {
 //     console.log('Hii...!');

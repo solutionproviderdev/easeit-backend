@@ -61,7 +61,7 @@ const processMessages = (messages) => {
 };
 
 const getConversationsAndUpdateLeads = async (io) => {
-    console.time('getConversationsAndUpdateLeads 2');
+    // console.time('getConversationsAndUpdateLeads 2');
     try {
         const fbSettings = await Settings.findOne({ name: 'facebook' });
         if (!fbSettings || !fbSettings.settingsData.page) {
@@ -203,7 +203,7 @@ const getConversationsAndUpdateLeads = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeads 2');
+    // console.timeEnd('getConversationsAndUpdateLeads 2');
 };
 
 module.exports = getConversationsAndUpdateLeads;
