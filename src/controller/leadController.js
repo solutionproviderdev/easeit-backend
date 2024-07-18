@@ -110,6 +110,7 @@ async function createLead(leadData) {
     return await newLead.save();
 }
 
+// Get all the leads
 const getLeads = async (req, res) => {
     try {
         // Extract creName and limit from query parameters

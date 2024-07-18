@@ -137,6 +137,11 @@ const getConversationsAndUpdateLeads = async (io) => {
                                     sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
                                     createdAt: savedLead.createdAt,
                                     creName: savedLead.creName,
+                                    pageInfo: {
+                                        pageName,
+                                        pageId,
+                                        pageProfilePicture,
+                                    },
                                     sourcePageName: pageName,
                                     sourcePageId: pageId,
                                     sourcePageProfilePicture: pageProfilePicture,
@@ -158,9 +163,11 @@ const getConversationsAndUpdateLeads = async (io) => {
                                 fbSenderID,
                                 messages: processedMessages,
                                 source: 'Facebook',
-                                sourcePageName: pageName,
-                                sourcePageId: pageId,
-                                sourcePageProfilePicture: pageProfilePicture,
+                                pageInfo: {
+                                    pageName,
+                                    pageId,
+                                    pageProfilePicture,
+                                },
                                 creName: cre,
                                 createdAt: new Date(firstMessageTime),
                             });
@@ -168,9 +175,11 @@ const getConversationsAndUpdateLeads = async (io) => {
                             const socketPayload = {
                                 name: savedNewLead.name,
                                 lastMessage: savedNewLead.lastMsg,
-                                sourcePageName: pageName,
-                                sourcePageId: pageId,
-                                sourcePageProfilePicture: pageProfilePicture,
+                                pageInfo: {
+                                    pageName,
+                                    pageId,
+                                    pageProfilePicture,
+                                },
                                 lastMessageTime: savedNewLead.messages[0].date,
                                 sentByMe: savedNewLead.messages[0].sentByMe,
                                 createdAt: savedNewLead.createdAt,

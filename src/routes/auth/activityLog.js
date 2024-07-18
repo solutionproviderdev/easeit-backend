@@ -1,10 +1,10 @@
 const express = require('express');
-const { checkLogin } = require('../middlewares/auth/checkLogin');
+const { checkLogin } = require('../../middlewares/auth/checkLogin');
 const {
     getAllActivityLogs,
     deleteActivityLog,
     getActivityLogsByUserId,
-} = require('../controller/activityLogController');
+} = require('../../controller/activityLogController');
 
 // Router Declaration
 const activityLogRouter = express.Router();

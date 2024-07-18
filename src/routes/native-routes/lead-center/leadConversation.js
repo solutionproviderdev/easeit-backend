@@ -1,5 +1,5 @@
 const express = require('express');
-const getAllLeadConversations = require('../../../controller/native/leadConversationController');
+const getAllLeadConversations = require('../../../controller/lead/leadConversationController');
 
 const leadConversationRouter = express.Router();
 

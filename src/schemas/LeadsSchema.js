@@ -39,6 +39,34 @@ const meetingDetailsSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const commentSchema = new mongoose.Schema({
+    comment: String,
+    commentBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    images: [String],
+    date: { type: Date, require: true },
+});
+
+const workScopeSchema = new mongoose.Schema(
+    {
+        scope: String,
+        sku: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
+        squareFeet: Number,
+    },
+    { _id: true }
+);
+
+const reminderSchema = new mongoose.Schema(
+    {
+        reminder: String,
+        date: { type: Date, require: true },
+        time: { type: Date, require: true },
+    },
+    { _id: true }
+);
+
 const leadSchema = mongoose.Schema(
     {
         CID: String,
@@ -62,19 +90,6 @@ const leadSchema = mongoose.Schema(
         },
         address: addressSchema,
         meetingDetails: [meetingDetailsSchema],
-        meetingStatus: {
-            type: String,
-            enum: [
-                'Fixed',
-                'Cancel Meeting',
-                'Rescheduled',
-                'In Progress',
-                'Complete',
-                'Follow up',
-                'Success',
-                'Need Approval',
-            ],
-        },
         lastMsg: String,
         fbSenderID: {
             type: String,
@@ -82,11 +97,9 @@ const leadSchema = mongoose.Schema(
         },
         source: {
             type: String,
-            enum: ['Facebook', 'WhatsApp', 'Web', 'By Phone'],
+            enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
             required: true,
         },
-        nextCallData: Date,
-        nextMsgData: Date,
         meetingData: [
             {
                 time: String,
@@ -94,36 +107,20 @@ const leadSchema = mongoose.Schema(
             },
         ],
         phone: String,
-        visitCharge: Number,
-        comment: [
-            {
-                comment: String,
-                images: [String],
-                from: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'people',
-                },
-                date: Date,
-            },
-        ],
-        workScope: [
-            {
-                scope: String,
-                sku: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
-                sqft: Number,
-                price: Number,
-            },
-        ],
-        sourcePageName: String,
-        sourcePageId: String,
-        sourcePageProfilePicture: String,
+        comment: [commentSchema],
+        workScope: [workScopeSchema],
+        pageInfo: {
+            pageId: String,
+            pageName: String,
+            pageProfilePicture: String,
+        },
         salesExqName: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'people',
+            ref: 'User',
         },
         creName: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'user',
+            ref: 'User',
         },
         projectStatus: {
             type: String,
@@ -133,11 +130,11 @@ const leadSchema = mongoose.Schema(
             type: String,
             enum: ['Inside', 'Outside'],
         },
+        reminder: [reminderSchema],
         positive: Boolean,
         discount: Number,
         projectValue: Number,
         mbSheetNo: String,
-        transportCost: Number,
         messages: [messageSchema],
         proposals: [{ client: Number, proposal: Number }],
         tags: [String],
