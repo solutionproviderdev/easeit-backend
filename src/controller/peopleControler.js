@@ -122,7 +122,6 @@ const peopleSignup = async (req, res) => {
 // Login
 const peopleLogin = async (req, res) => {
     const { email, password } = req.body;
-
     // First Check if the user exist in the database
     const people = await People.findOne({ email });
     if (!people) {
@@ -131,10 +130,12 @@ const peopleLogin = async (req, res) => {
             success: false,
         });
     }
-
+    
     // That means the people is existing and trying to signin fro the right portal
     // Now check if the password match
     const isMatch = await bcrypt.compare(password, people.password);
+    console.log('password salting bycrypt-->',isMatch)
+
     if (isMatch) {
         // if the password match Sign a the token and issue it to the people
         const token = jwt.sign(

@@ -33,7 +33,7 @@ function emitConversationUpdate(req, lead) {
         sourcePageName: lead.sourcePageName,
         sourcePageId: lead.sourcePageId,
         sourcePageProfilePicture: lead.sourcePageProfilePicture,
-        lastMessage: lastMessage.content,
+        lastMessage: lastMessage.content,   
         lastMessageTime: lastMessage.date,
         sentByMe: lastMessage.sentByMe,
         createdAt: lead.createdAt,

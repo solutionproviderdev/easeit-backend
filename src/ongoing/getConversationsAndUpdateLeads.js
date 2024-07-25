@@ -22,7 +22,7 @@ const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
     console.error(`${currentTime} => ${message}`);
     // Optionally, send the error to a logging service or notify via email/SMS
-    // sendErrorNotification(message, error);
+    sendErrorNotification(message, error);
 };
 
 const processMessages = (messages) => {
@@ -115,6 +115,8 @@ const getConversationsAndUpdateLeads = async (io) => {
                                         }
                                     });
 
+                                    // console.log('message --> ', message);
+
                                     io.emit(`fbMessage${lead._id}`, message);
                                     isNewMessageAdded = true;
                                 }
@@ -191,16 +193,16 @@ const getConversationsAndUpdateLeads = async (io) => {
                             io.emit('newLead', { newLead: socketPayloadNewLead });
                         }
                     } catch (innerError) {
-                        logError('Error processing a single conversation', innerError);
+                        console.log('Error processing a single conversation', innerError);
                         continue;
                     }
                 }
             } catch (error) {
-                logError(`Error fetching or processing data for page ${pageId}`, error);
+                // console.log(`Error fetching or processing data for page ${pageId}`, error);
             }
         }
     } catch (error) {
-        logError('Error fetching or processing data', error);
+        console.log('Error fetching or processing data', error);
     }
     // console.timeEnd('getConversationsAndUpdateLeads 1');
 };

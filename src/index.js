@@ -61,6 +61,8 @@ app.use(
 		origin: (origin, callback) => {
 			const allowedOrigins = [
 				'http://localhost:3000',
+				'http://localhost:3001',
+				'http://localhost:5000',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
 				'http://103.122.143.63:3000',
@@ -72,6 +74,10 @@ app.use(
 
 				'exp://192.168.68.101:8081', // expo link for cors allowance
 				'http://192.168.68.112:8081',
+				
+				'exp://192.168.0.112:8081', // expo link for cors allowance
+				'http://192.168.0.112:3000',
+				'http://192.168.0.112:8081',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
