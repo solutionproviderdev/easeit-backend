@@ -410,7 +410,7 @@ exports.deleteUser = async (req, res) => {
 // Login User
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
-
+console.log('login user function')
     try {
         // Check if user exists
         const user = await User.findOne({ email });

@@ -48,7 +48,7 @@ const io = new Server(server, {
 mongoose
 	.connect(process.env.MONGO_CONNECTION_STRING, {})
 	.then(() => console.log('🍀 Database connection successfull'))
-	.catch(err => console.log(err, 'Database connection Error'));
+	.catch((err) => console.log(err, 'Database connection Error'));
 
 // request process
 app.use(express.json());
@@ -68,13 +68,15 @@ app.use(
 				'http://103.122.143.63:3000',
 				'https://easeit.vercel.app',
 				'https://crm.solutionprovider.com.bd',
+				// fixed ipv4
+				'http://192.168.68.108:3000',
 
 				'http://localhost:8081', // Add localhost:8081 for web app development
 				'http://192.168.0.155:8081', // Add IP-based address for web app development
 
 				'exp://192.168.68.101:8081', // expo link for cors allowance
 				'http://192.168.68.112:8081',
-				
+
 				'exp://192.168.0.112:8081', // expo link for cors allowance
 				'http://192.168.0.112:3000',
 				'http://192.168.0.112:8081',
@@ -102,7 +104,7 @@ app.get('/', (req, res) => {
 });
 
 // io connection start
-io.on('connection', socket => {
+io.on('connection', (socket) => {
 	console.log(`User connected ID: ${socket.id}`);
 
 	socket.on('disconnect', () => {
@@ -133,7 +135,6 @@ app.use('/conversations', conversationRouter);
 app.use('/map', mapDataRouter);
 app.use('/teams', teamRouter);
 app.use('/wamessage', wpMessageRouter);
-
 
 // Native Route
 app.use('/nativeLeads', leadConversationRouter);
