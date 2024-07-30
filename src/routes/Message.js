@@ -5,11 +5,11 @@ const { getAllMessages, sendMessage } = require('../controller/messageController
 
 const messageRouter = express.Router();
 
-messageRouter.use(checkLogin);
+// messageRouter.use(checkLogin);
 
 messageRouter
-    .route('/:conversationId')
-    .get(getAllMessages)
-    .post(upload.array('attachments', 6), sendMessage);
+	.route('/:conversationId')
+	.get(getAllMessages)
+	.post(upload.array('attachments', 6), sendMessage);
 
 module.exports = messageRouter;

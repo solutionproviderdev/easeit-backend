@@ -6,7 +6,7 @@ const {
     sendTemplateWaMessage,
 } = require('../controller/whatsAppController');
 
-// Internal Imports
+// Internal
 // const { checkLogin } = require('../middlewares/auth/checkLogin');
 
 // Router Declearation

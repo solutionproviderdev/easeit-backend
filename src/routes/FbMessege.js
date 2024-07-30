@@ -17,16 +17,16 @@ const { upload } = require('../config/multerconfig');
 const fbMessageRouter = express.Router();
 
 // Add this new route
-fbMessageRouter.get('/all-leads', checkLogin, getAllLeads);
+fbMessageRouter.get('/all-leads',  getAllLeads);
 
 // Get leads sorted by newest message or most recent leads
-fbMessageRouter.get('/sorted-conversations', checkLogin, getSortedLeads);
+fbMessageRouter.get('/sorted-conversations', getSortedLeads);
 
 // New route for getting leads with last message details
 fbMessageRouter.get('/conversations', getLeadDetailsWithLastMessage);
 
 // Get All Meterials
-fbMessageRouter.get('/:id', checkLogin, getAllMessage);
+fbMessageRouter.get('/:id', getAllMessage);
 
 // New route for sending a message with attachments
 fbMessageRouter.post(
@@ -37,7 +37,7 @@ fbMessageRouter.post(
 ); // active
 
 // send a message to lead
-fbMessageRouter.post('/:id', checkLogin, sendMessege); // inactive
+fbMessageRouter.post('/:id', sendMessege); // inactive
 
 // send a file
 fbMessageRouter.post('/:id/attachment', checkLogin, upload.array('messageAttachment', 6), sendFile); // inactive

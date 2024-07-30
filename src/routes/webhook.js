@@ -31,37 +31,33 @@ webhookRouter.get(['/facebook', '/instagram', '/whatsapp'], (req, res) => {
     console.log(req.body);
     if (req.query['hub.mode'] == 'subscribe' && req.query['hub.verify_token'] == token) {
         res.send(req.query['hub.challenge']);
+        console.log('webhook pinged');
     } else {
         res.sendStatus(400);
     }
 });
+// routes for whatsapp
 
-// whatsapp webhook route
-webhookRouter.get('/whatsapp', (req, res) => {
-    console.log('Received webhook verification request:', req.query);
+// Handles incoming POST requests from the services after verification
+webhookRouter.post('/whatsapp', (req, res) => {
+    console.log('Received POST request:', req.body);
 
-    const VERIFY_TOKEN = 'apple';
-    const mode = req.query['hub.mode'];
-    const watoken = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
+    // Assuming the body structure as sent by WhatsApp, extract the message
+    if (req.body.object === 'whatsapp_business_account') {
+        const { messages } = req.body.entry[0].changes[0].value;
+        if (messages) {
+            const message = messages[0];
+            console.log('Received message from WhatsApp:', message);
 
-    if (mode && watoken && challenge) {
-        if (mode === 'subscribe' && watoken === VERIFY_TOKEN) {
-            console.log('WEBHOOK_VERIFIED');
-            res.send(challenge);
-            console.log(challenge);
-        } else {
-            console.log(
-                `Failed verification: Incorrect mode or token. Mode: ${mode}, Token: ${watoken}`
-            );
-            res.sendStatus(403);
+            // Here you can process the message further, e.g., send a reply or log it
         }
+        res.status(200).send('EVENT_RECEIVED');
     } else {
-        console.log('Failed verification: Missing required query parameters', req.query);
         res.sendStatus(400);
     }
 });
 
+// routes for fb
 webhookRouter.post('/facebook', addFbLead);
 
 webhookRouter.post('/comment/:id');

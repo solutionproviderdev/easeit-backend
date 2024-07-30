@@ -122,7 +122,6 @@ const peopleSignup = async (req, res) => {
 // Login
 const peopleLogin = async (req, res) => {
     const { email, password } = req.body;
-
     // First Check if the user exist in the database
     const people = await People.findOne({ email });
     if (!people) {
@@ -131,10 +130,12 @@ const peopleLogin = async (req, res) => {
             success: false,
         });
     }
-
+    
     // That means the people is existing and trying to signin fro the right portal
     // Now check if the password match
     const isMatch = await bcrypt.compare(password, people.password);
+    console.log('password salting bycrypt-->',isMatch)
+
     if (isMatch) {
         // if the password match Sign a the token and issue it to the people
         const token = jwt.sign(
@@ -174,28 +175,61 @@ const peopleLogin = async (req, res) => {
         success: false,
     });
 };
+// add User
+const addUser = async (req, res) => {
+    console.log('Backend reached');
+    // console.log('req.body:', req.body); // Log to check the received body
+    // console.log('req.file:', req.file); // Log to check the received file
+    const {
+        name,
+        email,
+        phone,
+        address,
+        department,
+        status,
+        role,
+        createdAt,
+        password,
+        NIDNumber,
+        startDate,
+    } = req.body;
+    const image = `${process.env.SERVER_URL}/images/${req.file.filename}`;
+    console.log(image);
+
+    try {
+        const newUser = new People({
+            name,
+            email,
+            phone,
+            address,
+            department,
+            status,
+            role,
+            createdAt,
+            image,
+            password,
+            NIDNumber,
+            startDate,
+        });
+
+        await newUser.save();
+        res.status(201).json({ message: 'User added successfully!', user: newUser });
+    } catch (error) {
+        res.status(400).json({ message: 'Error adding user', error });
+    }
+};
 
 // Update User details
+
 const updatePeopleDetails = async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
 
         // Handle file updates
-        if (req.files) {
-            // Assuming that 'avater' and 'nid' are the field names
-            if (req.files.avater) {
-                updates.avater = `${process.env.SERVER_URL}/images/${req.files.avater[0].filename}`;
-            }
-
-            if (req.files.nid) {
-                updates.nid = `${process.env.SERVER_URL}/images/${req.files.nid[0].filename}`;
-            }
+        if (req.file) {
+            updates.image = `${process.env.SERVER_URL}/images/${req.file.filename}`;
         }
-
-        console.log(updates);
-
-        // Validate the updates if needed
 
         // Update the user details in the database
         const updatedPeople = await People.findByIdAndUpdate(id, updates, { new: true });
@@ -205,13 +239,11 @@ const updatePeopleDetails = async (req, res) => {
                 message: 'User not found',
             });
         }
-
         return res.status(200).json({
             message: 'User details updated successfully',
             updatedPeople,
         });
     } catch (err) {
-        // Implement logger function if any
         return res.status(500).json({
             message: `${err.message}`,
         });
@@ -234,10 +266,51 @@ function peopleLogout(req, res) {
     res.status(200).json({ message: 'Logged out successfully' });
 }
 
+async function updateProfilePic(req, res) {
+    const { ID } = req.params;
+    const updates = {};
+
+    // Handle file updates
+    if (req.file) {
+        updates.image = `${process.env.SERVER_URL}/images/${req.file.filename}`;
+    }
+
+    try {
+        const updatedPeople = await People.findByIdAndUpdate(ID, updates, { new: true });
+
+        if (!updatedPeople) {
+            return res.status(404).json({
+                message: 'User not found',
+            });
+        }
+
+        console.log('Updated image URL:', updates.image);
+        console.log('Profile pic ID:', ID);
+        console.log('Uploaded picture:', req.file);
+
+        // Send only the necessary data in response
+        res.status(200).json({
+            message: 'Profile picture updated successfully',
+            user: {
+                _id: updatedPeople._id,
+                name: updatedPeople.name,
+                image: updatedPeople.image,
+            },
+        });
+    } catch (err) {
+        console.error('Error updating profile picture:', err);
+        res.status(500).json({
+            message: `${err.message}`,
+        });
+    }
+}
+
 module.exports = {
     peopleSignup,
+    updateProfilePic,
     getPeople,
     peopleLogin,
+    addUser,
     peopleLogout,
     getPeopleDetails,
     updatePeopleDetails,

@@ -72,7 +72,7 @@ const leadSchema = mongoose.Schema(
         CID: String,
         name: { type: String, required: true },
         status: {
-            type: String,
+            type: String,  
             enum: [
                 'unread',
                 'No Response',
