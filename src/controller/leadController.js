@@ -250,7 +250,7 @@ const addComment = async (req, res) => {
         if (!lead) {
             return res.status(404).send({ message: 'Lead not found' });
         }
-
+                               
         const comment = {
             comment: remark,
             images,
