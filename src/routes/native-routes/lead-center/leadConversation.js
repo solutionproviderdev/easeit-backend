@@ -1,5 +1,6 @@
 const express = require('express');
-const getAllLeadConversations = require('../../../controller/lead/leadConversationController');
+const { sendMessage } = require('../../../controller/messageController');
+const { getAllLeadConversations, getLeadConversationDetails } = require('../../../controller/lead/leadConversationController');
 
 const leadConversationRouter = express.Router();
 

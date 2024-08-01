@@ -33,9 +33,14 @@ const {
 const { checkAuth } = require('../../middlewares/auth/checkLoginCookie');
 const Department = require('../../schemas/DepartmentSchema');
 const User = require('../../schemas/UserSchema');
+const activityLogRouter = require('./activityLog');
+const departmentRouter = require('./department');
 
 // Router Declaration
 const userRouter = express.Router();
+
+userRouter.use('/activity-logs', activityLogRouter);
+userRouter.use('/departments', departmentRouter);
 
 // Get All Users
 userRouter.get('/', checkAuth, getAllUsers);

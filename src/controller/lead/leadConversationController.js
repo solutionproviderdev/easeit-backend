@@ -57,23 +57,20 @@ const getLeadConversationDetails = async (req, res) => {
     // console.log('its exicuted hare ok hare :---', req.params);
     try {
         const { id } = req.params;
-        const lead = await Lead.findById(id)
-          .select('name messages')
-          .populate({
+        const lead = await Lead.findById(id).select('name messages').populate({
             path: 'messages.senderId',
             select: 'name avatar',
-          });
-    
+        });
+
         if (!lead) {
-          return res.status(404).json({ message: 'Lead not found' });
+            return res.status(404).json({ message: 'Lead not found' });
         }
-    // console.log(lead)
+        // console.log(lead)
         res.status(200).json({ name: lead.name, messages: lead.messages });
-      } catch (error) {
+    } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'There was a server side error' });
-      }
-
+    }
 };
 
 const sendMessage = async (req, res) => {
@@ -100,14 +97,14 @@ const sendMessage = async (req, res) => {
             recipient: { id: lead.fbSenderID },
             message: { text: messageText },
             messaging_type: messagingType,
-            access_token: pageAccessToken,   
+            access_token: pageAccessToken,
         };
 
         const fbResponse = await axios.post(
-			`https://graph.facebook.com/${pageId}/messages`,
+            `https://graph.facebook.com/${pageId}/messages`,
             messagePayload
         );
-		console.log('95 er --fbResponse ashche :', fbResponse)
+        console.log('95 er --fbResponse ashche :', fbResponse);
 
         if (fbResponse.data && fbResponse.data.message_id) {
             const newMessage = {
@@ -138,14 +135,13 @@ const sendMessage = async (req, res) => {
         return res.status(500).json({ error: 'Failed to send message' });
     } catch (error) {
         if (error.response && error.response.data && error.response.data.error) {
-            console.log('123 error:', error.response.data.error.message)
+            console.log('123 error:', error.response.data.error.message);
             return res.status(500).json({ error: error.response.data.error.message });
         }
         console.log(error);
-		console.log('123 error:', error.response.data.error.message)
+        console.log('123 error:', error.response.data.error.message);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 
 module.exports = { getAllLeadConversations, getLeadConversationDetails, sendMessage };
