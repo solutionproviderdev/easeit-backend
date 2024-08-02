@@ -145,7 +145,7 @@ app.use('/nativeLeads', leadConversationRouter);
 // Get Lead Repetedly
 setInterval(() => {
 	getConversationsAndUpdateLeads(io);
-}, 1000);
+}, 8000);
 
 // const fetchAllMapData = async () => {
 //     console.log('Hii...!');

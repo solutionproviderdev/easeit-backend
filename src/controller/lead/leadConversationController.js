@@ -3,6 +3,7 @@ const Lead = require('../../schemas/LeadsSchema');
 const Settings = require('../../schemas/SettingsSchema');
 
 const getAllLeadConversations = async (req, res) => {
+    console.log('localhost leads come from hare')
     try {
         // Get the page and limit from query string, default to 1 and 10 if not provided
         const page = parseInt(req.query.page, 10) || 1;
@@ -54,7 +55,7 @@ const getAllLeadConversations = async (req, res) => {
 };
 
 const getLeadConversationDetails = async (req, res) => {
-    // console.log('its exicuted hare ok hare :---', req.params);
+    console.log('inbox page exicuted hare :---', req.params);
     try {
         const { id } = req.params;
         const lead = await Lead.findById(id).select('name messages').populate({
