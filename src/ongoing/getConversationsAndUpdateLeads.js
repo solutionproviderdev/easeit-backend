@@ -188,6 +188,7 @@ const getConversationsAndUpdateLeads = async io => {
 								createdAt: new Date(firstMessageTime),
 							});
 							const savedNewLead = await newLead.save();
+                            console.log('savedNewLead --> ', savedNewLead);
 
 							// const socketPayload = {
 							//     name: savedNewLead.name,
@@ -206,29 +207,15 @@ const getConversationsAndUpdateLeads = async io => {
 							// io.emit('conversation', socketPayload);
                             
 							const socketPayload = {
-								name: savedNewLead.name,
-								lastMessage:
-									savedNewLead.lastMsg ||
-									(savedNewLead.messages && savedNewLead.messages.length > 0
-										? savedNewLead.messages[savedNewLead.messages.length - 1]
-												.content
-										: ''),
-								pageInfo: savedNewLead.pageInfo || {},
-								lastMessageTime:
-									savedNewLead.messages && savedNewLead.messages.length > 0
-										? savedNewLead.messages[savedNewLead.messages.length - 1]
-												.date
-										: savedNewLead.createdAt,
-								sentByMe:
-									savedNewLead.messages && savedNewLead.messages.length > 0
-										? savedNewLead.messages[savedNewLead.messages.length - 1]
-												.sentByMe
-										: false,
-								createdAt: savedNewLead.createdAt,
-								_id: savedNewLead._id,
-								status: savedNewLead.status || 'unread',
-								source: savedNewLead.source || 'Unknown',
+                                _id: savedNewLead._id,
+                                name: savedNewLead.name,
+                                lastMessage: savedNewLead.lastMsg,
+                                lastMessageTime: savedNewLead.messages[savedNewLead.messages.length - 1].date,
+                                sourcePageProfilePicture: savedNewLead.pageInfo.pageProfilePicture,
+                                status: savedNewLead.status,
+                                creName: savedNewLead.creName,
 							};
+                            console.log('About to emit socket event. Payload:', JSON.stringify(socketPayload, null, 2));
 
 							io.emit('conversation', socketPayload);
 
