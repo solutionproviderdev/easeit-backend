@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// Address Schema
 const addressSchema = new mongoose.Schema(
     {
         division: String,
@@ -10,6 +11,7 @@ const addressSchema = new mongoose.Schema(
     { _id: false }
 );
 
+// Message Schema
 const messageSchema = new mongoose.Schema(
     {
         messageId: String,
@@ -23,6 +25,7 @@ const messageSchema = new mongoose.Schema(
     { _id: true }
 );
 
+// Meeting Details Schema
 const meetingDetailsSchema = new mongoose.Schema(
     {
         date: Date,
@@ -39,6 +42,7 @@ const meetingDetailsSchema = new mongoose.Schema(
     { _id: false }
 );
 
+// Comment Schema
 const commentSchema = new mongoose.Schema({
     comment: String,
     commentBy: {
@@ -49,24 +53,46 @@ const commentSchema = new mongoose.Schema({
     date: { type: Date, require: true },
 });
 
-const workScopeSchema = new mongoose.Schema(
-    {
-        scope: String,
-        sku: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
-        squareFeet: Number,
-    },
-    { _id: true }
-);
-
+// Reminder Schema
 const reminderSchema = new mongoose.Schema(
     {
-        reminder: String,
-        date: { type: Date, require: true },
-        time: { type: Date, require: true },
+        time: { type: Date, required: true }, // Date object to store time
+        status: {
+            type: String,
+            enum: ['Pending', 'Complete', 'Missed'],
+            default: 'Pending', // Default status is 'Pending'
+        },
+        commentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Lead.comments', // Reference to a comment within the same lead's comments array
+            required: false, // Optional field
+        },
     },
     { _id: true }
 );
 
+// Call Log Schema
+const callLogSchema = new mongoose.Schema(
+    {
+        recipientNumber: String, // Phone number of the recipient
+        callType: {
+            type: String,
+            enum: ['Incoming', 'Outgoing'], // Only two types of calls
+            required: true,
+        },
+        status: {
+            type: String,
+            enum: ['Missed', 'Received'], // Indicates whether the call was missed or received
+            required: true,
+            default: 'Received', // Default to 'Received'
+        },
+        callDuration: Number, // Duration of the call in seconds
+        timestamp: { type: Date, required: true }, // Date and time of the call
+    },
+    { _id: true }
+);
+
+// Lead Schema
 const leadSchema = mongoose.Schema(
     {
         CID: String,
@@ -91,29 +117,19 @@ const leadSchema = mongoose.Schema(
         address: addressSchema,
         meetingDetails: [meetingDetailsSchema],
         lastMsg: String,
-        fbSenderID: {
-            type: String,
-            unique: true,
+        pageInfo: {
+            pageId: String,
+            pageName: String,
+            pageProfilePicture: String,
+            fbSenderID: { type: String, unique: true },
         },
         source: {
             type: String,
             enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
             required: true,
         },
-        meetingData: [
-            {
-                time: String,
-                date: Date,
-            },
-        ],
-        phone: String,
+        phone: [String], // Array to handle multiple phone numbers
         comment: [commentSchema],
-        workScope: [workScopeSchema],
-        pageInfo: {
-            pageId: String,
-            pageName: String,
-            pageProfilePicture: String,
-        },
         salesExqName: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -123,27 +139,37 @@ const leadSchema = mongoose.Schema(
             ref: 'User',
         },
         projectStatus: {
-            type: String,
-            enum: ['Ready', 'Ongoing', 'Recently'],
+            status: {
+                type: String,
+                enum: ['Ongoing', 'Ready', 'Renovation'],
+            },
+            subStatus: {
+                type: String,
+                enum: [
+                    'Roof Casting',
+                    'Tiles and Painting Done',
+                    'Plumbing Done',
+                    'Electrical Wiring Done',
+                    'Finishing Touches',
+                    // Add more sub-statuses as needed
+                ],
+            },
         },
         projectLocation: {
             type: String,
             enum: ['Inside', 'Outside'],
         },
         reminder: [reminderSchema],
-        positive: Boolean,
-        discount: Number,
-        projectValue: Number,
-        mbSheetNo: String,
+        callLogs: [callLogSchema], // Updated call log schema
         messages: [messageSchema],
-        proposals: [{ client: Number, proposal: Number }],
-        tags: [String],
+        messagesSeen: { type: Boolean, default: false },
+        requirements: [String], // New simple array for requirements
     },
     {
         timestamps: true,
     }
 );
 
-const Lead = mongoose.model('lead', leadSchema);
+const Lead = mongoose.model('Lead', leadSchema);
 
 module.exports = Lead;

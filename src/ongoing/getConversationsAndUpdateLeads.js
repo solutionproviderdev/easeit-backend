@@ -1,3 +1,4 @@
+/* eslint-disable no-tabs */
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-continue */
 /* eslint-disable max-len */
@@ -60,158 +61,181 @@ const processMessages = (messages) => {
 };
 
 const getConversationsAndUpdateLeads = async (io) => {
-    console.time('getConversationsAndUpdateLeads');
-    try {
-        const fbSettings = await Settings.findOne({ name: 'facebook' });
-        if (!fbSettings || !fbSettings.settingsData.page) {
-            throw new Error('Facebook settings or access tokens not found');
-        }
+	console.time('getConversationsAndUpdateLeads');
+	try {
+		const fbSettings = await Settings.findOne({ name: 'facebook' });
+		if (!fbSettings || !fbSettings.settingsData.page) {
+			throw new Error('Facebook settings or access tokens not found');
+		}
 
-        const cres = await People.find({ role: 'CRE' });
+		const cres = await People.find({ role: 'CRE' });
 
-        const nameToCreId = cres.reduce((map, cre) => {
-            const lastName = cre.name.split(' ').pop();
-            map[lastName] = cre._id;
-            return map;
-        }, {});
+		const nameToCreId = cres.reduce((map, cre) => {
+			const lastName = cre.name.split(' ').pop();
+			map[lastName] = cre._id;
+			return map;
+		}, {});
 
-        for (const page of fbSettings.settingsData.page) {
-            const {
- pageAccessToken, pageId, name: pageName, picture: pageProfilePicture
-} = page;
+		for (const page of fbSettings.settingsData.page) {
+			const {
+				pageAccessToken,
+				pageId,
+				name: pageName,
+				picture: pageProfilePicture,
+			} = page;
 
-            try {
-                const response = await axios.get(
-                    `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-                    { timeout: 10000 }
-                );
+			try {
+				const response = await axios.get(
+					`https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+					{ timeout: 10000 }
+				);
 
-                const conversations = response.data.data;
+				const conversations = response.data.data;
 
-                for (const conversation of conversations) {
-                    try {
-                        const otherParticipant = conversation.participants.data.find(
-                            (p) => p.name !== 'Solution Provider'
-                        );
+				for (const conversation of conversations) {
+					try {
+						const otherParticipant = conversation.participants.data.find(
+							(p) => p.name !== 'Solution Provider'
+						);
 
-                        const fbSenderID = otherParticipant.id;
-                        const { processedMessages, phoneNumber } = processMessages(
-                            [...conversation.messages.data].reverse()
-                        );
+						const fbSenderID = otherParticipant.id;
+						const { processedMessages, phoneNumber } = processMessages(
+							[...conversation.messages.data].reverse()
+						);
 
-                        const lead = await Lead.findOne({ fbSenderID });
+						// Updated query to find the lead based on fbSenderID in the pageInfo object
+						const lead = await Lead.findOne({
+							'pageInfo.fbSenderID': fbSenderID,
+						});
 
-                        if (lead) {
-                            let isNewMessageAdded = false;
-                            let newCreId = lead.creName;
+						if (lead) {
+							let isNewMessageAdded = false;
+							let newCreId = lead.creName;
 
-                            for (const message of processedMessages) {
-                                if (!lead.messages.find((m) => m.messageId === message.messageId)) {
-                                    lead.messages.push(message);
+							for (const message of processedMessages) {
+								if (
+									!lead.messages.find((m) => m.messageId === message.messageId)
+								) {
+									lead.messages.push(message);
 
-                                    Object.entries(nameToCreId).forEach(([name, id]) => {
-                                        if (message.content.includes(name)) {
-                                            newCreId = id;
-                                        }
-                                    });
+									// Reset messagesSeen to false because a new message is added
+									lead.messagesSeen = false;
 
-                                    io.emit(`fbMessage${lead._id}`, message);
-                                    isNewMessageAdded = true;
-                                }
-                            }
-                            if (isNewMessageAdded) {
-                                lead.lastMsg = processedMessages[processedMessages.length - 1].content;
-                                lead.creName = newCreId;
+									Object.entries(nameToCreId).forEach(([name, id]) => {
+										if (message.content.includes(name)) {
+											newCreId = id;
+										}
+									});
 
-                                if (phoneNumber?.number?.length === 14) {
-                                    lead.phone = phoneNumber.formatInternational();
-                                    lead.status = 'Number Collected';
-                                }
+									io.emit(`fbMessage${lead._id}`, message);
+									isNewMessageAdded = true;
+								}
+							}
+							if (isNewMessageAdded) {
+								lead.lastMsg =									processedMessages[processedMessages.length - 1].content;
+								lead.creName = newCreId;
 
-                                const savedLead = await lead.save();
+								// Handle phone number as an array
+								if (phoneNumber?.number?.length === 14) {
+									const formattedPhoneNumber =										phoneNumber.formatInternational();
+									if (!lead.phone.includes(formattedPhoneNumber)) {
+										lead.phone.push(formattedPhoneNumber);
+									}
+									lead.status = 'Number Collected';
+								}
 
-                                const socketPayload = {
-                                    name: savedLead.name,
-                                    lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
-                                    lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
-                                    sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
-                                    createdAt: savedLead.createdAt,
-                                    creName: savedLead.creName,
-                                    pageInfo: {
-                                        pageName,
-                                        pageId,
-                                        pageProfilePicture,
-                                    },
-                                    sourcePageName: pageName,
-                                    sourcePageId: pageId,
-                                    sourcePageProfilePicture: pageProfilePicture,
-                                    status: savedLead.status,
-                                    _id: savedLead._id,
-                                };
+								const savedLead = await lead.save();
 
-                                io.emit('conversation', socketPayload);
-                            }
-                        } else {
-                            const cre = await findCREWithLowestLeads();
-                            const firstMessageTime = processedMessages[0].date;
+								const socketPayload = {
+									name: savedLead.name,
+									lastMessage:
+										savedLead.messages[savedLead.messages.length - 1].content,
+									lastMessageTime:
+										savedLead.messages[savedLead.messages.length - 1].date,
+									sentByMe:
+										savedLead.messages[savedLead.messages.length - 1].sentByMe,
+									createdAt: savedLead.createdAt,
+									creName: savedLead.creName,
+									pageInfo: {
+										pageName,
+										pageId,
+										pageProfilePicture,
+									},
+									sourcePageName: pageName,
+									sourcePageId: pageId,
+									sourcePageProfilePicture: pageProfilePicture,
+									status: savedLead.status,
+									_id: savedLead._id,
+								};
 
-                            const newLead = new Lead({
-                                CID: '',
-                                name: otherParticipant.name,
-                                lastMsg: processedMessages[processedMessages.length - 1].content,
-                                status: 'unread',
-                                fbSenderID,
-                                messages: processedMessages,
-                                source: 'Facebook',
-                                pageInfo: {
-                                    pageName,
-                                    pageId,
-                                    pageProfilePicture,
-                                },
-                                creName: cre,
-                                createdAt: new Date(firstMessageTime),
-                            });
-                            const savedNewLead = await newLead.save();
-                            const socketPayload = {
-                                name: savedNewLead.name,
-                                lastMessage: savedNewLead.lastMsg,
-                                pageInfo: {
-                                    pageName,
-                                    pageId,
-                                    pageProfilePicture,
-                                },
-                                lastMessageTime: savedNewLead.messages[0].date,
-                                sentByMe: savedNewLead.messages[0].sentByMe,
-                                createdAt: savedNewLead.createdAt,
-                                _id: savedNewLead._id,
-                            };
+								io.emit('conversation', socketPayload);
+							}
+						} else {
+							const cre = await findCREWithLowestLeads();
+							const firstMessageTime = processedMessages[0].date;
 
-                            io.emit('conversation', socketPayload);
+							const newLead = new Lead({
+								CID: '',
+								name: otherParticipant.name,
+								lastMsg:
+									processedMessages[processedMessages.length - 1].content,
+								status: 'unread',
+								pageInfo: {
+									pageId,
+									pageName,
+									pageProfilePicture,
+									fbSenderID, // Moved fbSenderID inside pageInfo
+								},
+								messages: processedMessages,
+								source: 'Facebook',
+								creName: cre,
+								createdAt: new Date(firstMessageTime),
+								messagesSeen: false, // Initialize messagesSeen to false for new leads
+							});
 
-                            const socketPayloadNewLead = {
-                                ...savedNewLead._doc,
-                                sourcePageName: pageName,
-                                sourcePageId: pageId,
-                                sourcePageProfilePicture: pageProfilePicture,
-                                status: savedNewLead.status,
-                                creName: await People.findOne({ _id: cre }).select('name role avatar'),
-                            };
+							const savedNewLead = await newLead.save();
+							const socketPayload = {
+								name: savedNewLead.name,
+								lastMessage: savedNewLead.lastMsg,
+								pageInfo: {
+									pageName,
+									pageId,
+									pageProfilePicture,
+								},
+								lastMessageTime: savedNewLead.messages[0].date,
+								sentByMe: savedNewLead.messages[0].sentByMe,
+								createdAt: savedNewLead.createdAt,
+								_id: savedNewLead._id,
+							};
 
-                            io.emit('newLead', { newLead: socketPayloadNewLead });
-                        }
-                    } catch (innerError) {
-                        logError('Error processing a single conversation', innerError);
-                        continue;
-                    }
-                }
-            } catch (error) {
-                logError(`Error fetching or processing data for page ${pageId}`, error);
-            }
-        }
-    } catch (error) {
-        logError('Error fetching or processing data', error);
-    }
-    console.timeEnd('getConversationsAndUpdateLeads');
+							io.emit('conversation', socketPayload);
+
+							const socketPayloadNewLead = {
+								...savedNewLead._doc,
+								sourcePageName: pageName,
+								sourcePageId: pageId,
+								sourcePageProfilePicture: pageProfilePicture,
+								status: savedNewLead.status,
+								creName: await People.findOne({ _id: cre }).select(
+									'name role avatar'
+								),
+							};
+
+							io.emit('newLead', { newLead: socketPayloadNewLead });
+						}
+					} catch (innerError) {
+						logError('Error processing a single conversation', innerError);
+						continue;
+					}
+				}
+			} catch (error) {
+				logError(`Error fetching or processing data for page ${pageId}`, error);
+			}
+		}
+	} catch (error) {
+		logError('Error fetching or processing data', error);
+	}
+	console.timeEnd('getConversationsAndUpdateLeads');
 };
 
 module.exports = getConversationsAndUpdateLeads;

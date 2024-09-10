@@ -7,7 +7,17 @@ const Department = require('../schemas/DepartmentSchema');
 // Validation rules for creating a lead
 const validateLeadCreation = [
     body('name').notEmpty().withMessage('Name is required'),
-    body('phone').notEmpty().withMessage('Phone number is required'),
+    body('phone')
+        .notEmpty()
+        .withMessage('Phone number is required')
+        .isString()
+        .withMessage('Phone number should be a string')
+        .matches(/^[0-9]{10,15}$/) // Regex for basic phone number validation
+        .withMessage('Phone number must be between 10 to 15 digits'),
+    body('source')
+        .optional()
+        .isIn(['Facebook', 'WhatsApp', 'Web', 'Phone'])
+        .withMessage('Source must be one of the following: Facebook, WhatsApp, Web, Phone'),
 
     // Middleware to handle validation result
     (req, res, next) => {
@@ -19,6 +29,7 @@ const validateLeadCreation = [
     },
 ];
 
+// Validation rules for adding a comment
 const validateComment = [
     body('comment').notEmpty().withMessage('Comment is required'),
     body('images').optional().isArray().withMessage('Images must be an array'),
@@ -32,10 +43,13 @@ const validateComment = [
     },
 ];
 
-const validateWorkScope = [
-    body('scope').notEmpty().withMessage('Work scope is required'),
-    body('sku').isMongoId().withMessage('Invalid SKU ID'),
-    body('squareFeet').isNumeric().withMessage('Square Feet must be a number'),
+// Validation rules for adding or updating requirements
+const validateRequirements = [
+    body('requirements')
+        .isArray()
+        .withMessage('Requirements must be an array of strings')
+        .custom((requirements) => requirements.every((req) => typeof req === 'string'))
+        .withMessage('Each requirement must be a string'),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -45,14 +59,150 @@ const validateWorkScope = [
     },
 ];
 
+// Updated validation rules for updating a lead
 const validateLeadUpdate = [
     body('name').optional().notEmpty().withMessage('Name is required'),
+    body('status')
+        .optional()
+        .isIn([
+            'unread',
+            'No Response',
+            'Message Rescheduled',
+            'Need Support',
+            'Number Collected',
+            'Call Reschedule',
+            'Follow Up',
+            'Meeting Fixed',
+            'Meeting Reschedule',
+            'Cancel Meeting',
+        ])
+        .withMessage('Invalid status value'),
     body('address.division').optional().notEmpty().withMessage('Division is required'),
     body('address.district').optional().notEmpty().withMessage('District is required'),
     body('address.area').optional().notEmpty().withMessage('Area is required'),
     body('address.address').optional().notEmpty().withMessage('Address is required'),
-    body('phone').optional().isString().withMessage('Invalid phone number'),
-    body('tags').optional().isArray().withMessage('Tags must be an array'),
+    body('phone').optional().isArray().withMessage('Phone numbers must be an array'),
+    body('phone.*').optional().isString().withMessage('Each phone number must be a string'),
+    body('source')
+        .optional()
+        .isIn(['Facebook', 'WhatsApp', 'Web', 'Phone'])
+        .withMessage('Invalid source'),
+    body('projectStatus.status')
+        .optional()
+        .isIn(['Ongoing', 'Ready', 'Renovation'])
+        .withMessage('Invalid project status'),
+    body('projectStatus.subStatus')
+        .optional()
+        .isIn([
+            'Roof Casting',
+            'Tiles and Painting Done',
+            'Plumbing Done',
+            'Electrical Wiring Done',
+            'Finishing Touches',
+        ])
+        .withMessage('Invalid project sub-status'),
+    body('projectLocation')
+        .optional()
+        .isIn(['Inside', 'Outside'])
+        .withMessage('Invalid project location'),
+    body('messagesSeen').optional().isBoolean().withMessage('Messages Seen must be a boolean'),
+    body('requirements')
+        .optional()
+        .isArray()
+        .withMessage('Requirements must be an array of strings'),
+    body('requirements.*').optional().isString().withMessage('Each requirement must be a string'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
+// Updated validation rules for adding a reminder
+const validateReminder = [
+    body('time')
+        .notEmpty()
+        .withMessage('Time is required')
+        .isISO8601()
+        .withMessage('Invalid date format'),
+    body('status')
+        .optional()
+        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
+        .withMessage('Invalid status'),
+    body('commentId').optional().isMongoId().withMessage('Invalid comment ID'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
+// Validation rules for updating a reminder status
+const validateReminderStatusUpdate = [
+    body('status')
+        .notEmpty()
+        .withMessage('Status is required')
+        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
+        .withMessage('Invalid status'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
+// Validation rules for adding a reminder with a comment
+const validateReminderWithComment = [
+    body('time')
+        .notEmpty()
+        .withMessage('Time is required')
+        .isISO8601()
+        .withMessage('Invalid date format'),
+    body('status')
+        .optional()
+        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
+        .withMessage('Invalid status'),
+    body('comment').notEmpty().withMessage('Comment is required'),
+    body('images').optional().isArray().withMessage('Images must be an array'),
+    body('images.*').optional().isURL().withMessage('Invalid image URL'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
+// Validation rules for adding a call log
+const validateCallLog = [
+    body('recipientNumber')
+        .notEmpty()
+        .withMessage('Recipient number is required')
+        .isString()
+        .withMessage('Recipient number must be a string'),
+    body('callType')
+        .notEmpty()
+        .withMessage('Call type is required')
+        .isIn(['Incoming', 'Outgoing'])
+        .withMessage('Call type must be either "Incoming" or "Outgoing"'),
+    body('status')
+        .notEmpty()
+        .withMessage('Status is required')
+        .isIn(['Missed', 'Received'])
+        .withMessage('Status must be either "Missed" or "Received"'),
+    body('callDuration').optional().isNumeric().withMessage('Call duration must be a number'),
+    body('timestamp')
+        .notEmpty()
+        .withMessage('Timestamp is required')
+        .isISO8601()
+        .withMessage('Invalid timestamp format'),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -103,9 +253,13 @@ const validateCreAssignment = [
 ];
 
 module.exports = {
-    validateWorkScope,
     validateComment,
+    validateCallLog,
+    validateReminder,
     validateLeadUpdate,
     validateLeadCreation,
+    validateRequirements,
     validateCreAssignment,
+    validateReminderWithComment,
+    validateReminderStatusUpdate,
 };

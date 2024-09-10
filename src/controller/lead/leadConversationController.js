@@ -1,6 +1,6 @@
 const Lead = require('../../schemas/LeadsSchema');
 
-const getAllLeadConversations = async (req, res) => {
+exports.getAllLeadConversations = async (req, res) => {
     try {
         // Get the page and limit from query string, default to 1 and 10 if not provided
         const page = parseInt(req.query.page, 10) || 1;
@@ -50,4 +50,25 @@ const getAllLeadConversations = async (req, res) => {
     }
 };
 
-module.exports = getAllLeadConversations;
+// Controller function to get all messages for a specific lead
+exports.getMessagesForLead = async (req, res) => {
+    const { leadId } = req.params;
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        // Return the messages for the specific lead
+        res.status(200).json({
+            messages: lead.messages,
+            messagesSeen: lead.messagesSeen, // Include global message seen status
+        });
+    } catch (error) {
+        console.error(`Error fetching messages for lead ${leadId}:`, error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
