@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../../schemas/UserSchema');
+const User = require('../../schemas/auth/UserSchema');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
 
 // Create a new user

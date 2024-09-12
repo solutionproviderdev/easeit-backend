@@ -31,8 +31,8 @@ const {
     validateUserUpdate,
 } = require('../../validators/authValidators');
 const { checkAuth } = require('../../middlewares/auth/checkLoginCookie');
-const Department = require('../../schemas/DepartmentSchema');
-const User = require('../../schemas/UserSchema');
+const Department = require('../../schemas/auth/DepartmentSchema');
+const User = require('../../schemas/auth/UserSchema');
 const activityLogRouter = require('./activityLog');
 const departmentRouter = require('./department');
 

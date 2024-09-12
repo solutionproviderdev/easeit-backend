@@ -1,7 +1,7 @@
 /* eslint-disable prefer-promise-reject-errors */
 // validators/departmentValidator.js
 const { body, validationResult } = require('express-validator');
-const Department = require('../schemas/DepartmentSchema');
+const Department = require('../schemas/auth/DepartmentSchema');
 
 const validateDepartment = [
     body('departmentName')

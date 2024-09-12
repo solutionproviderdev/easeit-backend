@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 const ActivityLog = require('../../schemas/ActivityLogSchema');
-const Department = require('../../schemas/DepartmentSchema');
+const Department = require('../../schemas/auth/DepartmentSchema');
 
 // Create a new department function
 

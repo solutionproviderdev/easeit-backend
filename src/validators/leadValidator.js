@@ -1,8 +1,8 @@
 /* eslint-disable prefer-promise-reject-errors */
 const { body, validationResult } = require('express-validator');
 const { default: mongoose } = require('mongoose');
-const User = require('../schemas/UserSchema');
-const Department = require('../schemas/DepartmentSchema');
+const User = require('../schemas/auth/UserSchema');
+const Department = require('../schemas/auth/DepartmentSchema');
 
 // Validation rules for creating a lead
 const validateLeadCreation = [
