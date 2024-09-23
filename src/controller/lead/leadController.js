@@ -183,6 +183,7 @@ exports.getComments = async (req, res) => {
 exports.updateRequirements = async (req, res) => {
     const { id } = req.params;
     const { requirements } = req.body;
+    console.log("id and requirement for update",id,requirements)
 
     try {
         // Find the lead by ID
@@ -193,7 +194,7 @@ exports.updateRequirements = async (req, res) => {
         }
 
         // Update the requirements of the lead
-        lead.requirements = requirements;
+        lead.requirements = requirements;  
 
         // Save the updated lead
         await lead.save();
@@ -209,6 +210,7 @@ exports.updateRequirements = async (req, res) => {
 exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
+    console.log('00000000000000000id',id,"phone array",req.body.phone)
 
     // Extract only the fields that are allowed to be updated
     if (req.body.name) updateFields.name = req.body.name;
@@ -240,7 +242,7 @@ exports.updateLead = async (req, res) => {
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
     const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
-
+console.log("backend to reminder",id,req.body)
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);

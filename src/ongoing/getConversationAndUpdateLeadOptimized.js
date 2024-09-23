@@ -203,7 +203,7 @@ const getConversationsAndUpdateLeads = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeads 2');
+    // console.timeEnd('getConversationsAndUpdateLeads 2');
 };
 
 module.exports = getConversationsAndUpdateLeads;

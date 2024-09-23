@@ -57,17 +57,19 @@ app.use(cors({
             'http://192.168.0.155:5000',
             'http://103.122.143.63:3000',
             'https://easeit.vercel.app',
-            'https://crm.solutionprovider.com.bd'
+            'https://crm.solutionprovider.com.bd',
+            'http://localhost:5173'
         ];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
-        } else {
+        } else {  
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 }));
+
 
 // set up EJS
 app.set('view engine', 'ejs');
@@ -103,7 +105,7 @@ app.use('/users', userRouter);
 // File upload Routers
 app.use('/upload', uploadRouter);
 
-// leads
+// leads--main
 app.use('/lead', leadRouter);
 
 app.use('/people', peopleRouter);
@@ -120,7 +122,7 @@ app.use('/wamessage', wpMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
-    // getConversationsAndUpdateLeads(io);
+    getConversationsAndUpdateLeads(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {
