@@ -59,6 +59,24 @@ const validateRequirements = [
     },
 ];
 
+// Validator for phone number input
+const validatePhoneNumber = [
+    body('phoneNumber')
+        .notEmpty()
+        .withMessage('Phone number is required')
+        .isString()
+        .withMessage('Phone number must be a string')
+        .isLength({ min: 8, max: 15 })
+        .withMessage('Phone number must be between 8 and 15 characters'),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
 // Updated validation rules for updating a lead
 const validateLeadUpdate = [
     body('name').optional().notEmpty().withMessage('Name is required'),
@@ -257,6 +275,7 @@ module.exports = {
     validateCallLog,
     validateReminder,
     validateLeadUpdate,
+    validatePhoneNumber,
     validateLeadCreation,
     validateRequirements,
     validateCreAssignment,

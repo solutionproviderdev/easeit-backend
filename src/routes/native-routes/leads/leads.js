@@ -14,6 +14,7 @@ const {
     updateReminderStatus,
     addReminderWithComment,
     addCallLog,
+    addPhoneNumberToLead,
 } = require('../../../controller/lead/leadController');
 const {
     validateLeadCreation,
@@ -25,6 +26,7 @@ const {
     validateReminderStatusUpdate,
     validateReminderWithComment,
     validateCallLog,
+    validatePhoneNumber,
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkLoginCookie');
 
@@ -49,6 +51,9 @@ leadRouter.post('/:id/comments', checkAuth, validateComment, addComment);
 
 // New route for adding or updating requirements
 leadRouter.put('/:id/requirements', validateRequirements, updateRequirements);
+
+// New route to add a phone number to a lead
+leadRouter.put('/:id/add-phone-number', validatePhoneNumber, addPhoneNumberToLead);
 
 // New route for updating a lead
 leadRouter.put('/:id', validateLeadUpdate, updateLead);

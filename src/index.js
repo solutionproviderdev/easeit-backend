@@ -27,6 +27,7 @@ const wpMessageRouter = require('./routes/whatsAppMessage');
 const userRouter = require('./routes/auth/user');
 const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
+const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
 
 // Initialize app
 const app = express();
@@ -52,13 +53,14 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(cors({
     origin: (origin, callback) => {
         const allowedOrigins = [
-            'http://localhost:3000',
-            'http://192.168.0.155:3000',
-            'http://192.168.0.155:5000',
-            'http://103.122.143.63:3000',
-            'https://easeit.vercel.app',
-            'https://crm.solutionprovider.com.bd'
-        ];
+                'http://localhost:3000',
+                'http://localhost:5173',
+                'http://192.168.0.155:3000',
+                'http://192.168.0.155:5000',
+                'http://103.122.143.63:3000',
+                'https://easeit.vercel.app',
+                'https://crm.solutionprovider.com.bd',
+            ];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
@@ -106,21 +108,22 @@ app.use('/upload', uploadRouter);
 // leads
 app.use('/lead', leadRouter);
 
-app.use('/people', peopleRouter);
-app.use('/settings', settingsRouter);
-app.use('/materials', meterialsRouter);
-app.use('/product', productRouter);
-app.use('/meetings', meetingsRouter);
-app.use('/fbmessage', fbMessageRouter);
-app.use('/messages', messageRouter);
-app.use('/conversations', conversationRouter);
+// app.use('/people', peopleRouter);
+// app.use('/settings', settingsRouter);
+// app.use('/materials', meterialsRouter);
+// app.use('/product', productRouter);
+// app.use('/meetings', meetingsRouter);
+// app.use('/fbmessage', fbMessageRouter);
+// app.use('/messages', messageRouter);
+// app.use('/conversations', conversationRouter);
 app.use('/map', mapDataRouter);
-app.use('/teams', teamRouter);
-app.use('/wamessage', wpMessageRouter);
+// app.use('/teams', teamRouter);
+// app.use('/wamessage', wpMessageRouter);
 
 // Get Lead Repetedly
 setInterval(() => {
     // getConversationsAndUpdateLeads(io);
+    getConversationsAndUpdateLeadsUpdated(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {

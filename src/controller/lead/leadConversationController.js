@@ -5,7 +5,7 @@ const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
 
 // reused Functions for only this files.
-function createNewMessageObject(messageId, content, senderId, sentByMe, fileUrl = null) {
+exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
     const newMessage = {
         messageId,
         content,
@@ -19,11 +19,33 @@ function createNewMessageObject(messageId, content, senderId, sentByMe, fileUrl 
     }
 
     return newMessage;
-}
+};
 
-function emitNewMessage(req, leadId, newMessage) {
+// Emit Socket.io events for new messages or leads
+const emitSocketEventsForNewMessage = (io, savedLead, pageInfo) => {
+    const socketPayload = {
+        name: savedLead.name,
+        lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+        lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+        sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
+        createdAt: savedLead.createdAt,
+        creName: savedLead.creName,
+        pageInfo: {
+            pageName: pageInfo.pageName,
+            pageId: pageInfo.pageId,
+            pageProfilePicture: pageInfo.pageProfilePicture,
+        },
+        status: savedLead.status,
+        _id: savedLead._id,
+    };
+
+    io.emit('conversation', socketPayload);
+    io.emit('newLead', { newLead: socketPayload });
+};
+
+exports.emitNewMessage = (req, leadId, newMessage) => {
     req.io.emit(`fbMessage${leadId}`, newMessage);
-}
+};
 
 exports.getAllLeadConversations = async (req, res) => {
     try {
@@ -79,6 +101,8 @@ exports.getAllLeadConversations = async (req, res) => {
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;
+
+    console.log(leadId);
 
     try {
         // Find the lead by ID
@@ -176,7 +200,7 @@ exports.sendMetaMessage = async (req, res) => {
             );
 
             if (fbResponse.data && fbResponse.data.message_id) {
-                const newMessage = createNewMessageObject(
+                const newMessage = this.createNewMessageObject(
                     fbResponse.data.message_id,
                     content.text,
                     pageId,
@@ -185,7 +209,10 @@ exports.sendMetaMessage = async (req, res) => {
                 lead.messages.push(newMessage);
                 await lead.save();
 
-                emitNewMessage(req, leadId, newMessage);
+                // Emit Conversation Updated event
+                emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
+
+                this.emitNewMessage(req, leadId, newMessage);
                 newMessages.push(newMessage);
             }
         } else if (['image', 'audio', 'video', 'file'].includes(messageType)) {
@@ -204,7 +231,7 @@ exports.sendMetaMessage = async (req, res) => {
                 );
 
                 if (fbResponse.data && fbResponse.data.message_id) {
-                    const newMessage = createNewMessageObject(
+                    const newMessage = this.createNewMessageObject(
                         fbResponse.data.message_id,
                         '',
                         pageId,
@@ -214,7 +241,7 @@ exports.sendMetaMessage = async (req, res) => {
                     lead.messages.push(newMessage);
                     await lead.save();
 
-                    emitNewMessage(req, leadId, newMessage);
+                    this.emitNewMessage(req, leadId, newMessage);
                     newMessages.push(newMessage);
                 }
             }
@@ -232,7 +259,7 @@ exports.sendMetaMessage = async (req, res) => {
             );
 
             if (fbResponse.data && fbResponse.data.message_id) {
-                const newMessage = createNewMessageObject(
+                const newMessage = this.createNewMessageObject(
                     fbResponse.data.message_id,
                     '',
                     pageId,
@@ -242,7 +269,7 @@ exports.sendMetaMessage = async (req, res) => {
                 lead.messages.push(newMessage);
                 await lead.save();
 
-                emitNewMessage(req, leadId, newMessage);
+                this.emitNewMessage(req, leadId, newMessage);
                 newMessages.push(newMessage);
             }
         }
