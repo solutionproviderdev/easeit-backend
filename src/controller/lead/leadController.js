@@ -1,5 +1,6 @@
 /* eslint-disable object-curly-newline */
 const { default: mongoose } = require('mongoose');
+const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../../schemas/LeadsSchema');
 
 // Get All Leads (with Filters)
@@ -206,11 +207,60 @@ exports.updateRequirements = async (req, res) => {
     }
 };
 
+// Add a new phone number to the lead
+exports.addPhoneNumberToLead = async (req, res) => {
+    const { id } = req.params;
+    const { phoneNumber } = req.body;
+    console.log('id and phoneNumber----------',id,phoneNumber)
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Parse and validate the phone number
+        const parsedNumber = parsePhoneNumberFromString(phoneNumber, 'BD');
+        if (!parsedNumber || !parsedNumber.isValid()) {
+            return res.status(400).json({ msg: 'Invalid phone format put bd number' });
+        }
+
+        const formattedPhoneNumber = parsedNumber.formatInternational();
+
+        // Check if the phone number already exists
+        if (lead.phone.includes(formattedPhoneNumber)) {
+            return res.status(400).json({ msg: 'Phone number already exists for this lead' });
+        }
+
+        // Add the phone number to the lead's phone array
+        lead.phone.push(formattedPhoneNumber);
+
+        // Save the lead
+        await lead.save();
+
+        // Emit Socket.io event for updated lead (if needed)
+        req.io.emit(`phoneUpdate${lead._id}`, {
+            leadId: lead._id,
+            phoneNumber: formattedPhoneNumber,
+        });
+
+        res.status(200).json({
+            msg: 'Phone number added successfully',
+            updatedPhoneNumbers: lead.phone,
+        });
+    } catch (error) {
+        console.error(`Error adding phone number to lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
 // Handler function to update a lead
 exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
-    console.log('00000000000000000id',id,"phone array",req.body.phone)
+    console.log('--------------id',id,"phone array",req.body)
 
     // Extract only the fields that are allowed to be updated
     if (req.body.name) updateFields.name = req.body.name;
@@ -242,7 +292,7 @@ exports.updateLead = async (req, res) => {
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
     const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
-console.log("backend to reminder",id,req.body)
+console.log("backend to reminder reminder ",id,'time hare',time)
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);
