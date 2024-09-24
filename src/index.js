@@ -124,7 +124,7 @@ app.use('/map', mapDataRouter);
 // Get Lead Repetedly
 setInterval(() => {
     // getConversationsAndUpdateLeads(io);
-    // getConversationsAndUpdateLeadsUpdated(io);
+    getConversationsAndUpdateLeadsUpdated(io);
 }, 8000);
 
 // const fetchAllMapData = async () => {
