@@ -86,7 +86,7 @@ const callLogSchema = new mongoose.Schema(
             required: true,
             default: 'Received', // Default to 'Received'
         },
-        callDuration: Number, // Duration of the call in seconds
+        callDuration: String, // Duration of the call in seconds
         timestamp: { type: Date, required: true }, // Date and time of the call
     },
     { _id: true }

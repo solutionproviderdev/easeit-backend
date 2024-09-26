@@ -405,6 +405,7 @@ exports.addReminderWithComment = async (req, res) => {
 exports.addCallLog = async (req, res) => {
     const { id } = req.params;
     const { recipientNumber, callType, status, callDuration, timestamp } = req.body;
+    console.log('callDuration----->',{ recipientNumber, callType, status, callDuration, timestamp })
 
     try {
         // Find the lead by ID
@@ -429,7 +430,7 @@ exports.addCallLog = async (req, res) => {
         res.status(200).json({ msg: 'Call log added successfully', lead });
     } catch (error) {
         console.error(`Error adding call log to lead ${id}: ${error.message}`);
-        res.status(500).json({ msg: 'Server error' });
+        res.status(500).json({ msg: 'Server error' ,error});
     }
 };
 
