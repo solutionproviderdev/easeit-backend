@@ -8,6 +8,9 @@
 # production
 /build
 
+# Public
+/public
+
 # Environment variable 
 .env
 *.env
