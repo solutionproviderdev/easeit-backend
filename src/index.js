@@ -63,13 +63,14 @@ app.use(cors({
             ];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
-        } else {
+        } else {  
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 }));
+
 
 // set up EJS
 app.set('view engine', 'ejs');
@@ -105,7 +106,7 @@ app.use('/users', userRouter);
 // File upload Routers
 app.use('/upload', uploadRouter);
 
-// leads
+// leads--main
 app.use('/lead', leadRouter);
 
 // app.use('/people', peopleRouter);

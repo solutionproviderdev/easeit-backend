@@ -41,7 +41,9 @@ leadRouter.get('/', getAllLeads);
 leadRouter.get('/:id', getLeadById);
 
 // New Route for creating a lead
-leadRouter.post('/', validateLeadCreation, createLead);
+leadRouter.post('/', 
+    // validateLeadCreation,
+     createLead);
 
 // Route for getting comments of a lead
 leadRouter.get('/:id/comments', getComments);

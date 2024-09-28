@@ -153,6 +153,7 @@ exports.getAllLeadConversations = async (req, res) => {
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;
+    console.log("lead id =",leadId)
 
     console.log(leadId);
 
@@ -223,7 +224,7 @@ exports.sendMetaMessage = async (req, res) => {
 
         // Find the specific page settings
         const pageSettings = settings.settingsData.page.find(
-            (page) => page.pageId === lead.pageInfo.pageId
+            (page) => page.pageId == lead.pageInfo.pageId
         );
 
         if (!pageSettings) {

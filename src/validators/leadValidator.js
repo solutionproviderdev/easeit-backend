@@ -215,7 +215,7 @@ const validateCallLog = [
         .withMessage('Status is required')
         .isIn(['Missed', 'Received'])
         .withMessage('Status must be either "Missed" or "Received"'),
-    body('callDuration').optional().isNumeric().withMessage('Call duration must be a number'),
+    // body('callDuration').optional().isNumeric().withMessage('Call duration must be a number'),
     body('timestamp')
         .notEmpty()
         .withMessage('Timestamp is required')
