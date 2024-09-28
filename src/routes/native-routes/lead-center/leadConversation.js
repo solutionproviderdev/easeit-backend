@@ -16,9 +16,9 @@ leadConversationRouter.get('/', getAllLeadConversations);
 leadConversationRouter.get('/:leadId/messages', getMessagesForLead);
 
 // New endpoint to Send a message to lead
-leadConversationRouter.post('/:leadId/messages', sendMetaMessage);
+leadConversationRouter.post('/:leadId/messages', validateSendMetaMessage, sendMetaMessage);
 
 // New route for marking messages as seen
-leadConversationRouter.put('/:id/mark-messages-seen', validateSendMetaMessage, markMessagesAsSeen);
+leadConversationRouter.put('/:id/mark-messages-seen', markMessagesAsSeen);
 
 module.exports = leadConversationRouter;

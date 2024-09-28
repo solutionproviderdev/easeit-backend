@@ -49,7 +49,6 @@ exports.emitNewMessage = (req, leadId, newMessage) => {
 
 exports.getAllLeadConversations = async (req, res) => {
     try {
-        // Get the page and limit from query string, default to 1 and 10 if not provided
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;
@@ -61,6 +60,12 @@ exports.getAllLeadConversations = async (req, res) => {
                     lastMessageTime: { $last: '$messages.date' },
                     sentByMe: { $last: '$messages.sentByMe' },
                     status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
                 },
             },
             {
@@ -68,14 +73,13 @@ exports.getAllLeadConversations = async (req, res) => {
                     name: 1,
                     lastMessage: 1,
                     lastMessageTime: 1,
+                    sentByMe: 1,
                     createdAt: 1,
                     status: 1,
-                    sourcePageName: 1,
-                    sourcePageId: 1,
-                    sourcePageProfilePicture: 1,
-                    sentByMe: 1,
+                    pageInfo: 1, // Include full pageInfo object
                     creName: 1,
                     messagesSeen: 1,
+                    _id: 1,
                 },
             },
         ])
@@ -83,14 +87,62 @@ exports.getAllLeadConversations = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        // Get the total count of leads
         const totalLeads = await Lead.countDocuments();
 
+        // Extract unique statuses
+        const uniqueStatuses = [...new Set(leadsWithLastMessage.map((lead) => lead.status))];
+        // const uniqueCRENAME = [...new Set(leadsWithLastMessage.map((lead) => lead.creName))];
+
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsWithLastMessage.forEach((lead) => {
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
+
+        // Extract unique creNames
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+
+        leadsWithLastMessage.forEach((lead) => {
+            const creNameStr = lead.creName.toString(); // Convert ObjectId to string
+            if (!creNamesSet.has(creNameStr)) {
+                creNamesSet.add(creNameStr);
+                uniqueCRENames.push(lead.creName); // Push original ObjectId to the result
+            }
+        });
+
+        console.log(creNamesSet);
+
+        // Respond with paginated leads and the conversation objects formatted as required
         res.status(200).json({
             totalLeads,
             totalPages: Math.ceil(totalLeads / limit),
             currentPage: page,
-            leads: leadsWithLastMessage,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames, // Unique CRE names
+            },
+            leads: leadsWithLastMessage.map((lead) => ({
+                name: lead.name,
+                lastMessage: lead.lastMessage,
+                lastMessageTime: lead.lastMessageTime,
+                sentByMe: lead.sentByMe,
+                createdAt: lead.createdAt,
+                creName: lead.creName,
+                status: lead.status,
+                _id: lead._id,
+                messagesSeen: lead.messagesSeen,
+                pageInfo: {
+                    pageId: lead.pageInfo.pageId,
+                    pageName: lead.pageInfo.pageName,
+                    pageProfilePicture: lead.pageInfo.pageProfilePicture,
+                },
+            })),
         });
     } catch (error) {
         console.error('Error getting leads with last message:', error);
