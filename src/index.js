@@ -63,14 +63,13 @@ app.use(cors({
             ];
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
-        } else {  
+        } else {
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 }));
-
 
 // set up EJS
 app.set('view engine', 'ejs');

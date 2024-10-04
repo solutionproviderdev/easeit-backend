@@ -184,7 +184,7 @@ exports.getComments = async (req, res) => {
 exports.updateRequirements = async (req, res) => {
     const { id } = req.params;
     const { requirements } = req.body;
-    console.log("id and requirement for update",id,requirements)
+    console.log('id and requirement for update', id, requirements);
 
     try {
         // Find the lead by ID
@@ -195,7 +195,7 @@ exports.updateRequirements = async (req, res) => {
         }
 
         // Update the requirements of the lead
-        lead.requirements = requirements;  
+        lead.requirements = requirements;
 
         // Save the updated lead
         await lead.save();
@@ -211,7 +211,7 @@ exports.updateRequirements = async (req, res) => {
 exports.addPhoneNumberToLead = async (req, res) => {
     const { id } = req.params;
     const { phoneNumber } = req.body;
-    console.log('id and phoneNumber----------',id,phoneNumber)
+    console.log('id and phoneNumber----------', id, phoneNumber);
 
     try {
         // Find the lead by ID
@@ -260,7 +260,7 @@ exports.addPhoneNumberToLead = async (req, res) => {
 exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
-    console.log('--------------id',id,"phone array",req.body)
+    console.log('--------------id', id, 'phone array', req.body);
 
     // Extract only the fields that are allowed to be updated
     if (req.body.name) updateFields.name = req.body.name;
@@ -292,7 +292,7 @@ exports.updateLead = async (req, res) => {
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
     const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
-console.log("backend to reminder reminder ",id,'time hare',time)
+    console.log('backend to reminder reminder ', id, 'time hare', time);
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);
@@ -405,7 +405,13 @@ exports.addReminderWithComment = async (req, res) => {
 exports.addCallLog = async (req, res) => {
     const { id } = req.params;
     const { recipientNumber, callType, status, callDuration, timestamp } = req.body;
-    console.log('callDuration----->',{ recipientNumber, callType, status, callDuration, timestamp })
+    console.log('callDuration----->', {
+        recipientNumber,
+        callType,
+        status,
+        callDuration,
+        timestamp,
+    });
 
     try {
         // Find the lead by ID
@@ -430,7 +436,7 @@ exports.addCallLog = async (req, res) => {
         res.status(200).json({ msg: 'Call log added successfully', lead });
     } catch (error) {
         console.error(`Error adding call log to lead ${id}: ${error.message}`);
-        res.status(500).json({ msg: 'Server error' ,error});
+        res.status(500).json({ msg: 'Server error', error });
     }
 };
 
@@ -447,6 +453,91 @@ exports.assignCreToLead = async (req, res) => {
         }
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Get All Leads with Reminders (and Filters) excluding 'messages' array
+exports.getAllLeadsWithReminders = async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 20,
+            status,
+            source,
+            startDate,
+            endDate,
+            assignedCre,
+            salesExecutive,
+        } = req.query;
+
+        // Create a filter object
+        const filter = {
+            reminder: { $exists: true, $not: { $size: 0 } },
+        };
+
+        if (status) {
+            filter.status = status;
+        }
+
+        if (source) {
+            filter.source = source;
+        }
+
+        if (startDate || endDate) {
+            if (!startDate || !endDate) {
+                return res.status(400).json({
+                    msg: 'Both startDate and endDate are required.',
+                });
+            }
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            if (start > end) {
+                return res.status(400).json({
+                    msg: 'startDate cannot be after endDate.',
+                });
+            }
+
+            // If startDate and endDate are the same, set end to end of the day
+            if (startDate === endDate) {
+                end.setHours(23, 59, 59, 999);
+            }
+
+            filter.createdAt = {
+                $gte: start,
+                $lte: end,
+            };
+        }
+
+        if (assignedCre) {
+            filter.creName = assignedCre;
+        }
+
+        if (salesExecutive) {
+            filter.salesExqName = salesExecutive;
+        }
+
+        // Fetch leads with pagination, reminders, and filters, excluding the 'messages' array
+        const leads = await Lead.find(filter)
+            .select('-messages') // Exclude the 'messages' array
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name');
+
+        const totalLeads = await Lead.countDocuments(filter);
+
+        res.status(200).json({
+            total: totalLeads,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(totalLeads / limit),
+            leads,
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });

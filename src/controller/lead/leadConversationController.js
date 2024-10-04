@@ -115,8 +115,6 @@ exports.getAllLeadConversations = async (req, res) => {
             }
         });
 
-        console.log(creNamesSet);
-
         // Respond with paginated leads and the conversation objects formatted as required
         res.status(200).json({
             totalLeads,
@@ -153,7 +151,7 @@ exports.getAllLeadConversations = async (req, res) => {
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;
-    console.log("lead id =",leadId)
+    console.log('lead id =', leadId);
 
     console.log(leadId);
 

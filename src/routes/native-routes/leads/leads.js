@@ -15,6 +15,7 @@ const {
     addReminderWithComment,
     addCallLog,
     addPhoneNumberToLead,
+    getAllLeadsWithReminders,
 } = require('../../../controller/lead/leadController');
 const {
     validateLeadCreation,
@@ -37,13 +38,14 @@ leadRouter.use('/conversation', leadConversationRouter);
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
 
+// get all the leads with reminders
+leadRouter.get('/reminders', getAllLeadsWithReminders);
+
 // Get single Lead Details
 leadRouter.get('/:id', getLeadById);
 
 // New Route for creating a lead
-leadRouter.post('/', 
-    // validateLeadCreation,
-     createLead);
+leadRouter.post('/', validateLeadCreation, createLead);
 
 // Route for getting comments of a lead
 leadRouter.get('/:id/comments', getComments);
