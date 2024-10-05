@@ -431,16 +431,15 @@ exports.loginUser = async (req, res) => {
         // Set cookie
         res.cookie('session_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-            sameSite: 'Strict',
-            maxAge: 3600000, // 1 hour
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 3600000,
         });
 
         // Remove sensitive information before sending response
         const userResponse = user.toObject();
         delete userResponse.password;
 
-        res.status(200).json({ user: userResponse });
+        res.status(200).json({ user: userResponse, token });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
