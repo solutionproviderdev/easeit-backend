@@ -29,7 +29,8 @@ const {
     validateCallLog,
     validatePhoneNumber,
 } = require('../../../validators/leadValidator');
-const { checkAuth } = require('../../../middlewares/auth/checkLoginCookie');
+const { checkAuth } = require('../../../middlewares/auth/checkAuth');
+const { checkLogin } = require('../../../middlewares/auth/checkLogin');
 
 const leadRouter = express.Router();
 
@@ -45,7 +46,7 @@ leadRouter.get('/reminders', getAllLeadsWithReminders);
 leadRouter.get('/:id', getLeadById);
 
 // New Route for creating a lead
-leadRouter.post('/', validateLeadCreation, createLead);
+leadRouter.post('/', checkAuth, validateLeadCreation, createLead);
 
 // Route for getting comments of a lead
 leadRouter.get('/:id/comments', getComments);

@@ -107,9 +107,9 @@ exports.getLeadById = async (req, res) => {
     }
 };
 
-// Create a new Lead
+// Create a new Lead with an optional comment
 exports.createLead = async (req, res) => {
-    const { name, phone, source, status } = req.body;
+    const { name, phone, source, status, comment, images } = req.body;
 
     try {
         // Create a new lead
@@ -120,12 +120,22 @@ exports.createLead = async (req, res) => {
             status: status || 'Number Collected',
         });
 
+        // If a comment is provided, add it to the lead
+        if (comment) {
+            newLead.comment.push({
+                comment,
+                images: images || [], // Add images if provided
+                commentBy: req.user._id, // Use user ID from authentication middleware
+                date: new Date(),
+            });
+        }
+
         // Save the lead to the database
         await newLead.save();
 
-        res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
+        res.status(201).json({ msg: 'Lead and comment created successfully', lead: newLead });
     } catch (error) {
-        console.error(`Error creating lead: ${error.message}`);
+        console.error(`Error creating lead with comment: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -288,7 +298,7 @@ exports.updateLead = async (req, res) => {
     }
 };
 
-// Updated handler function to add a reminder to a Lead
+// Handler function to add a reminder to a Lead
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
     const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
@@ -299,6 +309,17 @@ exports.addReminder = async (req, res) => {
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Check if there is any incomplete reminder (status not equal to 'Complete')
+        const hasIncompleteReminder = lead.reminder.some(
+            (reminder) => reminder.status !== 'Complete'
+        );
+
+        if (hasIncompleteReminder) {
+            return res.status(400).json({
+                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
+            });
         }
 
         // Determine the initial status for the reminder
@@ -365,6 +386,17 @@ exports.addReminderWithComment = async (req, res) => {
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Check if there is any incomplete reminder (status not equal to 'Complete')
+        const hasIncompleteReminder = lead.reminder.some(
+            (reminder) => reminder.status !== 'Complete'
+        );
+
+        if (hasIncompleteReminder) {
+            return res.status(400).json({
+                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
+            });
         }
 
         // Add the comment to the lead's comments array
@@ -459,7 +491,7 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
-// Get All Leads with Reminders (and Filters) excluding 'messages' array
+// Get All Leads with Reminders
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
         const {
@@ -475,7 +507,7 @@ exports.getAllLeadsWithReminders = async (req, res) => {
 
         // Create a filter object
         const filter = {
-            reminder: { $exists: true, $not: { $size: 0 } },
+            reminder: { $exists: true, $not: { $size: 0 } }, // Only leads with reminders
         };
 
         if (status) {
@@ -521,9 +553,9 @@ exports.getAllLeadsWithReminders = async (req, res) => {
             filter.salesExqName = salesExecutive;
         }
 
-        // Fetch leads with pagination, reminders, and filters, excluding the 'messages' array
+        // Fetch leads with pagination and filters, excluding the 'messages' array
         const leads = await Lead.find(filter)
-            .select('-messages') // Exclude the 'messages' array
+            .select('-messages -meetingDetails -messagesSeen -callLogs') // Exclude unnecessary fields
             .skip((page - 1) * limit)
             .limit(Number(limit))
             .populate('creName', 'name')
@@ -531,12 +563,52 @@ exports.getAllLeadsWithReminders = async (req, res) => {
 
         const totalLeads = await Lead.countDocuments(filter);
 
+        // Manually populate reminders with the corresponding comment
+        const populatedLeads = leads.map((lead) => {
+            const populatedReminders = lead.reminder.map((reminder) => {
+                const comment = lead.comment.id(reminder.commentId); // Find the matching comment
+
+                return {
+                    ...reminder.toObject(),
+                    comment: comment
+                        ? {
+                              comment: comment.comment,
+                              commentBy: comment.commentBy,
+                              images: comment.images,
+                              date: comment.date,
+                          }
+                        : null, // If no comment is found, return null for comment
+                };
+            });
+
+            return {
+                ...lead.toObject(),
+                comment: [], // Remove the comment array
+                reminder: populatedReminders, // Update reminder with populated comments
+            };
+        });
+
+        // Fetch unique filter options for CRE, Sales, Status, and Source
+        const creNames = await Lead.distinct('creName');
+        const salesNames = await Lead.distinct('salesExqName');
+        const statuses = await Lead.distinct('status');
+        const sources = await Lead.distinct('source');
+
+        // Prepare filter options data
+        const filterOptions = {
+            creNames: creNames.map((cre) => cre.toString()), // Convert CRE IDs to string or populate the name if needed
+            salesNames: salesNames.map((sales) => sales.toString()), // Same for sales
+            statuses,
+            sources,
+        };
+
         res.status(200).json({
             total: totalLeads,
             page: Number(page),
             limit: Number(limit),
             totalPages: Math.ceil(totalLeads / limit),
-            leads,
+            leads: populatedLeads,
+            filterOptions, // Include filter options in the response
         });
     } catch (error) {
         console.error(error.message);

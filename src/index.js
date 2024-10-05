@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -16,6 +17,7 @@ const webhookRouter = require('./routes/webhook');
 const meterialsRouter = require('./routes/meterials');
 const productRouter = require('./routes/products');
 const meetingsRouter = require('./routes/meeting');
+const userRouter = require('./routes/auth/user');
 const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpdateLeads');
 const fbMessageRouter = require('./routes/FbMessege');
 const messageRouter = require('./routes/Message');
@@ -24,7 +26,6 @@ const mapDataRouter = require('./routes/mapDataRouters');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const teamRouter = require('./routes/team');
 const wpMessageRouter = require('./routes/whatsAppMessage');
-const userRouter = require('./routes/auth/user');
 const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
