@@ -64,7 +64,6 @@ const reminderSchema = new mongoose.Schema(
         },
         commentId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Lead.comments', // Reference to a comment within the same lead's comments array
             required: false, // Optional field
         },
     },
@@ -121,7 +120,7 @@ const leadSchema = mongoose.Schema(
             pageId: String,
             pageName: String,
             pageProfilePicture: String,
-            fbSenderID: { type: String, unique: true },
+            fbSenderID: { type: String, sparse: true },
         },
         source: {
             type: String,

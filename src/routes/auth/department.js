@@ -15,7 +15,7 @@ const {
     validateRole,
     validateRoleUpdate,
 } = require('../../validators/departmentValidator');
-const { checkAuth } = require('../../middlewares/auth/checkLoginCookie');
+const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
 // Router Declaration
 const departmentRouter = express.Router();
