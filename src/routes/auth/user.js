@@ -43,7 +43,7 @@ userRouter.use('/activity-logs', activityLogRouter);
 userRouter.use('/departments', departmentRouter);
 
 // Get All Users
-userRouter.get('/', checkAuth, getAllUsers);
+userRouter.get('/', getAllUsers);
 
 // Get Single User
 userRouter.get('/:id', checkAuth, getUserById);
@@ -52,7 +52,7 @@ userRouter.get('/:id', checkAuth, getUserById);
 userRouter.get('/dropdown/options', checkAuth, getUserDropdownOptions);
 
 // Create a New User
-userRouter.post('/', checkAuth, validateUser, createUser);
+userRouter.post('/', createUser);//checkAuth, validateUser,
 
 // Update User Details
 userRouter.put('/:id', checkAuth, validateUserUpdate, updateUser);
