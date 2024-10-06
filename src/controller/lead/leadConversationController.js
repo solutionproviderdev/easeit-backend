@@ -108,7 +108,7 @@ exports.getAllLeadConversations = async (req, res) => {
         const creNamesSet = new Set();
 
         leadsWithLastMessage.forEach((lead) => {
-            const creNameStr = lead.creName.toString(); // Convert ObjectId to string
+            const creNameStr = lead?.creName?.toString(); // Convert ObjectId to string
             if (!creNamesSet.has(creNameStr)) {
                 creNamesSet.add(creNameStr);
                 uniqueCRENames.push(lead.creName); // Push original ObjectId to the result

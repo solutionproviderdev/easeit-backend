@@ -46,7 +46,7 @@ leadRouter.get('/reminders', getAllLeadsWithReminders);
 leadRouter.get('/:id', getLeadById);
 
 // New Route for creating a lead
-leadRouter.post('/', checkAuth, validateLeadCreation, createLead);
+leadRouter.post('/',checkAuth,validateLeadCreation, createLead);
 
 // Route for getting comments of a lead
 leadRouter.get('/:id/comments', getComments);
