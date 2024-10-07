@@ -43,15 +43,18 @@ const meetingDetailsSchema = new mongoose.Schema(
 );
 
 // Comment Schema
-const commentSchema = new mongoose.Schema({
-    comment: String,
-    commentBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+const commentSchema = new mongoose.Schema(
+    {
+        comment: String,
+        commentBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        images: [String],
+        date: { type: Date, require: true },
     },
-    images: [String],
-    date: { type: Date, require: true },
-});
+    { _id: true, timestamps: true }
+);
 
 // Reminder Schema
 const reminderSchema = new mongoose.Schema(
@@ -59,7 +62,7 @@ const reminderSchema = new mongoose.Schema(
         time: { type: Date, required: true }, // Date object to store time
         status: {
             type: String,
-            enum: ['Pending', 'Complete', 'Missed'],
+            enum: ['Pending', 'Complete', 'Missed', 'Late Complete'],
             default: 'Pending', // Default status is 'Pending'
         },
         commentId: {
@@ -146,11 +149,15 @@ const leadSchema = mongoose.Schema(
                 type: String,
                 enum: [
                     'Roof Casting',
-                    'Tiles and Painting Done',
-                    'Plumbing Done',
-                    'Electrical Wiring Done',
-                    'Finishing Touches',
-                    // Add more sub-statuses as needed
+                    'Brick Wall',
+                    'Plaster',
+                    'Pudding',
+                    'Two Coat Paint',
+                    'Tiles Complete',
+                    'Final Paint Done',
+                    'Handed Over',
+                    'Staying in the Apartment',
+                    'Interior Work Complete',
                 ],
             },
         },

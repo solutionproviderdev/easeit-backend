@@ -163,8 +163,16 @@ exports.addComment = async (req, res) => {
 
         // Save the lead
         await lead.save();
+        // get the new saved comment
+        const savedComment = lead.comment[lead.comment.length - 1];
 
-        res.status(200).json({ msg: 'Comment added successfully', lead });
+        res.status(200).json({ msg: 'Comment added successfully', savedComment });
+
+        // Emit Socket.io event for updated lead (if needed)
+        req.io.emit(`newComment_${lead._id}`, {
+            leadId: lead._id,
+            comment: savedComment,
+        });
     } catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
@@ -301,8 +309,8 @@ exports.updateLead = async (req, res) => {
 // Handler function to add a reminder to a Lead
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
-    const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
-    console.log('backend to reminder reminder ', id, 'time hare', time);
+    const { time, commentId } = req.body; // Removed status from request body
+
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);
@@ -311,31 +319,29 @@ exports.addReminder = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Check if there is any incomplete reminder (status not equal to 'Complete')
+        // Check if there is any incomplete reminder (status is either 'Pending' or 'Missed')
         const hasIncompleteReminder = lead.reminder.some(
-            (reminder) => reminder.status !== 'Complete'
+            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
 
         if (hasIncompleteReminder) {
             return res.status(400).json({
-                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
+                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
             });
         }
-
-        // Determine the initial status for the reminder
-        const reminderStatus = status === 'Complete' ? 'Complete' : 'Pending'; // Set to 'Pending' by default
 
         // Add the reminder to the lead's reminders array
         lead.reminder.push({
             time,
-            status: reminderStatus,
-            commentId,
+            status: 'Pending', // Default status is 'Pending'
+            ...(commentId && { commentId }), // Only add commentId if it is provided
         });
 
         // Save the updated lead
         await lead.save();
 
-        res.status(200).json({ msg: 'Reminder added successfully', lead });
+        // Return only the updated reminders array
+        res.status(200).json({ msg: 'Reminder added successfully', reminders: lead.reminder });
     } catch (error) {
         console.error(`Error adding reminder to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
@@ -378,7 +384,7 @@ exports.updateReminderStatus = async (req, res) => {
 // Handler function to add a reminder with a comment to a Lead
 exports.addReminderWithComment = async (req, res) => {
     const { id } = req.params;
-    const { time, status = 'Pending', comment, images } = req.body;
+    const { time, comment, images } = req.body;
 
     try {
         // Find the lead by ID
@@ -388,14 +394,14 @@ exports.addReminderWithComment = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Check if there is any incomplete reminder (status not equal to 'Complete')
+        // Check if there is any incomplete reminder (status is either 'Pending' or 'Missed')
         const hasIncompleteReminder = lead.reminder.some(
-            (reminder) => reminder.status !== 'Complete'
+            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
 
         if (hasIncompleteReminder) {
             return res.status(400).json({
-                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
+                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
             });
         }
 
@@ -414,20 +420,21 @@ exports.addReminderWithComment = async (req, res) => {
         const savedCommentId = savedLead.comment[savedLead.comment.length - 1]._id;
 
         // Add the reminder with the commentId
-        const newReminder = {
+        lead.reminder.push({
             time,
-            status,
+            status: 'Pending', // Default status is 'Pending'
             commentId: savedCommentId,
-        };
-
-        lead.reminder.push(newReminder);
+        });
 
         // Save the lead again with the new reminder
         await lead.save();
 
-        res.status(200).json({ msg: 'Reminder and comment added successfully', lead });
+        // Return only the updated reminders array
+        res.status(200).json({
+            msg: 'Reminder and comment added successfully',
+            reminders: lead.reminder,
+        });
     } catch (error) {
-        console.log(error);
         console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -437,13 +444,6 @@ exports.addReminderWithComment = async (req, res) => {
 exports.addCallLog = async (req, res) => {
     const { id } = req.params;
     const { recipientNumber, callType, status, callDuration, timestamp } = req.body;
-    console.log('callDuration----->', {
-        recipientNumber,
-        callType,
-        status,
-        callDuration,
-        timestamp,
-    });
 
     try {
         // Find the lead by ID

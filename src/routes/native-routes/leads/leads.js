@@ -1,5 +1,8 @@
+/* eslint-disable no-restricted-syntax */
 const express = require('express');
 
+const { default: mongoose } = require('mongoose');
+const dayjs = require('dayjs');
 const leadConversationRouter = require('../lead-center/leadConversation');
 const {
     getAllLeads,
@@ -31,6 +34,7 @@ const {
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const { checkLogin } = require('../../../middlewares/auth/checkLogin');
+const Lead = require('../../../schemas/LeadsSchema');
 
 const leadRouter = express.Router();
 
@@ -86,5 +90,54 @@ leadRouter.post('/:id/call-logs', validateCallLog, addCallLog);
 
 // New route for assigned cre [Need Update]
 leadRouter.put('/:id/assign-cre', validateCreAssignment, assignCreToLead);
+
+// Function to generate random reminders
+const generateRandomReminder = async () => {
+    try {
+        // Fetch all leads from the collection
+        const leads = await Lead.find();
+
+        if (!leads.length) {
+            console.log('No leads found in the collection');
+            return;
+        }
+
+        // Iterate over each lead and add a random reminder
+        for (const lead of leads) {
+            // Generate random reminder data
+            const randomReminder = {
+                time: generateRandomDate(), // Call the random date function
+                status: getRandomStatus(), // Call the random status generator
+                commentId: new mongoose.Types.ObjectId(), // Generating a random ObjectId
+            };
+
+            // Add the reminder to the lead
+            lead.reminder.push(randomReminder);
+
+            // Save the updated lead
+            await lead.save();
+            console.log(`Reminder added to lead ${lead.name}`);
+        }
+        console.log('All reminders added successfully!');
+    } catch (error) {
+        console.error('Error generating random reminders:', error.message);
+    }
+};
+
+// Function to generate a random status from the enum ['Pending', 'Complete', 'Missed']
+const getRandomStatus = () => {
+    const statuses = ['Pending', 'Complete', 'Missed'];
+    const randomIndex = Math.floor(Math.random() * statuses.length);
+    return statuses[randomIndex];
+};
+
+// Function to generate a random date within the last 30 days
+const generateRandomDate = () => {
+    const daysAgo = Math.floor(Math.random() * 30); // Random number of days ago
+    return dayjs().subtract(daysAgo, 'day').toDate(); // Use dayjs to subtract days and get a date
+};
+
+// Call the function to add reminders
+// generateRandomReminder();
 
 module.exports = leadRouter;

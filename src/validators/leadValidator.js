@@ -77,7 +77,7 @@ const validatePhoneNumber = [
     },
 ];
 
-// Updated validation rules for updating a lead
+// Validation rules for updating a lead
 const validateLeadUpdate = [
     body('name').optional().notEmpty().withMessage('Name is required'),
     body('status')
@@ -112,11 +112,19 @@ const validateLeadUpdate = [
     body('projectStatus.subStatus')
         .optional()
         .isIn([
+            // Sub-status for 'Ongoing'
             'Roof Casting',
-            'Tiles and Painting Done',
-            'Plumbing Done',
-            'Electrical Wiring Done',
-            'Finishing Touches',
+            'Brick Wall',
+            'Plaster',
+            'Pudding',
+            'Two Coat Paint',
+            // Sub-status for 'Ready'
+            'Tiles Complete',
+            'Final Paint Done',
+            'Handed Over',
+            'Staying in the Apartment',
+            // Sub-status for 'Renovation'
+            'Interior Work Complete',
         ])
         .withMessage('Invalid project sub-status'),
     body('projectLocation')
@@ -145,10 +153,6 @@ const validateReminder = [
         .withMessage('Time is required')
         .isISO8601()
         .withMessage('Invalid date format'),
-    body('status')
-        .optional()
-        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
-        .withMessage('Invalid status'),
     body('commentId').optional().isMongoId().withMessage('Invalid comment ID'),
     (req, res, next) => {
         const errors = validationResult(req);
@@ -182,10 +186,6 @@ const validateReminderWithComment = [
         .withMessage('Time is required')
         .isISO8601()
         .withMessage('Invalid date format'),
-    body('status')
-        .optional()
-        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
-        .withMessage('Invalid status'),
     body('comment').notEmpty().withMessage('Comment is required'),
     body('images').optional().isArray().withMessage('Images must be an array'),
     body('images.*').optional().isURL().withMessage('Invalid image URL'),
