@@ -110,7 +110,6 @@ exports.getLeadById = async (req, res) => {
 // Create a new Lead with an optional comment
 exports.createLead = async (req, res) => {
     const { name, phone, source, status, comment, images } = req.body;
-    console.log('create lead user id-----',req.user._id)
 
     try {
         // Create a new lead
