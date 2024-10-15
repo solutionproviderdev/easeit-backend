@@ -52,6 +52,7 @@ const processMessages = (messages) => {
 
 // Reusable error logging function
 const logError = (message, error) => {
+    console.error(`${message}: ${error}`);
     const currentTime = new Date().toLocaleString();
     console.error(`${currentTime} => ${message}`);
 };
@@ -173,7 +174,7 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
         CID: '',
         name: otherParticipant.name,
         lastMsg: processedMessages[processedMessages.length - 1].content,
-        status: 'unread',
+        status: 'New',
         pageInfo: {
             pageId: pageInfo.pageId,
             pageName: pageInfo.pageName,

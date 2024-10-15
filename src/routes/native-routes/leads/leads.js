@@ -3,6 +3,8 @@ const express = require('express');
 
 const { default: mongoose } = require('mongoose');
 const dayjs = require('dayjs');
+const { Parser } = require('json2csv');
+const fs = require('fs');
 const leadConversationRouter = require('../lead-center/leadConversation');
 const {
     getAllLeads,
@@ -33,7 +35,6 @@ const {
     validatePhoneNumber,
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
-const { checkLogin } = require('../../../middlewares/auth/checkLogin');
 const Lead = require('../../../schemas/LeadsSchema');
 
 const leadRouter = express.Router();
@@ -136,6 +137,143 @@ const generateRandomDate = () => {
     const daysAgo = Math.floor(Math.random() * 30); // Random number of days ago
     return dayjs().subtract(daysAgo, 'day').toDate(); // Use dayjs to subtract days and get a date
 };
+
+// Function to update all leads with status 'unread' to 'New'
+const updateUnreadLeadsToNew = async () => {
+    try {
+        // Use Mongoose updateMany to update all leads where status is 'unread'
+        const result = await Lead.updateMany(
+            { status: 'unread' }, // Filter: leads with status 'unread'
+            { $set: { status: 'New' } } // Update: set status to 'New'
+        );
+
+        console.log(`Updated ${result.modifiedCount} leads.`);
+    } catch (error) {
+        console.error('Error updating leads:', error.message);
+    }
+};
+
+// Function to generate CSV for all leads
+async function generateAllLeadsMessagesCsv() {
+    try {
+        // Fetch all leads
+        const leads = await Lead.find();
+
+        if (!leads || leads.length === 0) {
+            console.log('No leads found');
+            return;
+        }
+
+        const csvData = [];
+
+        // Loop through each lead and process messages
+        leads.forEach((lead) => {
+            const messagesByUs = lead.messages.filter((msg) => msg.sentByMe);
+            const messagesByCustomer = lead.messages.filter((msg) => !msg.sentByMe);
+
+            // Get the max length to pair messages
+            const maxLength = Math.max(messagesByUs.length, messagesByCustomer.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                csvData.push({
+                    leadId: lead._id, // Add lead ID for reference
+                    leadName: lead.name, // Add lead name for reference
+                    messageByUs: messagesByUs[i] ? messagesByUs[i].content : '',
+                    messageByCustomer: messagesByCustomer[i] ? messagesByCustomer[i].content : '',
+                });
+            }
+        });
+
+        // JSON to CSV conversion
+        const fields = ['leadId', 'leadName', 'messageByUs', 'messageByCustomer'];
+        const json2csvParser = new Parser({ fields });
+        const csv = json2csvParser.parse(csvData);
+
+        // Write the CSV data to a file
+        fs.writeFileSync('all_leads_messages.csv', csv);
+        console.log('CSV file for all leads created successfully!');
+    } catch (error) {
+        console.error('Error generating CSV for all leads:', error);
+    }
+}
+
+function isAutomatedMessage(message) {
+    // Convert the message to lowercase for case-insensitive matching
+    const lowerCaseMessage = message.toLowerCase();
+
+    // Define a regex pattern for automated messages based on common phrases
+    const automatedPattern =
+			/(replied to|automated welcome message|add comment|assigned this|change or remove|visit messaging settings|You are responding|comment to)/;
+
+    // Test if the message matches the automated pattern
+    return automatedPattern.test(lowerCaseMessage);
+}
+
+// Function to find and log automated messages
+async function logAutomatedMessages() {
+    try {
+        // Find all leads
+        const leads = await Lead.find({});
+
+        // Iterate over each lead and its messages
+        leads.forEach((lead) => {
+            lead.messages.forEach((message) => {
+                // Check if the message content is an automated message
+                if (isAutomatedMessage(message.content)) {
+                    console.log(`Lead ID: ${lead._id}, Message: ${message.content}`);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error reading messages:', error);
+    }
+}
+
+// Function to update the `isAutomatedMessage` field in the database
+async function updateAutomatedMessages() {
+    try {
+        // Find all leads
+        const leads = await Lead.find({});
+
+        // Iterate over each lead and their messages
+        for (const lead of leads) {
+            let isUpdated = false;
+
+            // Iterate over the messages of the lead
+            lead.messages.forEach((message) => {
+                // Check if the message content is automated
+                const isAutomated = isAutomatedMessage(message.content);
+
+                // Only update if the isAutomatedMessage field is different from the calculated value
+                if (message.isAutomatedMessage !== isAutomated) {
+                    message.isAutomatedMessage = isAutomated;
+                    isUpdated = true; // Mark as updated
+                }
+            });
+
+            // If any message was updated, save the lead document
+            if (isUpdated) {
+                await lead.save();
+                console.log(`Lead ID: ${lead._id} has been updated.`);
+            }
+        }
+
+        console.log('Automated message update process completed.');
+    } catch (error) {
+        console.error('Error updating automated messages:', error);
+    }
+}
+
+// updateAutomatedMessages();
+
+// Call the function to log automated messages
+// logAutomatedMessages();
+
+// Call the function
+// generateAllLeadsMessagesCsv();
+
+// Call the function to update the leads
+// updateUnreadLeadsToNew();
 
 // Call the function to add reminders
 // generateRandomReminder();

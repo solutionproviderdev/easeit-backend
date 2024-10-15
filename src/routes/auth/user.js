@@ -52,7 +52,7 @@ userRouter.get('/:id', checkAuth, getUserById);
 userRouter.get('/dropdown/options', checkAuth, getUserDropdownOptions);
 
 // Create a New User
-userRouter.post('/', createUser);//checkAuth, validateUser,
+userRouter.post('/', validateUser, createUser);
 
 // Update User Details
 userRouter.put('/:id', checkAuth, validateUserUpdate, updateUser);

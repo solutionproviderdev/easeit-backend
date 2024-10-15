@@ -78,11 +78,48 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// Get all users function excluding sensitive properties
+// Get all users function excluding sensitive properties and populating department and role
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password');
-        res.status(200).json(users);
+        // Find users and populate the department
+        const users = await User.find()
+            .select('-password') // Exclude the password field
+            .populate({
+                path: 'departmentId', // Populate department
+                select: 'departmentName roles', // Select departmentName and roles
+            });
+
+        // Manually map role information based on roleId
+        const usersWithRolesAndDepartments = users.map((user) => {
+            const department = user.departmentId;
+            let roleInfo = null;
+
+            if (department && department.roles && user.roleId) {
+                // Find the matching role in the department
+                const role = department.roles.find(
+                    (role) => role._id.toString() === user.roleId.toString()
+                );
+                if (role) {
+                    roleInfo = {
+                        roleId: role._id, // Include roleId
+                        roleName: role.roleName, // Include roleName
+                    };
+                }
+            }
+
+            return {
+                ...user.toObject(), // Convert user to plain object
+                department: department
+                    ? {
+                          departmentId: department._id, // Include departmentId
+                          departmentName: department.departmentName, // Include departmentName
+                      }
+                    : null,
+                role: roleInfo, // Include role object with roleId and roleName
+            };
+        });
+
+        res.status(200).json(usersWithRolesAndDepartments);
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
@@ -90,13 +127,51 @@ exports.getAllUsers = async (req, res) => {
 };
 
 // Get user by ID function excluding sensitive properties
+// Get user by ID function excluding sensitive properties and populating department and role
 exports.getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password');
+        // Find the user by ID and populate the department
+        const user = await User.findById(req.params.id)
+            .select('-password') // Exclude password
+            .populate({
+                path: 'departmentId', // Populate department
+                select: 'departmentName roles', // Select departmentName and roles
+            });
+
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
-        res.status(200).json(user);
+
+        // Manually map role information based on roleId
+        const department = user.departmentId;
+        let roleInfo = null;
+
+        if (department && department.roles && user.roleId) {
+            // Find the matching role in the department
+            const role = department.roles.find(
+                (role) => role._id.toString() === user.roleId.toString()
+            );
+            if (role) {
+                roleInfo = {
+                    roleId: role._id, // Include roleId
+                    roleName: role.roleName, // Include roleName
+                };
+            }
+        }
+
+        // Create the response object
+        const userWithRoleAndDepartment = {
+            ...user.toObject(), // Convert user to plain object
+            department: department
+                ? {
+                      departmentId: department._id, // Include departmentId
+                      departmentName: department.departmentName, // Include departmentName
+                  }
+                : null,
+            role: roleInfo, // Include role object with roleId and roleName
+        };
+
+        res.status(200).json(userWithRoleAndDepartment);
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });

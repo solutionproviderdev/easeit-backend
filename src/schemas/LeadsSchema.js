@@ -17,6 +17,7 @@ const messageSchema = new mongoose.Schema(
         messageId: String,
         content: String,
         senderId: String,
+        isAutomatedMessage: { type: Boolean, default: false },
         sentByMe: { type: Boolean, default: false },
         fileUrl: [String],
         isSticker: { type: Boolean, default: false },
@@ -102,10 +103,11 @@ const leadSchema = mongoose.Schema(
         status: {
             type: String,
             enum: [
-                'unread',
+                'New',
                 'No Response',
                 'Message Rescheduled',
                 'Need Support',
+                'Ongoing',
                 'Number Collected',
                 'Call Reschedule',
                 'Follow Up',

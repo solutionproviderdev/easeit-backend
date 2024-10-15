@@ -83,13 +83,14 @@ const validateLeadUpdate = [
     body('status')
         .optional()
         .isIn([
-            'unread',
+            'New',
             'No Response',
             'Message Rescheduled',
             'Need Support',
             'Number Collected',
             'Call Reschedule',
             'Follow Up',
+            'Ongoing',
             'Meeting Fixed',
             'Meeting Reschedule',
             'Cancel Meeting',

@@ -229,7 +229,7 @@ exports.updateRequirements = async (req, res) => {
 exports.addPhoneNumberToLead = async (req, res) => {
     const { id } = req.params;
     const { phoneNumber } = req.body;
-    console.log('id and phoneNumber----------', id, phoneNumber);
+    console.log(req.body);
 
     try {
         // Find the lead by ID
@@ -278,7 +278,6 @@ exports.addPhoneNumberToLead = async (req, res) => {
 exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
-    console.log('--------------id', id, 'phone array', req.body);
 
     // Extract only the fields that are allowed to be updated
     if (req.body.name) updateFields.name = req.body.name;
@@ -491,33 +490,44 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
-// Get All Leads with Reminders
+// Handler function to get all leads with reminders
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
-        const {
-            page = 1,
-            limit = 20,
-            status,
-            source,
-            startDate,
-            endDate,
-            assignedCre,
-            salesExecutive,
-        } = req.query;
+        const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
 
-        // Create a filter object
+        // Create a filter object for the leads
         const filter = {
             reminder: { $exists: true, $not: { $size: 0 } }, // Only leads with reminders
         };
 
+        // Add status filter if specified
         if (status) {
             filter.status = status;
         }
 
+        // Add source filter if specified
         if (source) {
             filter.source = source;
         }
 
+        // Add filter for CRE if specified
+        if (assignedCre) {
+            filter.creName = assignedCre;
+        }
+
+        // Add filter for Sales Executive if specified
+        if (salesExecutive) {
+            filter.salesExqName = salesExecutive;
+        }
+
+        // Fetch leads with filters, excluding the 'messages' array
+        let leads = await Lead.find(filter)
+            .select('-messages -meetingDetails -messagesSeen -callLogs') // Exclude unnecessary fields
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean(); // Use lean() to get plain JavaScript objects
+
+        // Filter reminders based on start and end date
         if (startDate || endDate) {
             if (!startDate || !endDate) {
                 return res.status(400).json({
@@ -534,42 +544,36 @@ exports.getAllLeadsWithReminders = async (req, res) => {
                 });
             }
 
-            // If startDate and endDate are the same, set end to end of the day
+            // If startDate and endDate are the same, set end to the end of the day
             if (startDate === endDate) {
                 end.setHours(23, 59, 59, 999);
             }
 
-            filter.createdAt = {
-                $gte: start,
-                $lte: end,
-            };
+            // Iterate through the leads and filter reminders by their time field
+            leads = leads.map((lead) => {
+                const filteredReminders = lead.reminder.filter(
+                    (reminder) => reminder.time >= start && reminder.time <= end
+                );
+
+                return {
+                    ...lead,
+                    reminder: filteredReminders,
+                };
+            });
+
+            // Remove leads without any reminders after filtering
+            leads = leads.filter((lead) => lead.reminder.length > 0);
         }
-
-        if (assignedCre) {
-            filter.creName = assignedCre;
-        }
-
-        if (salesExecutive) {
-            filter.salesExqName = salesExecutive;
-        }
-
-        // Fetch leads with pagination and filters, excluding the 'messages' array
-        const leads = await Lead.find(filter)
-            .select('-messages -meetingDetails -messagesSeen -callLogs') // Exclude unnecessary fields
-            .skip((page - 1) * limit)
-            .limit(Number(limit))
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
-
-        const totalLeads = await Lead.countDocuments(filter);
 
         // Manually populate reminders with the corresponding comment
         const populatedLeads = leads.map((lead) => {
             const populatedReminders = lead.reminder.map((reminder) => {
-                const comment = lead.comment.id(reminder.commentId); // Find the matching comment
+                const comment = lead.comment.find(
+                    (c) => c._id.toString() === reminder.commentId?.toString()
+                );
 
                 return {
-                    ...reminder.toObject(),
+                    ...reminder,
                     comment: comment
                         ? {
                               comment: comment.comment,
@@ -582,8 +586,8 @@ exports.getAllLeadsWithReminders = async (req, res) => {
             });
 
             return {
-                ...lead.toObject(),
-                comment: [], // Remove the comment array
+                ...lead,
+                comment: [], // Remove the comment array to avoid including it multiple times
                 reminder: populatedReminders, // Update reminder with populated comments
             };
         });
@@ -596,19 +600,16 @@ exports.getAllLeadsWithReminders = async (req, res) => {
 
         // Prepare filter options data
         const filterOptions = {
-            creNames: creNames.map((cre) => cre.toString()), // Convert CRE IDs to string or populate the name if needed
-            salesNames: salesNames.map((sales) => sales.toString()), // Same for sales
+            creNames: creNames.map((cre) => cre?.toString()),
+            salesNames: salesNames.map((sales) => sales?.toString()),
             statuses,
             sources,
         };
 
         res.status(200).json({
-            total: totalLeads,
-            page: Number(page),
-            limit: Number(limit),
-            totalPages: Math.ceil(totalLeads / limit),
+            total: leads.length,
+            filterOptions,
             leads: populatedLeads,
-            filterOptions, // Include filter options in the response
         });
     } catch (error) {
         console.error(error.message);
