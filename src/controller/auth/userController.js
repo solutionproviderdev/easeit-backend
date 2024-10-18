@@ -25,6 +25,8 @@ exports.createUser = async (req, res) => {
             socialLinks,
             guardian,
             type,
+            profilePicture, // Include profilePicture
+            coverPhoto, // Include coverPhoto
         } = req.body;
 
         // Check if user already exists
@@ -55,6 +57,8 @@ exports.createUser = async (req, res) => {
             socialLinks,
             guardian,
             type,
+            profilePicture, // Add profilePicture
+            coverPhoto, // Add coverPhoto
         });
 
         // Save the user

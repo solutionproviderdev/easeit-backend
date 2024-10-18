@@ -6,8 +6,6 @@ exports.uploadImage = (req, res) => {
         return res.status(400).json({ msg: 'No image uploaded' });
     }
 
-    console.log(req.file);
-
     const fileUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
     res.status(200).json({ fileUrl });
 };
