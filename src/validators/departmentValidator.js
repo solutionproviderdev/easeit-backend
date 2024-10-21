@@ -3,6 +3,7 @@
 const { body, validationResult } = require('express-validator');
 const Department = require('../schemas/auth/DepartmentSchema');
 
+// Validation middleware for creating a new department
 const validateDepartment = [
     body('departmentName')
         .notEmpty()
@@ -14,8 +15,9 @@ const validateDepartment = [
             }
         }),
     body('description').optional().isString().withMessage('Description must be a string'),
-    body('roles').isArray().withMessage('Roles must be an array'),
+    body('roles').optional().isArray().withMessage('Roles must be an array'),
     body('roles.*.roleName')
+        .optional()
         .notEmpty()
         .withMessage('Role name is required')
         .isString()
@@ -24,17 +26,27 @@ const validateDepartment = [
         .optional()
         .isString()
         .withMessage('Role description must be a string'),
-    body('roles.*.permissions').isArray().withMessage('Permissions must be an array'),
+    body('roles.*.permissions').optional().isArray().withMessage('Permissions must be an array'),
     body('roles.*.permissions.*.resource')
+        .optional()
         .notEmpty()
         .withMessage('Permission resource is required')
         .isString()
         .withMessage('Permission resource must be a string'),
-    body('roles.*.permissions.*.action')
+    body('roles.*.permissions.*.actions')
+        .optional()
+        .isArray()
+        .withMessage('Actions must be an array'),
+    body('roles.*.permissions.*.actions.*.name')
+        .optional()
         .notEmpty()
-        .withMessage('Permission action is required')
+        .withMessage('Action name is required')
         .isString()
-        .withMessage('Permission action must be a string'),
+        .withMessage('Action name must be a string'),
+    body('roles.*.permissions.*.actions.*.allowed')
+        .optional()
+        .isBoolean()
+        .withMessage('Allowed must be a boolean'),
 
     // Middleware to handle validation result
     (req, res, next) => {
@@ -94,25 +106,24 @@ const validateDepartmentUpdate = [
     },
 ];
 
-// Validation rules for adding a role to a department
-const validateRole = [
-    body('roleName')
-        .notEmpty()
-        .withMessage('Role name is required')
-        .isString()
-        .withMessage('Role name must be a string'),
-    body('description').optional().isString().withMessage('Description must be a string'),
+const validatePermissions = [
     body('permissions').isArray().withMessage('Permissions must be an array'),
     body('permissions.*.resource')
         .notEmpty()
         .withMessage('Permission resource is required')
         .isString()
         .withMessage('Permission resource must be a string'),
-    body('permissions.*.action')
+    body('permissions.*.actions')
+        .isArray({ min: 1 })
+        .withMessage('Actions must be an array with at least one action'),
+    body('permissions.*.actions.*.name')
         .notEmpty()
-        .withMessage('Permission action is required')
+        .withMessage('Action name is required')
         .isString()
-        .withMessage('Permission action must be a string'),
+        .withMessage('Action name must be a string'),
+    body('permissions.*.actions.*.allowed')
+        .isBoolean()
+        .withMessage('isActive must be a boolean value'),
 
     // Middleware to handle validation result
     (req, res, next) => {
@@ -124,7 +135,26 @@ const validateRole = [
     },
 ];
 
-// Validation rules for updating a role in a department
+// Role validation
+const validateRole = [
+    body('roleName')
+        .notEmpty()
+        .withMessage('Role name is required')
+        .isString()
+        .withMessage('Role name must be a string'),
+    body('description').optional().isString().withMessage('Description must be a string'),
+    validatePermissions, // Include the permission validator here
+
+    // Middleware to handle validation result
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    },
+];
+
 const validateRoleUpdate = [
     body('roleName').optional().isString().withMessage('Role name must be a string'),
     body('description').optional().isString().withMessage('Description must be a string'),
@@ -135,12 +165,20 @@ const validateRoleUpdate = [
         .withMessage('Permission resource is required')
         .isString()
         .withMessage('Permission resource must be a string'),
-    body('permissions.*.action')
+    body('permissions.*.actions')
+        .optional()
+        .isArray({ min: 1 })
+        .withMessage('Actions must be an array with at least one action'),
+    body('permissions.*.actions.*.actionName')
         .optional()
         .notEmpty()
-        .withMessage('Permission action is required')
+        .withMessage('Action name is required')
         .isString()
-        .withMessage('Permission action must be a string'),
+        .withMessage('Action name must be a string'),
+    body('permissions.*.actions.*.isActive')
+        .optional()
+        .isBoolean()
+        .withMessage('isActive must be a boolean value'),
 
     // Middleware to handle validation result
     (req, res, next) => {
@@ -157,4 +195,5 @@ module.exports = {
     validateDepartmentUpdate,
     validateRole,
     validateRoleUpdate,
+    validatePermissions,
 };

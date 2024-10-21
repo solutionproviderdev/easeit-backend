@@ -29,6 +29,7 @@ const wpMessageRouter = require('./routes/whatsAppMessage');
 const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
+const { createDummyUsers, updateAutomatedMessages, findHighQualityLeads } = require('../populateDatabase');
 
 // Initialize app
 const app = express();
@@ -131,6 +132,10 @@ setInterval(() => {
 //     console.log('Hii...!');
 //     await fetchAndStoreDarazData();
 // };
+
+// createDummyUsers();
+// updateAutomatedMessages();
+// findHighQualityLeads();
 
 // 404 error handling
 app.use(notFoundHandler);

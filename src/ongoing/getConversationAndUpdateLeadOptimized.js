@@ -11,6 +11,7 @@ const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
+const { isAutomatedMessage } = require('../../populateDatabase');
 
 const processMessages = (messages) => {
     let phoneNumber = '';
@@ -39,6 +40,7 @@ const processMessages = (messages) => {
         return {
             messageId: msg.id,
             content: msg.message,
+            isAutomatedMessage: isAutomatedMessage(msg.message),
             senderId: msg.from.id,
             senderName: msg.from.name,
             sentByMe: msg.from.name === 'Solution Provider',

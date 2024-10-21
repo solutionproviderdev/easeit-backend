@@ -25,8 +25,8 @@ exports.createUser = async (req, res) => {
             socialLinks,
             guardian,
             type,
-            profilePicture, // Include profilePicture
-            coverPhoto, // Include coverPhoto
+            profilePicture,
+            coverPhoto,
         } = req.body;
 
         // Check if user already exists
@@ -130,10 +130,10 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-// Get user by ID function excluding sensitive properties
 // Get user by ID function excluding sensitive properties and populating department and role
 exports.getUserById = async (req, res) => {
     try {
+        console.log(req.params.id);
         // Find the user by ID and populate the department
         const user = await User.findById(req.params.id)
             .select('-password') // Exclude password

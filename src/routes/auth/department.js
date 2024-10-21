@@ -8,12 +8,15 @@ const {
     addRoleToDepartment,
     updateRoleInDepartment,
     deleteRoleFromDepartment,
+    updateRolePermissions,
+    getAllPermissions,
 } = require('../../controller/auth/departmentController');
 const {
     validateDepartment,
     validateDepartmentUpdate,
     validateRole,
     validateRoleUpdate,
+    validatePermissions,
 } = require('../../validators/departmentValidator');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
@@ -22,6 +25,9 @@ const departmentRouter = express.Router();
 
 // Get All Departments
 departmentRouter.get('/', checkAuth, getAllDepartments);
+
+// Route to get all permissions data
+departmentRouter.get('/permissions', checkAuth, getAllPermissions);
 
 // Get Single Department
 departmentRouter.get('/:id', checkAuth, getDepartmentById);
@@ -43,5 +49,13 @@ departmentRouter.put('/:id/roles/:roleId', checkAuth, validateRoleUpdate, update
 
 // Delete Role from Department
 departmentRouter.delete('/:id/roles/:roleId', checkAuth, deleteRoleFromDepartment);
+
+// // New Route for updating role permissions
+// departmentRouter.put(
+//     '/:id/roles/:roleId/permissions',
+//     checkAuth,
+//     validatePermissions,
+//     updateRolePermissions
+// );
 
 module.exports = departmentRouter;
