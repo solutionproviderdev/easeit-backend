@@ -6,10 +6,14 @@ const {
     getAllMeetings,
     getSingleMeeting,
     updateMeeting,
+    createMeeting,
 } = require('../controller/meetingController');
 
 // Router Declearation
 const meetingsRouter = express.Router();
+
+// Create a new meeting
+meetingsRouter.post('/', checkLogin, createMeeting);
 
 // Get All meetings
 meetingsRouter.get('/', checkLogin, getAllMeetings);

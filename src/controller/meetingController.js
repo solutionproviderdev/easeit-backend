@@ -1,47 +1,62 @@
-const Lead = require('../schemas/LeadsSchema');
+import { Request, Response } from 'express';
+import Meeting from '../models/Meeting'; // Adjust the import path as necessary
 
-const getAllMeetings = async (req, res) => {
+// Create a new meeting
+export const createMeeting = async (req: Request, res: Response) => {
+    const meetingData = req.body; // Ensure proper validation and sanitization
+
     try {
-        const meetings = await Lead.find({ status: 'Meeting Fixed' })
-            .select('meetingData name phone address visitCharge salesExqName workScope status')
-            .populate({ path: 'creName', select: 'name avatar role' });
-        res.status(200).json(meetings);
+        const newMeeting = new Meeting(meetingData);
+        await newMeeting.save();
+
+        res.status(201).json(newMeeting);
     } catch (error) {
-        res.status(500).json({ message: 'Error retrieving meetings', error: error.message });
+        res.status(400).json({ message: 'Failed to create meeting', error });
     }
 };
 
-const getSingleMeeting = async (req, res) => {
-    const { id } = req.params;
+// Get all meetings
+export const getAllMeetings = async (req: Request, res: Response) => {
     try {
-        const meeting = await Lead.findById(id);
+        const meetings = await Meeting.find().populate('salesTeam cre'); // Populate related fields
+        res.status(200).json(meetings);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to retrieve meetings', error });
+    }
+};
+
+// Get a single meeting by ID
+export const getSingleMeeting = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const meeting = await Meeting.findById(id).populate('salesTeam cre'); // Populate related fields
+
         if (!meeting) {
             return res.status(404).json({ message: 'Meeting not found' });
         }
+
         res.status(200).json(meeting);
     } catch (error) {
-        res.status(500).json({ message: 'Error retrieving meeting', error: error.message });
+        res.status(500).json({ message: 'Failed to retrieve meeting', error });
     }
 };
 
-const updateMeeting = async (req, res) => {
+// Update meeting details
+export const updateMeeting = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { meetingData } = req.body; // Ensure that meetingData is structured correctly
+    const updates = req.body; // Ensure proper validation and sanitization
 
     try {
-        const updatedMeeting = await Lead.findByIdAndUpdate(
-            id,
-            { $set: { meetingData } },
-            { new: true }
-        );
-        res.status(200).json({ message: 'Meeting updated successfully', updatedMeeting });
+        const meeting = await Meeting.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('salesTeam cre');
+
+        if (!meeting) {
+            return res.status(404).json({ message: 'Meeting not found' });
+        }
+
+        res.status(200).json(meeting);
     } catch (error) {
-        res.status(500).json({ message: 'Error updating meeting', error: error.message });
+        res.status(500).json({ message: 'Failed to update meeting', error });
     }
 };
 
-module.exports = {
-    getAllMeetings,
-    updateMeeting,
-    getSingleMeeting,
-};
