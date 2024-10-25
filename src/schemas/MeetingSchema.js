@@ -26,7 +26,7 @@ const meetingSchema = new mongoose.Schema({
     },
     salesTeam: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Emon,Supto,Yeasin,Ashim,Rahat', // Reference to the sales team member involved
+        ref: 'Emon', // Reference to the sales team member involved
         required: true,
     },
     location: {
@@ -40,11 +40,11 @@ const meetingSchema = new mongoose.Schema({
         required: true, // Status of the project related to the meeting
     },
     phone: {
-        type: String, // Phone number of the lead or client
+        type: String,
         required: true,
     },
     requirement: {
-        type: String, // Requirement of the meeting (e.g., 'Kitchen', 'Bathroom')
+        type: String,
         required: true,
     },
     cre: {
