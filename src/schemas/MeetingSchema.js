@@ -26,7 +26,7 @@ const meetingSchema = new mongoose.Schema({
     },
     salesTeam: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User', // Reference to the sales team member involved
+        ref: 'Emon,Supto,Yeasin,Ashim,Rahat', // Reference to the sales team member involved
         required: true,
     },
     location: {
@@ -62,8 +62,8 @@ const meetingSchema = new mongoose.Schema({
         required: false,
     },
     rating: {
-        type: String, // Rating for the lead or project
-        default: '☆☆☆☆☆',
+        type: Number, // Store numeric rating
+        default: 0, // Default rating
     },
     remarks: {
         type: String, // Remarks for the meeting or lead

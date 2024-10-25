@@ -188,7 +188,7 @@ const getConversationsAndUpdateLeads = async io => {
 								createdAt: new Date(firstMessageTime),
 							});
 							const savedNewLead = await newLead.save();
-                            console.log('savedNewLead --> ', savedNewLead);
+                            // console.log('savedNewLead --> ', savedNewLead);
 
 							// const socketPayload = {
 							//     name: savedNewLead.name,
@@ -215,7 +215,7 @@ const getConversationsAndUpdateLeads = async io => {
                                 status: savedNewLead.status,
                                 creName: savedNewLead.creName,
 							};
-                            console.log('About to emit socket event. Payload:', JSON.stringify(socketPayload, null, 2));
+                            // console.log('About to emit socket event. Payload:', JSON.stringify(socketPayload, null, 2));
 
 							io.emit('conversation', socketPayload);
 

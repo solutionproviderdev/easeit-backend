@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
-import Meeting from '../models/Meeting'; // Adjust the import path as necessary
+const Meeting =require("../schemas/MeetingSchema");
 
 // Create a new meeting
-export const createMeeting = async (req: Request, res: Response) => {
+ const createMeeting = async (req, res) => {
     const meetingData = req.body; // Ensure proper validation and sanitization
-
+// console.log('meeting data---->',meetingData)
     try {
         const newMeeting = new Meeting(meetingData);
         await newMeeting.save();
@@ -16,21 +15,24 @@ export const createMeeting = async (req: Request, res: Response) => {
 };
 
 // Get all meetings
-export const getAllMeetings = async (req: Request, res: Response) => {
+ const getAllMeetings = async (req, res) => {
+    // console.log('its log---------->')
     try {
-        const meetings = await Meeting.find().populate('salesTeam cre'); // Populate related fields
+        const meetings = await Meeting.find(); // Populate related fields
         res.status(200).json(meetings);
     } catch (error) {
+        console.log(error)
         res.status(500).json({ message: 'Failed to retrieve meetings', error });
     }
 };
 
 // Get a single meeting by ID
-export const getSingleMeeting = async (req: Request, res: Response) => {
+ const getSingleMeeting = async (req, res) => {
     const { id } = req.params;
+        console.log('its single meeting---------->',id)
 
     try {
-        const meeting = await Meeting.findById(id).populate('salesTeam cre'); // Populate related fields
+        const meeting = await Meeting.findById(id); // Populate related fields
 
         if (!meeting) {
             return res.status(404).json({ message: 'Meeting not found' });
@@ -43,13 +45,12 @@ export const getSingleMeeting = async (req: Request, res: Response) => {
 };
 
 // Update meeting details
-export const updateMeeting = async (req: Request, res: Response) => {
+ const updateMeeting = async (req, res) => {
     const { id } = req.params;
     const updates = req.body; // Ensure proper validation and sanitization
 
     try {
-        const meeting = await Meeting.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).populate('salesTeam cre');
-
+        const meeting = await Meeting.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
         if (!meeting) {
             return res.status(404).json({ message: 'Meeting not found' });
         }
@@ -60,3 +61,4 @@ export const updateMeeting = async (req: Request, res: Response) => {
     }
 };
 
+module.exports = { createMeeting, getAllMeetings,getSingleMeeting,updateMeeting };

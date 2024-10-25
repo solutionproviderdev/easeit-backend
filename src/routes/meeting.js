@@ -12,16 +12,16 @@ const {
 // Router Declearation
 const meetingsRouter = express.Router();
 
-// Create a new meeting
-meetingsRouter.post('/', checkLogin, createMeeting);
+// Create a new meeting------------checkLogin
+meetingsRouter.post('/',createMeeting);
 
 // Get All meetings
-meetingsRouter.get('/', checkLogin, getAllMeetings);
+meetingsRouter.get('/', getAllMeetings);
 
 // Get single meetings
-meetingsRouter.get('/:id', checkLogin, getSingleMeeting);
+meetingsRouter.get('/:id', getSingleMeeting);
 
 // Update meetings Details
-meetingsRouter.put('/:id', checkLogin, updateMeeting);
+meetingsRouter.put('/:id', updateMeeting);
 
 module.exports = meetingsRouter;
