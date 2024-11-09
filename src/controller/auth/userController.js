@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../../schemas/auth/UserSchema');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
+const Department = require('../../schemas/auth/DepartmentSchema');
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -85,43 +86,79 @@ exports.createUser = async (req, res) => {
 // Get all users function excluding sensitive properties and populating department and role
 exports.getAllUsers = async (req, res) => {
     try {
-        // Find users and populate the department
-        const users = await User.find()
+        // Extract query parameters for filtering
+        const { departmentName, roleName } = req.query;
+
+        // Build a query object based on the query parameters
+        const query = {};
+
+        let roleInfo;
+
+        if (departmentName) {
+            // Get the department by name and set the department ID in the query
+            const department = await Department.findOne({ departmentName });
+            if (!department) {
+                return res.status(404).json({ msg: 'Department not found' });
+            }
+            query.departmentId = department._id;
+
+            // console.log(department);
+
+            if (roleName) {
+                // Get the role by name and set the role ID in the query
+                const role = department.roles.find((r) => r.roleName === roleName);
+                if (!role) {
+                    return res.status(404).json({ msg: 'Role not found' });
+                }
+                roleInfo = role;
+                query.roleId = role._id;
+            }
+        }
+
+        // Find users based on the constructed query and populate the department
+        const users = await User.find(query)
             .select('-password') // Exclude the password field
             .populate({
                 path: 'departmentId', // Populate department
-                select: 'departmentName roles', // Select departmentName and roles
+                select: 'departmentName', // Select departmentName and roles
             });
 
-        // Manually map role information based on roleId
-        const usersWithRolesAndDepartments = users.map((user) => {
-            const department = user.departmentId;
-            let roleInfo = null;
+        // Manually map role information based on roleId and filter by roleName if provided
+        const usersWithRolesAndDepartments = users
+            .map((user) => {
+                const department = user.departmentId;
 
-            if (department && department.roles && user.roleId) {
-                // Find the matching role in the department
-                const role = department.roles.find(
-                    (role) => role._id.toString() === user.roleId.toString()
-                );
-                if (role) {
-                    roleInfo = {
-                        roleId: role._id, // Include roleId
-                        roleName: role.roleName, // Include roleName
-                    };
+                if (department && department.roles && user.roleId) {
+                    // Find the matching role in the department
+                    const role = department.roles.find(
+                        (role) => role._id.toString() === user.roleId.toString()
+                    );
+                    if (role) {
+                        roleInfo = {
+                            roleId: role._id, // Include roleId
+                            roleName: role.roleName, // Include roleName
+                        };
+                    }
                 }
-            }
 
-            return {
-                ...user.toObject(), // Convert user to plain object
-                department: department
-                    ? {
-                          departmentId: department._id, // Include departmentId
-                          departmentName: department.departmentName, // Include departmentName
-                      }
-                    : null,
-                role: roleInfo, // Include role object with roleId and roleName
-            };
-        });
+                return {
+                    ...user.toObject(), // Convert user to plain object
+                    department: department
+                        ? {
+                              departmentId: department._id, // Include departmentId
+                              departmentName: department.departmentName, // Include departmentName
+                          }
+                        : null,
+                    role: roleInfo, // Include role object with roleId and roleName
+                };
+            })
+            // Filter users by roleName if provided in the query parameters
+            .filter((user) => {
+                if (roleName) {
+                    return user.role && user.role.roleName === roleName;
+                }
+                return true;
+            });
 
         res.status(200).json(usersWithRolesAndDepartments);
     } catch (error) {
@@ -505,7 +542,7 @@ exports.loginUser = async (req, res) => {
 
         // Create JWT
         const payload = { userId: user._id };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 
         // Set cookie
         res.cookie('session_token', token, {

@@ -65,18 +65,70 @@ exports.getAllLeads = async (req, res) => {
 
         // Fetch leads with pagination and filters
         const leads = await Lead.find(filter)
+            .select('-messages -callLogs')
             .skip((page - 1) * limit)
             .limit(Number(limit))
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
+            .populate('creName', 'nameAsPerNID nickname profilePicture')
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture');
 
         const totalLeads = await Lead.countDocuments(filter);
+
+        // List of all statuses
+        const allStatuses = [
+            'New',
+            'No Response',
+            'Need Support',
+            'Message Rescheduled',
+            'Number Collected',
+            'Call Reschedule',
+            'Ongoing',
+            'Close',
+            'Follow Up',
+            'Meeting Fixed',
+            'Meeting Postponed',
+            'Cancel Meeting',
+        ];
+
+        // Extract unique Sources
+        const allSources = ['Facebook', 'WhatsApp', 'Web', 'Phone'];
+
+        // Extract unique CREs and Sales Executives
+        const uniqueCRENames = [];
+        const uniqueSalesExecs = [];
+        const creNamesSet = new Set();
+        const salesExecsSet = new Set();
+
+        leads.forEach((lead) => {
+            if (lead.creName && !creNamesSet.has(lead.creName._id.toString())) {
+                creNamesSet.add(lead.creName._id.toString());
+                uniqueCRENames.push({
+                    _id: lead.creName._id,
+                    name: lead.creName.nameAsPerNID,
+                    nickname: lead.creName.nickname,
+                    profilePicture: lead.creName.profilePicture,
+                });
+            }
+
+            if (lead.salesExqName && !salesExecsSet.has(lead.salesExqName._id.toString())) {
+                salesExecsSet.add(lead.salesExqName._id.toString());
+                uniqueSalesExecs.push({
+                    _id: lead.salesExqName._id,
+                    name: lead.salesExqName.name,
+                });
+            }
+        });
 
         res.status(200).json({
             total: totalLeads,
             page: Number(page),
             limit: Number(limit),
             totalPages: Math.ceil(totalLeads / limit),
+            filters: {
+                statuses: allStatuses,
+                sources: allSources,
+                creNames: uniqueCRENames,
+                salesExecutives: uniqueSalesExecs,
+            },
             leads,
         });
     } catch (error) {

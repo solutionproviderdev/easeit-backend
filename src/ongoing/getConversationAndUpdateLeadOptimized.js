@@ -12,6 +12,25 @@ const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../../populateDatabase');
+const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
+const User = require('../schemas/auth/UserSchema');
+
+// Convert Bengali numerals to English numerals
+const convertBengaliToEnglishNumbers = (input) => {
+    const bengaliToEnglishMap = {
+        '০': '0',
+        '১': '1',
+        '২': '2',
+        '৩': '3',
+        '৪': '4',
+        '৫': '5',
+        '৬': '6',
+        '৭': '7',
+        '৮': '8',
+        '৯': '9',
+    };
+    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+};
 
 const processMessages = (messages) => {
     let phoneNumber = '';
@@ -20,7 +39,9 @@ const processMessages = (messages) => {
 
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
-            const potentialNumber = content.replace(/[^0-9]+/g, '');
+            const potentialNumber = convertBengaliToEnglishNumbers(
+                content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+            );
             if (potentialNumber) {
                 const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
                 if (parsedNumber && parsedNumber.isValid()) {
@@ -159,6 +180,10 @@ const updateExistingLead = async (
             if (!lead.phone.includes(formattedPhoneNumber)) {
                 lead.phone.push(formattedPhoneNumber);
             }
+        }
+
+        // check if leads statusis not 'New' then update status to 'Number Collected'
+        if (phoneNumber?.number?.length === 14 && lead.status === 'New') {
             lead.status = 'Number Collected';
         }
 
@@ -169,7 +194,7 @@ const updateExistingLead = async (
 
 // Create a new lead if no matching lead exists
 const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) => {
-    const cre = await findCREWithLowestLeads();
+    const cre = await getPerformanceBasedCRE();
     const firstMessageTime = processedMessages[0].date;
 
     const newLead = new Lead({
@@ -194,15 +219,35 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
     emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
 };
 
+// get cre information
+const getCreInfo = async (id) => {
+    const cre = await User.findOne({ _id: id });
+    return cre || null;
+};
+
 // Emit Socket.io events for new messages or leads
-const emitSocketEventsForNewMessage = (io, savedLead, pageInfo) => {
+const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
+    // get cre information
+    const cre = await getCreInfo(savedLead.creName);
+
+    // make crename as object if it is not null
+    let creName = null;
+    if (cre) {
+        creName = {
+            _id: cre._id,
+            name: cre.name,
+            profilePicture: cre.profilePicture,
+            nickName: cre.nickName,
+        };
+    }
+
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
-        creName: savedLead.creName,
+        creName: { ...creName },
         pageInfo: {
             pageName: pageInfo.pageName,
             pageId: pageInfo.pageId,

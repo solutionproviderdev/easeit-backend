@@ -148,6 +148,124 @@ exports.getAllLeadConversations = async (req, res) => {
     }
 };
 
+exports.getAllLeadConversationUpdated = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+
+        const leadsWithLastMessage = await Lead.aggregate([
+            {
+                $addFields: {
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1, // Include full pageInfo object
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                },
+            },
+        ])
+            .sort({ lastMessageTime: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Populate creName with details from the User model
+        const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
+            path: 'creName',
+            select: 'nameAsPerNID nickname profilePicture',
+        });
+
+        const totalLeads = await Lead.countDocuments();
+
+        // Extract unique statuses
+        const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
+
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsPopulated.forEach((lead) => {
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
+
+        // Extract unique CRE names with details
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+
+        leadsPopulated.forEach((lead) => {
+            const creDetails = lead.creName;
+            if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
+                creNamesSet.add(creDetails._id.toString());
+                uniqueCRENames.push({
+                    _id: creDetails._id,
+                    name: creDetails.nameAsPerNID,
+                    nickname: creDetails.nickname,
+                    profilePicture: creDetails.profilePicture,
+                });
+            }
+        });
+
+        // Respond with paginated leads and the conversation objects formatted as required
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames, // Unique CRE names with details
+            },
+            leads: leadsPopulated.map((lead) => ({
+                name: lead.name,
+                lastMessage: lead.lastMessage,
+                lastMessageTime: lead.lastMessageTime,
+                sentByMe: lead.sentByMe,
+                createdAt: lead.createdAt,
+                creName: lead.creName
+                    ? {
+                          _id: lead.creName._id,
+                          name: lead.creName.nameAsPerNID,
+                          nickname: lead.creName.nickname,
+                          profilePicture: lead.creName.profilePicture,
+                      }
+                    : null,
+                status: lead.status,
+                _id: lead._id,
+                messagesSeen: lead.messagesSeen,
+                pageInfo: {
+                    pageId: lead.pageInfo.pageId,
+                    pageName: lead.pageInfo.pageName,
+                    pageProfilePicture: lead.pageInfo.pageProfilePicture,
+                },
+            })),
+        });
+    } catch (error) {
+        console.error('Error getting leads with last message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;

@@ -26,23 +26,6 @@ const messageSchema = new mongoose.Schema(
     { _id: true }
 );
 
-// Meeting Details Schema
-const meetingDetailsSchema = new mongoose.Schema(
-    {
-        date: Date,
-        slot: {
-            type: String,
-            enum: ['slot_1', 'slot_2', 'slot_3', 'slot_4'],
-            required: true,
-        },
-        team: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Team',
-        },
-    },
-    { _id: false }
-);
-
 // Comment Schema
 const commentSchema = new mongoose.Schema(
     {
@@ -105,22 +88,23 @@ const leadSchema = mongoose.Schema(
             enum: [
                 'New',
                 'No Response',
-                'Message Rescheduled',
                 'Need Support',
-                'Ongoing',
+                'Message Rescheduled',
                 'Number Collected',
                 'Call Reschedule',
+                'Ongoing',
+                'Close',
                 'Follow Up',
                 'Meeting Fixed',
-                'Meeting Reschedule',
+                'Meeting Postponed',
                 'Cancel Meeting',
             ],
             required: true,
             default: 'unread',
         },
         address: addressSchema,
-        meetingDetails: [meetingDetailsSchema],
         lastMsg: String,
+        meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
         pageInfo: {
             pageId: String,
             pageName: String,

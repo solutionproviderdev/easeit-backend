@@ -1,11 +1,33 @@
 const mongoose = require('mongoose');
-const People = require('../schemas/PeopleSchema');
-const Lead = require('../schemas/LeadsSchema');
+const Lead = require('../schemas/LeadsSchema'); // Assuming this is your Lead schema
+const Department = require('../schemas/auth/DepartmentSchema');
+const User = require('../schemas/auth/UserSchema');
 
 const findCREWithLowestLeads = async () => {
     try {
-        // Retrieve all active CREs
-        const cres = await People.find({ department: 'CRE', active: true }).select('_id');
+        // Fetch the CRE department and its roles
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
+
+        if (!creDepartment || creDepartment.roles.length === 0) {
+            return null; // No CRE roles found in the department
+        }
+
+        // Retrieve the specific roleId for "CRE" role within the CRE department
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+        if (!creRole) {
+            return null; // No specific "CRE" role found
+        }
+
+        // Retrieve all active users with the "CRE" role in the "CRE" department
+        const cres = await User.find({
+            departmentId: creDepartment._id,
+            roleId: creRole._id,
+            status: 'Active', // Active users only
+        }).select('_id');
+
         if (!cres || cres.length === 0) return null;
 
         // Map CRE IDs for use in aggregation
@@ -13,7 +35,11 @@ const findCREWithLowestLeads = async () => {
 
         // Aggregate to count the number of leads for each CRE
         const leadCounts = await Lead.aggregate([
-            { $match: { creName: { $in: creIds.map((id) => new mongoose.Types.ObjectId(id)) } } },
+            {
+                $match: {
+                    creName: { $in: creIds.map((id) => new mongoose.Types.ObjectId(id)) },
+                },
+            },
             { $group: { _id: '$creName', count: { $sum: 1 } } },
             { $sort: { count: 1 } },
         ]);

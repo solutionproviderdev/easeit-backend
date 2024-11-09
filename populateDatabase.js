@@ -1,3 +1,6 @@
+/* eslint-disable no-lonely-if */
+/* eslint-disable no-continue */
+/* eslint-disable no-await-in-loop */
 /* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-use-before-define */
@@ -7,9 +10,13 @@ const { Parser } = require('json2csv');
 const dayjs = require('dayjs');
 const { faker } = require('@faker-js/faker');
 const bcrypt = require('bcrypt');
+const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('./src/schemas/LeadsSchema');
 const Department = require('./src/schemas/auth/DepartmentSchema');
 const User = require('./src/schemas/auth/UserSchema');
+const findCREWithLowestLeads = require('./src/helpers/findCREWithLowestLeads');
+const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE');
+const Meeting = require('./src/schemas/MeetingSchema');
 
 // Function to generate random departments
 const generateDepartments = (num) => {
@@ -225,8 +232,7 @@ const isAutomatedMessage = (message) => {
 
     // Add a pattern to detect the message "You can call [name] back within the next 7 days."
     // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
-    const automatedPattern =
-        /(replied to|automated welcome message|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
 
     return automatedPattern.test(lowerCaseMessage);
 };
@@ -292,8 +298,8 @@ const findHighQualityLeads = async () => {
         // Iterate over each lead
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
-            const hasHighQualityMessage = lead.messages.some((message) => isHighQualityLeadMessage(message.content)
-            );
+            const hasHighQualityMessage = lead.messages.some((message) =>
+                isHighQualityLeadMessage(message.content));
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -456,6 +462,180 @@ const createDummyUsers = async () => {
     }
 };
 
+const assignLeadsToCRE = async () => {
+    try {
+        // Find all leads that do not have an assigned CRE
+        const unassignedLeads = await Lead.find();
+
+        if (unassignedLeads.length === 0) {
+            console.log('No unassigned leads found.');
+            return;
+        }
+
+        // Loop through each unassigned lead
+        for (const lead of unassignedLeads) {
+            // Find a CRE with the lowest number of leads
+            const creId = await getPerformanceBasedCRE();
+
+            if (!creId) {
+                console.error('No CRE available for assignment.');
+                continue;
+            }
+
+            // Assign the lead to the selected CRE
+            lead.creName = creId;
+
+            // Save the updated lead
+            await lead.save();
+
+            console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
+        }
+
+        console.log('Lead assignment to CRE completed.');
+    } catch (error) {
+        console.error('Error assigning leads to CRE:', error);
+        throw error;
+    }
+};
+
+// Convert Bengali numerals to English numerals
+const convertBengaliToEnglishNumbers = (input) => {
+    const bengaliToEnglishMap = {
+        '০': '0',
+        '১': '1',
+        '২': '2',
+        '৩': '3',
+        '৪': '4',
+        '৫': '5',
+        '৬': '6',
+        '৭': '7',
+        '৮': '8',
+        '৯': '9',
+    };
+    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+};
+
+// Function to check and update phone numbers for all leads
+const updateLeadsWithPhoneNumbers = async () => {
+    try {
+        const leads = await Lead.find({});
+
+        for (const lead of leads) {
+            let newPhoneAdded = false;
+
+            for (const message of lead.messages) {
+                if (message.sentByMe !== true) {
+                    const content = convertBengaliToEnglishNumbers(message.content);
+                    const potentialNumber = content.replace(/[^0-9]+/g, '');
+
+                    if (potentialNumber) {
+                        const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
+
+                        // Check if the parsed number is valid and not already in the phone array
+                        if (parsedNumber && parsedNumber.isValid()) {
+                            const formattedNumber = parsedNumber.formatInternational();
+
+                            if (!lead.phone.includes(formattedNumber)) {
+                                lead.phone.push(formattedNumber);
+                                newPhoneAdded = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update lead status if a new phone number was added
+            if (newPhoneAdded) {
+                lead.status = 'Number Collected';
+                await lead.save();
+                console.log(`Updated lead ID ${lead._id}: Number collected.`);
+            }
+        }
+
+        console.log('All leads processed for phone number updates.');
+    } catch (error) {
+        console.error('Error updating leads with phone numbers:', error);
+    }
+};
+
+const updateLeadsStatusToMeetingFixed = async () => {
+    try {
+        // Retrieve all meetings
+        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
+
+        for (const meeting of meetings) {
+            // Check if the lead's status is not already 'Meeting Fixed'
+            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
+                meeting.lead.status = 'Meeting Fixed'; // Update status
+                await meeting.lead.save(); // Save the updated lead
+                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
+            }
+        }
+
+        console.log('All relevant lead statuses updated to "Meeting Fixed".');
+    } catch (error) {
+        console.error('Error updating lead statuses:', error);
+    }
+};
+
+const updateLeadStatusBasedOnPhoneNumber = async () => {
+    try {
+        // Retrieve all leads
+        const leads = await Lead.find();
+
+        for (const lead of leads) {
+            if (lead.phone && lead.phone.length > 0) {
+                // Lead has phone numbers, check if status needs updating to 'Number Collected'
+                if (lead.status !== 'Number Collected') {
+                    lead.status = 'Number Collected';
+                    await lead.save();
+                    console.log(`Lead ID ${lead._id} status updated to 'Number Collected'.`);
+                }
+            } else {
+                // Lead has no phone numbers, check if status is incorrectly set to 'Number Collected'
+                if (lead.status === 'Number Collected') {
+                    lead.status = 'New';
+                    await lead.save();
+                    console.log(`Lead ID ${lead._id} status corrected to 'New'.`);
+                }
+            }
+        }
+
+        console.log('Lead statuses updated based on phone number presence.');
+    } catch (error) {
+        console.error('Error updating lead statuses based on phone number:', error);
+    }
+};
+
+const updateMeetingStatuses = async () => {
+    try {
+        // Define a mapping of old status values to new status values
+        const statusMapping = {
+            'Meeting Fixed': 'Fixed',
+            'Meeting Postponed': 'Postponed',
+            'Meeting Rescheduled': 'Rescheduled',
+            'Meeting Canceled': 'Canceled',
+        };
+
+        // Fetch all meetings from the database
+        const meetings = await Meeting.find();
+
+        for (const meeting of meetings) {
+            // Check if the current status needs to be updated
+            if (statusMapping[meeting.status]) {
+                // Update the status to the new value
+                meeting.status = statusMapping[meeting.status];
+                await meeting.save();
+                console.log(`Updated meeting ID ${meeting._id} status to '${meeting.status}'.`);
+            }
+        }
+
+        console.log('All meeting statuses updated successfully.');
+    } catch (error) {
+        console.error('Error updating meeting statuses:', error);
+    }
+};
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -463,15 +643,20 @@ module.exports = {
     generatePermissions,
     generateUsers,
     populateDatabase,
-    generateRandomReminder,
     getRandomStatus,
-    generateRandomDate,
-    updateUnreadLeadsToNew,
-    generateAllLeadsMessagesCsv,
-    findHighQualityLeads,
-    isHighQualityLeadMessage,
-    isAutomatedMessage,
-    logAutomatedMessages,
+    assignLeadsToCRE,
     createDummyUsers,
+    generateRandomDate,
+    isAutomatedMessage,
+    findHighQualityLeads,
+    logAutomatedMessages,
+    updateMeetingStatuses,
+    generateRandomReminder,
+    updateUnreadLeadsToNew,
     updateAutomatedMessages,
+    isHighQualityLeadMessage,
+    updateLeadsWithPhoneNumbers,
+    generateAllLeadsMessagesCsv,
+    updateLeadsStatusToMeetingFixed,
+    updateLeadStatusBasedOnPhoneNumber,
 };
