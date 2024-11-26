@@ -104,7 +104,7 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
             `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-            { timeout: 10000 }
+            { timeout: 20000 }
         );
         return response.data.data;
     } catch (error) {
@@ -117,7 +117,7 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
 const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
     try {
         const otherParticipant = conversation.participants.data.find(
-            (p) => p.name !== 'Solution Provider'
+            (p) => p.name !== pageInfo.name
         );
         const fbSenderID = otherParticipant.id;
         const { processedMessages, phoneNumber } = processMessages(

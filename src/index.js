@@ -9,6 +9,8 @@ const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('../swagger_output.json');
 
 // internal imports
 const {
@@ -22,6 +24,7 @@ const mapDataRouter = require('./routes/mapDataRouters');
 const meetingsRouter = require('./routes/meetings/meeting');
 const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
+const settingsRouter = require('./routes/settings/settingsRouter');
 
 // Initialize app
 const app = express();
@@ -49,6 +52,7 @@ app.use(
 		origin: (origin, callback) => {
 			const allowedOrigins = [
 				'http://localhost:3000',
+				'http://localhost:5000',
 				'http://localhost:5173',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
@@ -69,6 +73,9 @@ app.use(
 
 // set up EJS
 app.set('view engine', 'ejs');
+
+// swagger setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
@@ -101,6 +108,9 @@ app.use('/meeting', meetingsRouter);
 app.use('/map', mapDataRouter);
 app.use('/dashboard', dashBoardRouter);
 
+// seetings router
+app.use('/settings', settingsRouter);
+
 // Get Lead Repeatedly
 setInterval(() => {
 	getConversationsAndUpdateLeadsUpdated(io);
@@ -113,13 +123,17 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start the server
-server.listen(process.env.PORT, () => {
-	const environment = process.env.NODE_ENV || 'development';
-	const nodeVersion = process.version;
-	const currentTime = new Date().toLocaleString();
+if (require.main === module) {
+	server.listen(process.env.PORT, () => {
+		const environment = process.env.NODE_ENV || 'development';
+		const nodeVersion = process.version;
+		const currentTime = new Date().toLocaleString();
 
-	console.log(`🚀 Server started in ${environment} mode 🌟`);
-	console.log(`💻 Node version: ${nodeVersion}`);
-	console.log(`🕒 Current Time: ${currentTime}`);
-	console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
-});
+		console.log(`🚀 Server started in ${environment} mode 🌟`);
+		console.log(`💻 Node version: ${nodeVersion}`);
+		console.log(`🕒 Current Time: ${currentTime}`);
+		console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
+	});
+}
+
+module.exports = app;

@@ -1,21 +1,19 @@
 const express = require('express');
 const {
-    getFacebookSettings,
-    postFacebookSettings,
-    putFacebookSettings,
-    deleteFacebookSettings,
+    getAllFacebookPages,
     addFacebookPage,
     deleteFacebookPage,
 } = require('../../../controller/settings/facebookController');
 
 const facebookRouter = express.Router();
 
-facebookRouter.get('/', getFacebookSettings);
-facebookRouter.post('/', postFacebookSettings);
-facebookRouter.post('/addpage', addFacebookPage);
-facebookRouter.put('/', putFacebookSettings);
-facebookRouter.delete('/', deleteFacebookSettings);
-facebookRouter.delete('/deletepage', deleteFacebookPage);
+// Get all Facebook pages
+facebookRouter.get('/pages', getAllFacebookPages);
+
+// Add a new Facebook page
+facebookRouter.post('/pages', addFacebookPage);
+
+// Delete a Facebook page
+facebookRouter.delete('/pages', deleteFacebookPage);
 
 module.exports = facebookRouter;
-
