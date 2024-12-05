@@ -395,7 +395,7 @@ exports.sendMetaMessage = async (req, res) => {
 
                 // Send the message through Meta API
                 const fbResponse = await axios.post(
-                    `https://graph.facebook.com/v17.0/${pageId}/messages`,
+                    `https://graph.facebook.com/v18.0/${pageId}/messages`,
                     messagePayload
                 );
 
