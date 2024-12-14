@@ -59,6 +59,8 @@ app.use(
 				'http://103.122.143.63:3000',
 				'https://easeit.vercel.app',
 				'https://crm.solutionprovider.com.bd',
+				'http://192.168.218.103:5173',
+				'http://192.168.68.123:5173',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
