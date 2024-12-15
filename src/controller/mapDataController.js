@@ -1,4 +1,6 @@
-const MapData = require('../schemas/MapData');
+ const MapData = require('../schemas/MapData');
+const mongoose = require('mongoose');
+
 
 // Controller function to get all divisions
 const getDivisions = async (req, res) => {
@@ -45,33 +47,92 @@ const getDistrictsByDivision = async (req, res) => {
 };
 
 // Controller function to get areas by district ID
+// const getAreasByDistrict = async (req, res) => {
+//     const { districtId } = req.params;
+//     try {
+//         // Find the division that contains the district with the provided ID
+//         // const division = await MapData.findOne({
+//         //     'districts._id': districtId,
+//         // }).select('districts.$');
+
+//         const division = await MapData.findOne({
+//             districts: { $elemMatch: { _id: districtId } }
+//         });        
+
+//         console.log(districtId,'------',division);
+ 
+//         if (!division || !division.districts || division.districts.length === 0) {
+//             return res.status(404).json({ message: 'District not found' });
+//         }
+
+//         // Extract the areas from the found district
+//         const district = division.districts[0];
+//         const areas = district.areas.map((area) => ({
+//             id: area._id,
+//             name: area.name,
+//         }));
+
+//         // Respond with the list of area IDs and names
+//         res.status(200).json(district.areas);
+//     } catch (error) {
+//         console.error('Error fetching areas:', error);
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// };
+
 const getAreasByDistrict = async (req, res) => {
     const { districtId } = req.params;
 
     try {
-        // Find the division that contains the district with the provided ID
-        const division = await MapData.findOne({
-            'districts._id': districtId,
-        }).select('districts.$');
+        console.log("District ID Received:", districtId);
 
-        if (!division || !division.districts || division.districts.length === 0) {
-            return res.status(404).json({ message: 'District not found' });
+        // Use an aggregation pipeline to filter districts by _id
+        const result = await MapData.aggregate([
+            {
+                $match: {
+                    "districts._id": districtId // Match the document that contains this district _id
+                }
+            },
+            {
+                $project: {
+                    division: 1, // Include the division name
+                    districts: {
+                        $filter: {
+                            input: "$districts",
+                            as: "district",
+                            cond: { $eq: ["$$district._id", districtId] }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        console.log("Aggregation Result:", JSON.stringify(result, null, 2));
+
+        // Check if the district exists
+        if (!result || result.length === 0 || result[0].districts.length === 0) {
+            return res.status(404).json({ message: "District not found" });
         }
 
-        // Extract the areas from the found district
-        const district = division.districts[0];
+        const district = result[0].districts[0];
+
+        // Extract areas
         const areas = district.areas.map((area) => ({
             id: area._id,
             name: area.name,
+            visitCharge: area.visitCharge
         }));
 
-        // Respond with the list of area IDs and names
-        res.status(200).json(district.areas);
+        res.status(200).json(areas);
     } catch (error) {
-        console.error('Error fetching areas:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error fetching areas:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
+
+
+
+
 
 // Controller function to search through divisions, districts, and areas
 const searchLocation = async (req, res) => {
