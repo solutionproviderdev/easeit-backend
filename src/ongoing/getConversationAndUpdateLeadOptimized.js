@@ -14,6 +14,7 @@ const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../../populateDatabase');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
+const { SholutionBot } = require('../SolutionBot/SolutionBot');
 
 // Convert Bengali numerals to English numerals
 const convertBengaliToEnglishNumbers = (input) => {
@@ -125,6 +126,11 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         );
 
         const lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
+
+        // if lead id is 65ae1513f02dfe23f30d122c then cal SolutionBot
+        if (lead?._id.toString() === '65ae1513f02dfe23f30d122c') {
+            await SholutionBot(lead?._id, io);
+        }
 
         if (lead) {
             await updateExistingLead(
