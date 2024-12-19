@@ -130,10 +130,7 @@ const getAreasByDistrict = async (req, res) => {
     }
 };
 
-
-
-
-
+ 
 // Controller function to search through divisions, districts, and areas
 const searchLocation = async (req, res) => {
     const { keyword } = req.query;
