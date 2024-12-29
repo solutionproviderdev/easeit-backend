@@ -25,6 +25,7 @@ const meetingsRouter = require('./routes/meetings/meeting');
 const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
+const { updateLeadsWithPhoneNumbersAndStatus, updateLeadsStatusToMeetingFixed } = require('../populateDatabase');
 
 // Initialize app
 const app = express();
@@ -117,6 +118,9 @@ app.use('/settings', settingsRouter);
 setInterval(() => {
 	getConversationsAndUpdateLeadsUpdated(io);
 }, 8000);
+
+// updateLeadsWithPhoneNumbersAndStatus();
+// updateLeadsStatusToMeetingFixed();
 
 // 404 error handling
 app.use(notFoundHandler);

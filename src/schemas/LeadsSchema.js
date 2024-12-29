@@ -21,6 +21,7 @@ const messageSchema = new mongoose.Schema(
         sentByMe: { type: Boolean, default: false },
         fileUrl: [String],
         isSticker: { type: Boolean, default: false },
+        isAiMessage: { type: Boolean, default: false },
         date: { type: Date, require: true },
     },
     { _id: true }
@@ -156,6 +157,7 @@ const leadSchema = mongoose.Schema(
         messages: [messageSchema],
         messagesSeen: { type: Boolean, default: false },
         requirements: [String], // New simple array for requirements
+        botResponded: { type: Boolean, default: false },
     },
     {
         timestamps: true,

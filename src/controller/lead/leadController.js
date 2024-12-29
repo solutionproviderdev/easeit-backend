@@ -2,6 +2,8 @@
 const { default: mongoose } = require('mongoose');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../../schemas/LeadsSchema');
+const User = require('../../schemas/auth/UserSchema');
+const Department = require('../../schemas/auth/DepartmentSchema');
 
 // Get All Leads (with Filters)
 exports.getAllLeads = async (req, res) => {
@@ -92,11 +94,44 @@ exports.getAllLeads = async (req, res) => {
         // Extract unique Sources
         const allSources = ['Facebook', 'WhatsApp', 'Web', 'Phone'];
 
+        // Preparing data for Bar chart
+        const barchartData = (
+            await Promise.all(
+                allStatuses.map(async (status) => {
+                    const count = await Lead.countDocuments({ ...filter, status });
+                    return count > 0 ? { status, count } : null; // Return null if count is zero
+                })
+            )
+        ).filter((data) => data !== null); // Filter out null entries
+
         // Extract unique CREs and Sales Executives
         const uniqueCRENames = [];
         const uniqueSalesExecs = [];
         const creNamesSet = new Set();
         const salesExecsSet = new Set();
+
+        // 1. Get the CRE department and roles from the Department schema
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
+
+        if (!creDepartment || !creDepartment.roles) {
+            throw new Error('CRE department or roles not found');
+        }
+
+        // Filter the CRE role from the department roles (excluding CRE Head)
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+        if (!creRole) {
+            throw new Error('CRE role not found in department');
+        }
+
+        // 2. Retrieve all active CREs with the role 'CRE' (not 'CRE Head') from User schema
+        const activeCREs = await User.find({
+            departmentId: creDepartment._id,
+            roleId: creRole._id, // Filter by roleId for CRE
+            status: 'Active', // Only active users
+        }).select('_id nameAsPerNID nickname profilePicture');
 
         leads.forEach((lead) => {
             if (lead.creName && !creNamesSet.has(lead.creName._id.toString())) {
@@ -123,10 +158,11 @@ exports.getAllLeads = async (req, res) => {
             page: Number(page),
             limit: Number(limit),
             totalPages: Math.ceil(totalLeads / limit),
+            barchartData,
             filters: {
                 statuses: allStatuses,
                 sources: allSources,
-                creNames: uniqueCRENames,
+                creNames: activeCREs,
                 salesExecutives: uniqueSalesExecs,
             },
             leads,

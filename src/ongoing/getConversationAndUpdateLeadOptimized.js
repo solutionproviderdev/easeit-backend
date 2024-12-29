@@ -9,28 +9,43 @@ const moment = require('moment');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
-const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../../populateDatabase');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
-const { SholutionBot } = require('../SolutionBot/SolutionBot');
+const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
 
-// Convert Bengali numerals to English numerals
-const convertBengaliToEnglishNumbers = (input) => {
-    const bengaliToEnglishMap = {
-        '০': '0',
-        '১': '1',
-        '২': '2',
-        '৩': '3',
-        '৪': '4',
-        '৫': '5',
-        '৬': '6',
-        '৭': '7',
-        '৮': '8',
-        '৯': '9',
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // Convert Bengali numerals to English numerals
+    const convertBengaliToEnglishNumbers = (input) => {
+        const bengaliToEnglishMap = {
+            '০': '0',
+            '১': '1',
+            '২': '2',
+            '৩': '3',
+            '৪': '4',
+            '৫': '5',
+            '৬': '6',
+            '৭': '7',
+            '৮': '8',
+            '৯': '9',
+        };
+        return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
     };
-    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+
+    // Sanitize and extract the number
+    const sanitizedContent = convertBengaliToEnglishNumbers(
+        content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+    );
+
+    // Validate the number using libphonenumber-js
+    if (sanitizedContent) {
+        const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
+        if (parsedNumber && parsedNumber.isValid()) {
+            return parsedNumber;
+        }
+    }
+    return null;
 };
 
 const processMessages = (messages) => {
@@ -40,14 +55,9 @@ const processMessages = (messages) => {
 
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
-            const potentialNumber = convertBengaliToEnglishNumbers(
-                content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
-            );
-            if (potentialNumber) {
-                const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
-                if (parsedNumber && parsedNumber.isValid()) {
-                    phoneNumber = parsedNumber; // Update phoneNumber only if valid
-                }
+            const extractedNumber = extractValidPhoneNumber(content, 'BD');
+            if (extractedNumber) {
+                phoneNumber = extractedNumber; // Update phoneNumber only if valid
             }
         }
 
@@ -114,7 +124,6 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     }
 };
 
-// Process each conversation to update or create leads
 const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
     try {
         const otherParticipant = conversation.participants.data.find(
@@ -126,11 +135,6 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         );
 
         const lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
-
-        // if lead id is 65ae1513f02dfe23f30d122c then cal SolutionBot
-        if (lead?._id.toString() === '65ae1513f02dfe23f30d122c') {
-            await SholutionBot(lead?._id, io);
-        }
 
         if (lead) {
             await updateExistingLead(
@@ -144,6 +148,17 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         } else {
             await createNewLead(otherParticipant, processedMessages, pageInfo, io);
         }
+
+        // Call SholutionBot only for specific conditions
+        // if (
+        //     lead?._id.toString() === '66e277615ed719dde5ba5036' ||
+        //     lead?._id.toString() === '6763bf1c007e8833d2770e53'
+        // ) {
+        //     // console.log('Triggering SholutionBot for lead:', lead._id);
+        //     await SholutionBot(lead._id, io);
+        // }
+
+        await lead.save();
     } catch (error) {
         logError('Error processing a single conversation', error);
     }

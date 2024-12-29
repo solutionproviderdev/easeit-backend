@@ -3,24 +3,26 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-loop-func */
 const axios = require('axios');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
+const dotenv = require('dotenv');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 
-// Initialize OpenAI API
-const configuration = new Configuration({
+dotenv.config();
+
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 // Generate AI response using OpenAI API
 const generateAIResponse = async (message) => {
     try {
-        const response = await openai.createChatCompletion({
-            model: 'gpt-3.5-turbo',
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4',
             messages: [{ role: 'user', content: message }],
         });
-        return response.data.choices[0].message.content;
+
+        return response.choices[0].message.content;
     } catch (error) {
         console.error('Error generating AI response:', error);
         return 'I’m sorry, but I’m unable to process your request at the moment.';
@@ -34,7 +36,7 @@ const sendFacebookMessage = async (recipientId, message, pageAccessToken) => {
             recipient: { id: recipientId },
             messaging_type: 'RESPONSE',
             message: { text: message },
-            access_token: pageAccessToken,
+            access_token: pageAccessToken, // Include access token in the payload
         };
 
         const response = await axios.post(

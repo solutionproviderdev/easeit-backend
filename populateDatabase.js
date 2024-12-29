@@ -232,7 +232,8 @@ const isAutomatedMessage = (message) => {
 
     // Add a pattern to detect the message "You can call [name] back within the next 7 days."
     // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
-    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+    const automatedPattern =
+        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
 
     return automatedPattern.test(lowerCaseMessage);
 };
@@ -298,8 +299,7 @@ const findHighQualityLeads = async () => {
         // Iterate over each lead
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
-            const hasHighQualityMessage = lead.messages.some((message) =>
-                isHighQualityLeadMessage(message.content));
+            const hasHighQualityMessage = lead.messages.some((message) => isHighQualityLeadMessage(message.content));
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -558,26 +558,6 @@ const updateLeadsWithPhoneNumbers = async () => {
     }
 };
 
-const updateLeadsStatusToMeetingFixed = async () => {
-    try {
-        // Retrieve all meetings
-        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
-
-        for (const meeting of meetings) {
-            // Check if the lead's status is not already 'Meeting Fixed'
-            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
-                meeting.lead.status = 'Meeting Fixed'; // Update status
-                await meeting.lead.save(); // Save the updated lead
-                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
-            }
-        }
-
-        console.log('All relevant lead statuses updated to "Meeting Fixed".');
-    } catch (error) {
-        console.error('Error updating lead statuses:', error);
-    }
-};
-
 const updateLeadStatusBasedOnPhoneNumber = async () => {
     try {
         // Retrieve all leads
@@ -604,6 +584,26 @@ const updateLeadStatusBasedOnPhoneNumber = async () => {
         console.log('Lead statuses updated based on phone number presence.');
     } catch (error) {
         console.error('Error updating lead statuses based on phone number:', error);
+    }
+};
+
+const updateLeadsStatusToMeetingFixed = async () => {
+    try {
+        // Retrieve all meetings
+        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
+
+        for (const meeting of meetings) {
+            // Check if the lead's status is not already 'Meeting Fixed'
+            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
+                meeting.lead.status = 'Meeting Fixed'; // Update status
+                await meeting.lead.save(); // Save the updated lead
+                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
+            }
+        }
+
+        console.log('All relevant lead statuses updated to "Meeting Fixed".');
+    } catch (error) {
+        console.error('Error updating lead statuses:', error);
     }
 };
 
@@ -636,6 +636,94 @@ const updateMeetingStatuses = async () => {
     }
 };
 
+// Helper function to extract valid phone numbers from a message
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // Convert Bengali numerals to English and remove non-numeric characters
+    const sanitizedContent = convertBengaliToEnglishNumbers(
+        content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+    );
+
+    // Validate the number using libphonenumber-js
+    if (sanitizedContent) {
+        const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
+        if (parsedNumber && parsedNumber.isValid()) {
+            return parsedNumber.formatInternational(); // Return formatted number
+        }
+    }
+    return null;
+};
+
+// Unified function to process leads
+const updateLeadsWithPhoneNumbersAndStatus = async () => {
+    try {
+        let totalNewLeadsUpdated = 0; // Count of leads updated to "New"
+        let totalNumberCollectedLeadsUpdated = 0; // Count of leads updated to "Number Collected"
+
+        let totalNewLeads = 0; // Total leads with "New" status
+        let totalNumberCollectedLeads = 0; // Total leads with "Number Collected" status
+        let totalLeads = 0; // Total number of leads
+
+        // Fetch all leads
+        const leads = await Lead.find({});
+        totalLeads = leads.length;
+
+        for (const lead of leads) {
+            let newPhoneAdded = false;
+
+            // Process each message in the lead
+            for (const message of lead.messages) {
+                if (!message.sentByMe && message.content) {
+                    const validPhoneNumber = extractValidPhoneNumber(message.content);
+                    if (validPhoneNumber) {
+                        // Add the phone number if not already in the lead's phone array
+                        if (!lead.phone.includes(validPhoneNumber)) {
+                            lead.phone.push(validPhoneNumber);
+                            newPhoneAdded = true;
+                        }
+                    }
+                }
+            }
+
+            // Update the lead's status based on whether a new phone number was added
+            if (newPhoneAdded) {
+                if (lead.status !== 'Number Collected') {
+                    lead.status = 'Number Collected';
+                    totalNumberCollectedLeadsUpdated++;
+                }
+            } else if (!lead.phone.length && lead.status === 'Number Collected') {
+                lead.status = 'New'; // Reset status if no phone numbers are found
+                totalNewLeadsUpdated++;
+            }
+
+            // Save the updated lead
+            await lead.save();
+            console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
+        }
+
+        // Fetch total counts of leads by status
+        totalNumberCollectedLeads = await Lead.countDocuments({ status: 'Number Collected' });
+        totalNewLeads = await Lead.countDocuments({ status: 'New' });
+
+        // Calculate percentages
+        const percentNumberCollected = ((totalNumberCollectedLeads / totalLeads) * 100).toFixed(2);
+        const percentNew = ((totalNewLeads / totalLeads) * 100).toFixed(2);
+
+        // Log the summary
+        console.log(
+            `Total leads updated to 'Number Collected': ${totalNumberCollectedLeadsUpdated}`
+        );
+        console.log(`Total leads updated to 'New': ${totalNewLeadsUpdated}`);
+        console.log(
+            `Total leads with 'Number Collected' status: ${totalNumberCollectedLeads} (${percentNumberCollected}%)`
+        );
+        console.log(`Total leads with 'New' status: ${totalNewLeads} (${percentNew}%)`);
+        console.log(`Total leads processed: ${totalLeads}`);
+        console.log('All leads processed and updated.');
+    } catch (error) {
+        console.error('Error processing leads for phone number updates:', error);
+    }
+};
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -659,4 +747,5 @@ module.exports = {
     generateAllLeadsMessagesCsv,
     updateLeadsStatusToMeetingFixed,
     updateLeadStatusBasedOnPhoneNumber,
+    updateLeadsWithPhoneNumbersAndStatus,
 };
