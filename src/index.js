@@ -95,12 +95,11 @@ app.get('/', (req, res) => {
 
 // io connection start
 io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);http://localhost:3000
+    console.log(`User connected: ${socket.id}`);
     socket.on('disconnect', (reason) => {
         console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
     });
 });
-
 
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {

@@ -1,740 +1,258 @@
-[{
-  "_id": {
-    "$oid": "671553f4b001ad533a7d42b6"
-  },
-  "departmentName": "Administration",
-  "description": "Handles all administrative tasks with full access.",
-  "roles": [
-    {
-      "roleName": "Master Admin",
-      "description": "Has full access to all resources and operations across the system.",
-      "permissions": [
-        {
-          "resource": "dashboard",
-          "actions": [
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42b9"
-              }
-            },
-            {
-              "name": "edit",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42ba"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42b8"
-          }
-        },
-        {
-          "resource": "users",
-          "actions": [
-            {
-              "name": "create",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42bc"
-              }
-            },
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42bd"
-              }
-            },
-            {
-              "name": "delete",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42be"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42bf"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42bb"
-          }
-        },
-        {
-          "resource": "roles",
-          "actions": [
-            {
-              "name": "create",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c1"
-              }
-            },
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c2"
-              }
-            },
-            {
-              "name": "delete",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c3"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c4"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42c0"
-          }
-        },
-        {
-          "resource": "departments",
-          "actions": [
-            {
-              "name": "create",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c6"
-              }
-            },
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c7"
-              }
-            },
-            {
-              "name": "delete",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c8"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42c9"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42c5"
-          }
-        },
-        {
-          "resource": "meetings",
-          "actions": [
-            {
-              "name": "create",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42cb"
-              }
-            },
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42cc"
-              }
-            },
-            {
-              "name": "delete",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42cd"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42ce"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42ca"
-          }
-        },
-        {
-          "resource": "lead_management",
-          "actions": [
-            {
-              "name": "create",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d0"
-              }
-            },
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d1"
-              }
-            },
-            {
-              "name": "delete",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d2"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d3"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42cf"
-          }
-        },
-        {
-          "resource": "analytics",
-          "actions": [
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d5"
-              }
-            },
-            {
-              "name": "generate_reports",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d6"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42d4"
-          }
-        },
-        {
-          "resource": "notifications",
-          "actions": [
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d8"
-              }
-            },
-            {
-              "name": "manage",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42d9"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42d7"
-          }
-        },
-        {
-          "resource": "settings",
-          "actions": [
-            {
-              "name": "update",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42db"
-              }
-            },
-            {
-              "name": "view",
-              "allowed": true,
-              "_id": {
-                "$oid": "671553f4b001ad533a7d42dc"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671553f4b001ad533a7d42da"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671553f4b001ad533a7d42b7"
-      }
-    }
-  ],
-  "__v": 0
-},
-{
-  "_id": {
-    "$oid": "671559466e4cfe7268429b8c"
-  },
-  "departmentName": "CRE",
-  "description": "Customer Relationship Executive",
-  "roles": [
-    {
-      "roleName": "CRE Head",
-      "description": "Responsible for CRE teams, performance, delivery and reporting.",
-      "permissions": [
-        {
-          "resource": "Dashboard",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc0"
-              }
-            },
-            {
-              "name": "CRE",
-              "allowed": false,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc1"
-              }
-            },
-            {
-              "name": "Admin",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc2"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559bb6e4cfe726842acbf"
-          }
-        },
-        {
-          "resource": "CRE - Lead",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc4"
-              }
-            },
-            {
-              "name": "Lead Center",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc5"
-              }
-            },
-            {
-              "name": "Lead Management",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc6"
-              }
-            },
-            {
-              "name": "Follow Up",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc7"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559bb6e4cfe726842acc3"
-          }
-        },
-        {
-          "resource": "User",
-          "actions": [
-            {
-              "name": "User Profile",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842acc9"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559bb6e4cfe726842acc8"
-          }
-        },
-        {
-          "resource": "Meetings",
-          "actions": [
-            {
-              "name": "Daily Meetings",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842accb"
-              }
-            },
-            {
-              "name": "Meeting History",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559bb6e4cfe726842accc"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559bb6e4cfe726842acca"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671559bb6e4cfe726842acbe"
-      }
-    },
-    {
-      "roleName": "CRE",
-      "description": "Responsible for converting a lead to Meeting. ",
-      "permissions": [
-        {
-          "resource": "Dashboard",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b300"
-              }
-            },
-            {
-              "name": "CRE",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b301"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559e16e4cfe726842b2ff"
-          }
-        },
-        {
-          "resource": "CRE - Lead",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b303"
-              }
-            },
-            {
-              "name": "Lead Center",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b304"
-              }
-            },
-            {
-              "name": "Follow Up",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b305"
-              }
-            },
-            {
-              "name": "Lead Management",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b306"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559e16e4cfe726842b302"
-          }
-        },
-        {
-          "resource": "User",
-          "actions": [
-            {
-              "name": "User Profile",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b308"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559e16e4cfe726842b307"
-          }
-        },
-        {
-          "resource": "Meetings",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b30a"
-              }
-            },
-            {
-              "name": "Daily Meetings",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b30b"
-              }
-            },
-            {
-              "name": "Meeting History",
-              "allowed": true,
-              "_id": {
-                "$oid": "671559e16e4cfe726842b30c"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671559e16e4cfe726842b309"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671559e16e4cfe726842b2fe"
-      }
-    }
-  ],
-  "__v": 2
-},
-{
-  "_id": {
-    "$oid": "6715596c6e4cfe726842a07b"
-  },
-  "departmentName": "Sales",
-  "description": "Sales",
-  "roles": [
-    {
-      "roleName": "Sales Head",
-      "description": "Responsible for Seals teams performance and Reporting.  ",
-      "permissions": [
-        {
-          "resource": "Dashboard",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a358"
-              }
-            },
-            {
-              "name": "Sales",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a359"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdf87d6f559a50427a357"
-          }
-        },
-        {
-          "resource": "User",
-          "actions": [
-            {
-              "name": "User Profile",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a35b"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdf87d6f559a50427a35a"
-          }
-        },
-        {
-          "resource": "Meetings",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a35d"
-              }
-            },
-            {
-              "name": "Daily Meetings",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a35e"
-              }
-            },
-            {
-              "name": "Meeting History",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdf87d6f559a50427a35f"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdf87d6f559a50427a35c"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671cdf87d6f559a50427a356"
-      }
-    },
-    {
-      "roleName": "Sales",
-      "description": "Responsible for Sales",
-      "permissions": [
-        {
-          "resource": "Dashboard",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a5fb"
-              }
-            },
-            {
-              "name": "Sales",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a5fc"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfadd6f559a50427a5fa"
-          }
-        },
-        {
-          "resource": "User",
-          "actions": [
-            {
-              "name": "User Profile",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a5fe"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfadd6f559a50427a5fd"
-          }
-        },
-        {
-          "resource": "Meetings",
-          "actions": [
-            {
-              "name": "all",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a600"
-              }
-            },
-            {
-              "name": "Daily Meetings",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a601"
-              }
-            },
-            {
-              "name": "Meeting History",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfadd6f559a50427a602"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfadd6f559a50427a5ff"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671cdfadd6f559a50427a5f9"
-      }
-    },
-    {
-      "roleName": "Support Stuff",
-      "description": "Sales Assistant. ",
-      "permissions": [
-        {
-          "resource": "Dashboard",
-          "actions": [
-            {
-              "name": "Sales",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfd0d6f559a50427a826"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfd0d6f559a50427a825"
-          }
-        },
-        {
-          "resource": "User",
-          "actions": [
-            {
-              "name": "User Profile",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfd0d6f559a50427a828"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfd0d6f559a50427a827"
-          }
-        },
-        {
-          "resource": "Meetings",
-          "actions": [
-            {
-              "name": "Meeting History",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfd0d6f559a50427a82a"
-              }
-            },
-            {
-              "name": "Daily Meetings",
-              "allowed": true,
-              "_id": {
-                "$oid": "671cdfd0d6f559a50427a82b"
-              }
-            }
-          ],
-          "_id": {
-            "$oid": "671cdfd0d6f559a50427a829"
-          }
-        }
-      ],
-      "_id": {
-        "$oid": "671cdfd0d6f559a50427a824"
-      }
-    }
-  ],
-  "__v": 3
-}]
+[
+	{
+		"_id": "671553f4b001ad533a7d42b6",
+		"departmentName": "Administration",
+		"description": "Handles all administrative tasks with full access.",
+		"roles": [
+			{
+				"roleName": "Master Admin",
+				"description": "Has full access to all resources and operations across the system.",
+				"permissions": [
+					{
+						"resource": "dashboard",
+						"actions": [
+							{
+								"name": "view",
+								"allowed": true,
+								"_id": "671553f4b001ad533a7d42b9"
+							},
+							{
+								"name": "edit",
+								"allowed": true,
+								"_id": "671553f4b001ad533a7d42ba"
+							}
+						],
+						"_id": "671553f4b001ad533a7d42b8"
+					}
+				],
+				"_id": "671553f4b001ad533a7d42b7"
+			}
+		],
+		"__v": 0
+	},
+	{
+		"_id": "671559466e4cfe7268429b8c",
+		"departmentName": "CRE",
+		"description": "Customer Relationship Executive",
+		"roles": [
+			{
+				"roleName": "CRE Head",
+				"description": "Responsible for CRE teams, performance, delivery and reporting.",
+				"permissions": [
+					{
+						"resource": "Dashboard",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671559bb6e4cfe726842acc0"
+							}
+						],
+						"_id": "671559bb6e4cfe726842acbf"
+					}
+				],
+				"_id": "671559bb6e4cfe726842acbe"
+			},
+			{
+				"roleName": "CRE",
+				"description": "Responsible for converting leads into meetings.",
+				"permissions": [
+					{
+						"resource": "Dashboard",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b300"
+							},
+							{
+								"name": "CRE",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b301"
+							}
+						],
+						"_id": "671559e16e4cfe726842b2ff"
+					},
+					{
+						"resource": "CRE - Lead",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b303"
+							},
+							{
+								"name": "Lead Center",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b304"
+							},
+							{
+								"name": "Follow Up",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b305"
+							},
+							{
+								"name": "Lead Management",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b306"
+							}
+						],
+						"_id": "671559e16e4cfe726842b302"
+					},
+					{
+						"resource": "User",
+						"actions": [
+							{
+								"name": "User Profile",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b308"
+							}
+						],
+						"_id": "671559e16e4cfe726842b307"
+					},
+					{
+						"resource": "Meetings",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b30a"
+							},
+							{
+								"name": "Daily Meetings",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b30b"
+							},
+							{
+								"name": "Meeting History",
+								"allowed": true,
+								"_id": "671559e16e4cfe726842b30c"
+							}
+						],
+						"_id": "671559e16e4cfe726842b309"
+					}
+				],
+				"_id": "671559e16e4cfe726842b2fe"
+			}
+		],
+		"__v": 2
+	},
+	{
+		"_id": "6715596c6e4cfe726842a07b",
+		"departmentName": "Sales",
+		"description": "Sales",
+		"roles": [
+			{
+				"roleName": "Sales Head",
+				"description": "Responsible for Sales teams' performance and reporting.",
+				"permissions": [
+					{
+						"resource": "Dashboard",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a358"
+							},
+							{
+								"name": "Sales",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a359"
+							}
+						],
+						"_id": "671cdf87d6f559a50427a357"
+					},
+					{
+						"resource": "User",
+						"actions": [
+							{
+								"name": "User Profile",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a35b"
+							}
+						],
+						"_id": "671cdf87d6f559a50427a35a"
+					},
+					{
+						"resource": "Meetings",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a35d"
+							},
+							{
+								"name": "Daily Meetings",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a35e"
+							},
+							{
+								"name": "Meeting History",
+								"allowed": true,
+								"_id": "671cdf87d6f559a50427a35f"
+							}
+						],
+						"_id": "671cdf87d6f559a50427a35c"
+					}
+				],
+				"_id": "671cdf87d6f559a50427a356"
+			},
+			{
+				"roleName": "Sales",
+				"description": "Responsible for Sales.",
+				"permissions": [
+					{
+						"resource": "Dashboard",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a5fb"
+							},
+							{
+								"name": "Sales",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a5fc"
+							}
+						],
+						"_id": "671cdfadd6f559a50427a5fa"
+					},
+					{
+						"resource": "User",
+						"actions": [
+							{
+								"name": "User Profile",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a5fe"
+							}
+						],
+						"_id": "671cdfadd6f559a50427a5fd"
+					},
+					{
+						"resource": "Meetings",
+						"actions": [
+							{
+								"name": "all",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a600"
+							},
+							{
+								"name": "Daily Meetings",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a601"
+							},
+							{
+								"name": "Meeting History",
+								"allowed": true,
+								"_id": "671cdfadd6f559a50427a602"
+							}
+						],
+						"_id": "671cdfadd6f559a50427a5ff"
+					}
+				],
+				"_id": "671cdfadd6f559a50427a5f9"
+			}
+		],
+		"__v": 3
+	}
+]
