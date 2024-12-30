@@ -62,6 +62,11 @@ app.use(
 				'https://crm.solutionprovider.com.bd',
 				'http://192.168.218.103:5173',
 				'http://192.168.68.123:5173',
+				'http://localhost:3000',
+				'http://localhost:5000',
+				'http://192.168.68.130:3000',
+				'http://192.168.68.130:5000',
+				'http://192.168.68.130',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
@@ -90,12 +95,12 @@ app.get('/', (req, res) => {
 
 // io connection start
 io.on('connection', (socket) => {
-	console.log(`User connected ID: ${socket.id}`);
-
-	socket.on('disconnect', () => {
-		console.log('User Disconnected', socket.id);
-	});
+    console.log(`User connected: ${socket.id}`);http://localhost:3000
+    socket.on('disconnect', (reason) => {
+        console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
+    });
 });
+
 
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {
@@ -130,7 +135,7 @@ app.use(errorHandler);
 
 // Start the server
 if (require.main === module) {
-	server.listen(process.env.PORT, () => {
+	server.listen(process.env.PORT, '0.0.0.0', () => {
 		const environment = process.env.NODE_ENV || 'development';
 		const nodeVersion = process.version;
 		const currentTime = new Date().toLocaleString();
