@@ -253,22 +253,22 @@ const getMeetingsData = async (req, res) => {
     }
 };
 
-// Controller function to get notifications
 const getNotifications = async (req, res) => {
     try {
         const creId = req.user._id; // Get CRE ID from authenticated user
 
         // Fetch the user to verify the role and department
-        const user = await User.findById(creId).populate('departmentId');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        const { user } = req;
+
+        // Fetch the department and role details
+        const department = await Department.findById(user.departmentId);
+        const role = department.roles.find((role) => role._id.equals(user.roleId));
+
+        // Log the department name and role name
+        console.log('Department Name:', department.departmentName);
+        console.log('Role Name:', role.roleName);
 
         // Check if the user is a CRE by verifying role and department
-        const department = await Department.findById(user.departmentId._id);
-        const role = department.roles.find(
-            (role) => role._id.equals(user.roleId) && role.roleName === 'CRE'
-        );
         if (!role || department.departmentName !== 'CRE') {
             return res.status(403).json({ message: 'User is not authorized as CRE' });
         }

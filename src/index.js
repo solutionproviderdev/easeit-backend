@@ -134,7 +134,7 @@ setInterval(() => {
 // updateLeadsStatusToMeetingFixed();
 // assignLeadsToCRE();
 // getPerformanceBasedCRE();
-assignLeadsToCREInOrder();
+// assignLeadsToCREInOrder();
 // deleteLeadsWithInvalidMessageIds();
 
 // 404 error handling

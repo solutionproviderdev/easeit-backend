@@ -7,6 +7,7 @@
 const axios = require('axios');
 const moment = require('moment');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const { el } = require('@faker-js/faker');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const People = require('../schemas/PeopleSchema');
@@ -217,6 +218,12 @@ const updateExistingLead = async (
 const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) => {
     const cre = await getPerformanceBasedCRE();
     const firstMessageTime = processedMessages[0].date;
+
+    if (cre) {
+        console.log('CRE Found:', cre._id);
+    } else {
+        console.log('No CRE found');
+    }
 
     const newLead = new Lead({
         CID: '',

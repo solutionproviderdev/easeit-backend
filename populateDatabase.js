@@ -11,6 +11,7 @@ const dayjs = require('dayjs');
 const { faker } = require('@faker-js/faker');
 const bcrypt = require('bcrypt');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const { all } = require('axios');
 const Lead = require('./src/schemas/LeadsSchema');
 const Department = require('./src/schemas/auth/DepartmentSchema');
 const User = require('./src/schemas/auth/UserSchema');
@@ -725,123 +726,116 @@ const updateLeadsWithPhoneNumbersAndStatus = async () => {
 };
 
 const assignLeadsToCREInOrder = async () => {
-	try {
-		// Fetch all active CREs
-		const creDepartment = await Department.findOne({
-			departmentName: 'CRE',
-		}).select('roles');
+    try {
+        // Fetch all active CREs
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
 
-		if (!creDepartment || !creDepartment.roles) {
-			throw new Error('CRE department or roles not found');
-		}
+        if (!creDepartment || !creDepartment.roles) {
+            throw new Error('CRE department or roles not found');
+        }
 
-		// Filter the CRE role from the department roles (excluding CRE Head)
-		const creRole = creDepartment.roles.find(role => role.roleName === 'CRE');
+        // Filter the CRE role from the department roles (excluding CRE Head)
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
 
-		if (!creRole) {
-			throw new Error('CRE role not found in department');
-		}
+        if (!creRole) {
+            throw new Error('CRE role not found in department');
+        }
 
-		// Retrieve all active CREs with the role 'CRE'
-		const activeCREs = await User.find({
-			departmentId: creDepartment._id,
-			roleId: creRole._id, // Filter by roleId for CRE
-			status: 'Active', // Only active users
-		}).select('_id');
+        // Retrieve all active CREs with the role 'CRE'
+        const activeCREs = await User.find({
+            roleId: creRole._id, // Filter by roleId for CRE
+            status: 'Active', // Only active users
+        }).select('_id');
 
-		if (!activeCREs || activeCREs.length === 0) {
-			console.error('No active CREs available for assignment.');
-			return;
-		}
+        if (!activeCREs || activeCREs.length === 0) {
+            console.error('No active CREs available for assignment.');
+            return;
+        }
 
-		const creIds = activeCREs.map(cre => cre._id);
+        const creIds = activeCREs.map((cre) => cre._id);
 
-		// Fetch unassigned leads (leads without a CRE assigned)
-		const unassignedLeads = await Lead.find();
+        // Fetch unassigned leads (leads without a CRE assigned)
+        const unassignedLeads = await Lead.find();
 
-		if (unassignedLeads.length === 0) {
-			console.log('No unassigned leads found.');
-			return;
-		}
+        if (unassignedLeads.length === 0) {
+            console.log('No unassigned leads found.');
+            return;
+        }
 
-		// Assign leads to CREs in round-robin order
-		let creIndex = 0;
+        // Assign leads to CREs in round-robin order
+        let creIndex = 0;
 
-		for (const lead of unassignedLeads) {
-			// Assign the lead to the current CRE
-			lead.creName = creIds[creIndex];
+        for (const lead of unassignedLeads) {
+            // Assign the lead to the current CRE
+            lead.creName = creIds[creIndex];
 
-			// Save the updated lead
-			await lead.save();
+            // Save the updated lead
+            await lead.save();
 
-			console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
+            console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
 
-			// Move to the next CRE in the list, wrapping around if necessary
-			creIndex = (creIndex + 1) % creIds.length;
-		}
+            // Move to the next CRE in the list, wrapping around if necessary
+            creIndex = (creIndex + 1) % creIds.length;
+        }
 
-		console.log('Leads have been assigned to CREs in round-robin order.');
-	} catch (error) {
-		console.error('Error assigning leads to CREs in order:', error);
-		throw error;
-	}
+        console.log('Leads have been assigned to CREs in round-robin order.');
+    } catch (error) {
+        console.error('Error assigning leads to CREs in order:', error);
+        throw error;
+    }
 };
 
 const deleteLeadsWithInvalidMessageIds = async () => {
-	try {
-		// Find leads with invalid `_id` values in the `messages` array
-		const invalidLeads = await Lead.find({
-			'messages._id': { $type: 'number' },
-		});
+    try {
+        // Find leads with invalid `_id` values in the `messages` array
+        const invalidLeads = await Lead.find({
+            'messages._id': { $type: 'number' },
+        });
 
-		if (invalidLeads.length === 0) {
-			console.log('No leads with invalid message IDs found.');
-			return;
-		}
+        if (invalidLeads.length === 0) {
+            console.log('No leads with invalid message IDs found.');
+            return;
+        }
 
-		console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
+        console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
 
-		// Delete all invalid leads
-		const invalidLeadIds = invalidLeads.map(lead => lead._id);
+        // Delete all invalid leads
+        const invalidLeadIds = invalidLeads.map((lead) => lead._id);
 
-		await Lead.deleteMany({ _id: { $in: invalidLeadIds } });
+        await Lead.deleteMany({ _id: { $in: invalidLeadIds } });
 
-		console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
-	} catch (error) {
-		console.error(
-			'Error deleting leads with invalid message IDs:',
-			error.message
-		);
-	}
+        console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
+    } catch (error) {
+        console.error('Error deleting leads with invalid message IDs:', error.message);
+    }
 };
-
-
-
 
 // Export all the functions as a module
 module.exports = {
-	generateDepartments,
-	generateRoles,
-	generatePermissions,
-	generateUsers,
-	populateDatabase,
-	getRandomStatus,
-	assignLeadsToCRE,
-	createDummyUsers,
-	generateRandomDate,
-	isAutomatedMessage,
-	findHighQualityLeads,
-	logAutomatedMessages,
-	updateMeetingStatuses,
-	generateRandomReminder,
-	updateUnreadLeadsToNew,
-	updateAutomatedMessages,
-	isHighQualityLeadMessage,
-	updateLeadsWithPhoneNumbers,
-	generateAllLeadsMessagesCsv,
-	updateLeadsStatusToMeetingFixed,
-	updateLeadStatusBasedOnPhoneNumber,
-	updateLeadsWithPhoneNumbersAndStatus,
-	assignLeadsToCREInOrder,
-	deleteLeadsWithInvalidMessageIds,
+    generateDepartments,
+    generateRoles,
+    generatePermissions,
+    generateUsers,
+    populateDatabase,
+    getRandomStatus,
+    assignLeadsToCRE,
+    createDummyUsers,
+    generateRandomDate,
+    isAutomatedMessage,
+    findHighQualityLeads,
+    logAutomatedMessages,
+    updateMeetingStatuses,
+    generateRandomReminder,
+    updateUnreadLeadsToNew,
+    updateAutomatedMessages,
+    isHighQualityLeadMessage,
+    updateLeadsWithPhoneNumbers,
+    generateAllLeadsMessagesCsv,
+    updateLeadsStatusToMeetingFixed,
+    updateLeadStatusBasedOnPhoneNumber,
+    updateLeadsWithPhoneNumbersAndStatus,
+    assignLeadsToCREInOrder,
+    deleteLeadsWithInvalidMessageIds,
 };
