@@ -4,6 +4,7 @@
 /* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-use-before-define */
+
 const mongoose = require('mongoose');
 const fs = require('fs');
 const { Parser } = require('json2csv');
@@ -18,6 +19,7 @@ const User = require('./src/schemas/auth/UserSchema');
 const findCREWithLowestLeads = require('./src/helpers/findCREWithLowestLeads');
 const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE');
 const Meeting = require('./src/schemas/MeetingSchema');
+const MapData = require('./src/schemas/MapData'); // Adjust the path as needed
 
 // Function to generate random departments
 const generateDepartments = (num) => {
@@ -696,6 +698,14 @@ const updateLeadsWithPhoneNumbersAndStatus = async () => {
                 totalNewLeadsUpdated++;
             }
 
+            if (lead.status === 'Meeting Fixed') {
+                lead.status = 'New'; // Reset status if no phone numbers are found
+                totalNewLeadsUpdated++;
+            } else if (!lead.phone.length && lead.status === 'New') {
+                lead.status = 'Number Collected'; // Reset status if no phone numbers are found
+                totalNumberCollectedLeadsUpdated++;
+            }
+
             // Save the updated lead
             await lead.save();
             console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
@@ -812,6 +822,172 @@ const deleteLeadsWithInvalidMessageIds = async () => {
     }
 };
 
+// Function to randomly fix meetings for leads
+const randomlyFixMeetings = async () => {
+    try {
+        // Fetch all leads
+        const leads = await Lead.find({ status: { $ne: 'Meeting Fixed' } }); // Exclude leads already in "Meeting Fixed" status
+
+        if (leads.length === 0) {
+            console.log('No leads available to fix meetings.');
+            return;
+        }
+
+        // Fetch map data for visit charges
+        const mapData = await MapData.findOne({});
+        if (!mapData) {
+            console.log('Map data not found. Cannot determine visit charges.');
+            return;
+        }
+
+        // Log the mapData to debug its structure
+        console.log('Map Data:', JSON.stringify(mapData, null, 2));
+
+        // Fetch a sales executive from the User collection
+        const salesExecutive = await User.findOne({
+            departmentId: '67729dfc8110182641cd44d1',
+        });
+
+        if (!salesExecutive) {
+            console.log('No sales executive found in the Sales department.');
+            return;
+        }
+
+        // Randomly select a subset of leads (e.g., 30% of leads)
+        const numberOfLeadsToFix = Math.ceil(leads.length * 0.3); // Adjust the percentage as needed
+        const leadsToFix = leads.sort(() => 0.5 - Math.random()).slice(0, numberOfLeadsToFix);
+
+        // Function to get a random address from mapData
+        const getRandomAddress = () => {
+            const randomDistrict =
+                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =
+                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+
+            return {
+                division: mapData.division,
+                district: randomDistrict.name,
+                area: randomArea.name,
+            };
+        };
+
+        // Iterate through selected leads and fix meetings
+        for (const lead of leadsToFix) {
+            const { _id: leadId, address: leadAddress, projectLocation } = lead;
+
+            // If the lead has no address, assign a random address from mapData
+            const address = leadAddress || getRandomAddress();
+
+            // Determine visit charge based on lead's address and project location
+            const district = mapData.districts.find((dist) => dist.name === address.district);
+            if (!district) {
+                console.log(`District not found for lead: ${leadId}`);
+                continue;
+            }
+
+            const area = district.areas.find((a) => a.name === address.area);
+            const visitCharge = area?.visitCharge || 0; // Default to 0 if no visit charge is found
+
+            // Generate a random date and time slot for the meeting
+            const date = new Date(Date.now() + Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000); // Random date within the next 7 days
+            const slots = [
+                '10:00 AM',
+                '11:00 AM',
+                '12:00 PM',
+                '01:00 PM',
+                '02:00 PM',
+                '03:00 PM',
+                '04:00 PM',
+                '05:00 PM',
+                '06:00 PM',
+                '07:00 PM',
+                '08:00 PM',
+                '09:00 PM',
+                '10:00 PM',
+                '11:00 PM',
+                '12:00 AM',
+                '01:00 AM',
+                '02:00 AM',
+                '03:00 AM',
+                '04:00 AM',
+                '05:00 AM',
+                '06:00 AM',
+                '07:00 AM',
+                '08:00 AM',
+                '09:00 AM',
+            ];
+            const slot = slots[Math.floor(Math.random() * slots.length)];
+
+            // Fix the meeting using the existing controller function
+            await fixMeeting({
+                body: {
+                    leadId,
+                    date,
+                    slot,
+                    salesExecutive: salesExecutive._id, // Use the fetched sales executive's ID
+                    visitCharge,
+                    address, // Use the assigned address (either existing or random)
+                    projectLocation: lead.projectLocation,
+                },
+                user: { _id: salesExecutive._id }, // Simulate the user object for audit fields
+            });
+
+            console.log(`Meeting fixed for lead: ${leadId}`);
+        }
+
+        console.log(`Successfully fixed meetings for ${leadsToFix.length} leads.`);
+    } catch (error) {
+        console.error('Error fixing meetings:', error);
+    }
+};
+
+// Helper function to simulate the fixMeeting controller
+const fixMeeting = async (req) => {
+    try {
+        const {
+ leadId, date, slot, salesExecutive, visitCharge, address, projectLocation 
+} =            req.body;
+
+        const allMeetingStatus = ['Fixed', 'Postponed', 'Rescheduled', 'Canceled', 'Complete'];
+
+        // get a random meeting status
+        const randomStatusIndex = Math.floor(Math.random() * allMeetingStatus.length);
+        const randomStatus = allMeetingStatus[randomStatusIndex];
+
+        // Create a new meeting
+        const newMeeting = new Meeting({
+            lead: leadId,
+            date,
+            slot,
+            salesExecutive,
+            status: randomStatus,
+            visitCharge,
+            auditFields: {
+                createdBy: req.user._id,
+                updatedBy: req.user._id,
+            },
+        });
+
+        // Save the new meeting
+        await newMeeting.save();
+
+        // Update the lead's reference to this meeting
+        await Lead.findByIdAndUpdate(leadId, {
+            $push: { meetings: newMeeting._id },
+            status: 'Meeting Fixed',
+            address,
+            projectLocation,
+        });
+
+        return newMeeting;
+    } catch (error) {
+        console.error('Error in fixMeeting:', error);
+        throw error;
+    }
+};
+
+// Run the function
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -838,4 +1014,5 @@ module.exports = {
     updateLeadsWithPhoneNumbersAndStatus,
     assignLeadsToCREInOrder,
     deleteLeadsWithInvalidMessageIds,
+    randomlyFixMeetings,
 };

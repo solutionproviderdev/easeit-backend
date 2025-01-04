@@ -118,43 +118,75 @@ const getCREPerformanceDataById = async (req, res) => {
         // Ensure the user's department and role match 'CRE'
         const department = await Department.findById(user.departmentId._id);
         const role = department.roles.find(
-            (role) => role._id.equals(user.roleId) && role.roleName === 'CRE'
+            (r) => r._id.toString() === user.roleId.toString() && r.roleName === 'CRE'
         );
         if (!role) {
             console.log('User is not a CRE.');
             return res.status(400).json({ message: 'User is not a CRE' });
         }
 
-        // Calculate performance metrics
-        const assigned = await Lead.countDocuments({ creName: user._id });
+        // Fetch total number of leads in the system
+        const totalLeads = await Lead.countDocuments();
 
+        // Calculate raw performance metrics
+        const assigned = await Lead.countDocuments({ creName: user._id });
         const numberCollected = await Lead.countDocuments({
             creName: user._id,
             phone: { $exists: true, $ne: [] },
         });
-
         const meetingsSet = await Lead.countDocuments({
             creName: user._id,
             status: 'Meeting Fixed',
         });
-
         const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
         const leadIds = leadsForUser.map((lead) => lead._id);
-
         const meetingsCompleted = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: { $in: ['Complete', 'Sold'] },
         });
+        const target = 100; // Fixed target for everyone
 
         const totalSales = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: 'Sold',
         });
 
-        const target = 150;
-        const performancePercentage = Math.round((meetingsCompleted / target) * 100);
+        // Prepare bar chart data with percentages
+        const barChartData = [
+            {
+                label: 'Lead Assign Rate',
+                value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
+            },
+            {
+                label: 'Number Collection Rate',
+                value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
+            },
+            {
+                label: 'Meeting Set Rate',
+                value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+            },
+            {
+                label: 'Meeting Complete Rate',
+                value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
+            },
+            {
+                label: 'Target Achieved',
+                value: (meetingsCompleted / target) * 100,
+            },
+            {
+                label: 'Complete Performance',
+                value:
+                    [
+                        (assigned / totalLeads) * 100,
+                        (numberCollected / assigned) * 100,
+                        (meetingsSet / numberCollected) * 100,
+                        (meetingsCompleted / meetingsSet) * 100,
+                        (meetingsCompleted / target) * 100,
+                    ].reduce((acc, val) => acc + val, 0) / 5,
+            },
+        ];
 
-        // Structure response
+        // Structure response with raw performance metrics
         const response = {
             id: user._id.toString(),
             name: user.nameAsPerNID,
@@ -170,8 +202,8 @@ const getCREPerformanceDataById = async (req, res) => {
                 meetingsCompleted,
                 totalSales,
                 target,
-                performancePercentage,
             },
+            barChartData,
         };
 
         console.log('Returning performance data for the specified CRE.');
