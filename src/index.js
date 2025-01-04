@@ -25,7 +25,14 @@ const meetingsRouter = require('./routes/meetings/meeting');
 const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
-const { updateLeadsWithPhoneNumbersAndStatus, updateLeadsStatusToMeetingFixed } = require('../populateDatabase');
+const {getPerformanceBasedCRE} = require('./helpers/getPerformanceBasedCRE')
+const {
+	updateLeadsWithPhoneNumbersAndStatus,
+	updateLeadsStatusToMeetingFixed,
+	assignLeadsToCRE,
+	deleteLeadsWithInvalidMessageIds,
+	assignLeadsToCREInOrder,
+} = require('../populateDatabase');
 
 // Initialize app
 const app = express();
@@ -125,6 +132,10 @@ setInterval(() => {
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();
+// assignLeadsToCRE();
+// getPerformanceBasedCRE();
+assignLeadsToCREInOrder();
+// deleteLeadsWithInvalidMessageIds();
 
 // 404 error handling
 app.use(notFoundHandler);

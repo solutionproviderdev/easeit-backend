@@ -6,7 +6,7 @@ exports.uploadImage = (req, res) => {
         return res.status(400).json({ msg: 'No image uploaded' });
     }
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
+    const fileUrl = `${req.protocol}://${req.get('host')}/api/images/${req.file.filename}`;
     res.status(200).json({ fileUrl });
 };
 
@@ -15,6 +15,6 @@ exports.uploadFile = (req, res) => {
         return res.status(400).json({ msg: 'No file uploaded' });
     }
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/files/${req.file.filename}`;
+    const fileUrl = `${req.protocol}://${req.get('host')}/api/files/${req.file.filename}`;
     res.status(200).json({ fileUrl });
 };
