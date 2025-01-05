@@ -241,25 +241,45 @@ exports.addComment = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Add the comment to the lead's comments array
-        lead.comment.push({
+        // Create the new comment object
+        const newComment = {
             comment,
             images: images || [],
             commentBy: req.user._id, // Use user ID from authentication middleware
             date: new Date(),
-        });
+        };
+
+        // Add the comment to the lead's comments array
+        lead.comment.push(newComment);
 
         // Save the lead
         await lead.save();
-        // get the new saved comment
+
+        // Get the newly saved comment
         const savedComment = lead.comment[lead.comment.length - 1];
 
-        res.status(200).json({ msg: 'Comment added successfully', savedComment });
+        // Manually populate the `commentBy` field with user details
+        const populatedComment = {
+            ...savedComment.toObject(), // Convert Mongoose document to a plain JavaScript object
+            commentBy: {
+                _id: req.user._id,
+                nameAsPerNID: req.user.nameAsPerNID,
+                profilePicture: req.user.profilePicture,
+            },
+        };
 
-        // Emit Socket.io event for updated lead (if needed)
+        console.log(populatedComment);
+
+        // Respond to the client
+        res.status(200).json({
+            msg: 'Comment added successfully',
+            savedComment: populatedComment,
+        });
+
+        // Emit Socket.io event for the new comment
         req.io.emit(`newComment_${lead._id}`, {
             leadId: lead._id,
-            comment: savedComment,
+            comment: populatedComment,
         });
     } catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
@@ -273,7 +293,9 @@ exports.getComments = async (req, res) => {
 
     try {
         // Find the lead by ID and select only the comments field
-        const lead = await Lead.findById(id).select('comment');
+        const lead = await Lead.findById(id)
+            .select('comment')
+            .populate('comment.commentBy', 'nameAsPerNID profilePicture');
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
@@ -578,125 +600,45 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
-// Handler function to get all leads with reminders
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
         const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
 
-        // Create a filter object for the leads
-        const filter = {
-            reminder: { $exists: true, $not: { $size: 0 } }, // Only leads with reminders
-        };
+        const filter = { reminder: { $exists: true, $not: { $size: 0 } } };
+        if (status) filter.status = status;
+        if (source) filter.source = source;
+        if (assignedCre) filter.creName = assignedCre;
+        if (salesExecutive) filter.salesExqName = salesExecutive;
 
-        // Add status filter if specified
-        if (status) {
-            filter.status = status;
-        }
-
-        // Add source filter if specified
-        if (source) {
-            filter.source = source;
-        }
-
-        // Add filter for CRE if specified
-        if (assignedCre) {
-            filter.creName = assignedCre;
-        }
-
-        // Add filter for Sales Executive if specified
-        if (salesExecutive) {
-            filter.salesExqName = salesExecutive;
-        }
-
-        // Fetch leads with filters, excluding the 'messages' array
-        let leads = await Lead.find(filter)
-            .select('-messages -meetingDetails -messagesSeen -callLogs') // Exclude unnecessary fields
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name')
-            .lean(); // Use lean() to get plain JavaScript objects
-
-        // Filter reminders based on start and end date
-        if (startDate || endDate) {
-            if (!startDate || !endDate) {
-                return res.status(400).json({
-                    msg: 'Both startDate and endDate are required.',
-                });
-            }
-
+        if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
-
             if (start > end) {
-                return res.status(400).json({
-                    msg: 'startDate cannot be after endDate.',
-                });
+                return res.status(400).json({ msg: 'startDate cannot be after endDate.' });
             }
-
-            // If startDate and endDate are the same, set end to the end of the day
-            if (startDate === endDate) {
-                end.setHours(23, 59, 59, 999);
-            }
-
-            // Iterate through the leads and filter reminders by their time field
-            leads = leads.map((lead) => {
-                const filteredReminders = lead.reminder.filter(
-                    (reminder) => reminder.time >= start && reminder.time <= end
-                );
-
-                return {
-                    ...lead,
-                    reminder: filteredReminders,
-                };
-            });
-
-            // Remove leads without any reminders after filtering
-            leads = leads.filter((lead) => lead.reminder.length > 0);
+            if (startDate === endDate) end.setHours(23, 59, 59, 999);
+            filter['reminder.time'] = { $gte: start, $lte: end };
         }
 
-        // Manually populate reminders with the corresponding comment
-        const populatedLeads = leads.map((lead) => {
-            const populatedReminders = lead.reminder.map((reminder) => {
-                const comment = lead.comment.find(
-                    (c) => c._id.toString() === reminder.commentId?.toString()
-                );
+        const leads = await Lead.find(filter)
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean();
 
-                return {
-                    ...reminder,
-                    comment: comment
-                        ? {
-                              comment: comment.comment,
-                              commentBy: comment.commentBy,
-                              images: comment.images,
-                              date: comment.date,
-                          }
-                        : null, // If no comment is found, return null for comment
-                };
-            });
-
-            return {
-                ...lead,
-                comment: [], // Remove the comment array to avoid including it multiple times
-                reminder: populatedReminders, // Update reminder with populated comments
-            };
-        });
-
-        // Fetch unique filter options for CRE, Sales, Status, and Source
-        const creNames = await Lead.distinct('creName');
-        const salesNames = await Lead.distinct('salesExqName');
-        const statuses = await Lead.distinct('status');
-        const sources = await Lead.distinct('source');
-
-        // Prepare filter options data
-        const filterOptions = {
-            creNames: creNames.map((cre) => cre?.toString()),
-            salesNames: salesNames.map((sales) => sales?.toString()),
-            statuses,
-            sources,
-        };
+        const populatedLeads = leads.map((lead) => ({
+            ...lead,
+            reminder: lead.reminder.map((reminder) => ({
+                ...reminder,
+                comment:
+                    lead.comment.find((c) => c._id.toString() === reminder.commentId?.toString()) ||
+                    null,
+            })),
+            comment: [],
+        }));
 
         res.status(200).json({
             total: leads.length,
-            filterOptions,
             leads: populatedLeads,
         });
     } catch (error) {

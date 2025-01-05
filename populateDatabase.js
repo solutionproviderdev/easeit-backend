@@ -698,14 +698,6 @@ const updateLeadsWithPhoneNumbersAndStatus = async () => {
                 totalNewLeadsUpdated++;
             }
 
-            if (lead.status === 'Meeting Fixed') {
-                lead.status = 'New'; // Reset status if no phone numbers are found
-                totalNewLeadsUpdated++;
-            } else if (!lead.phone.length && lead.status === 'New') {
-                lead.status = 'Number Collected'; // Reset status if no phone numbers are found
-                totalNumberCollectedLeadsUpdated++;
-            }
-
             // Save the updated lead
             await lead.save();
             console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
