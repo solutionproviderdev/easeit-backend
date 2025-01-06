@@ -192,6 +192,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
             path: 'creName',
             select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
         });
 
         const totalLeads = await Lead.countDocuments();
