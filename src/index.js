@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const swaggerUi = require('swagger-ui-express');
+const cron = require('node-cron');
 const swaggerFile = require('../swagger_output.json');
 
 // internal imports
@@ -34,6 +35,7 @@ const {
 	assignLeadsToCREInOrder,
 	randomlyFixMeetings,
 } = require('../populateDatabase');
+const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 
 // Initialize app
 const app = express();
@@ -126,10 +128,22 @@ app.use('/dashboard', dashBoardRouter);
 // seetings router
 app.use('/settings', settingsRouter);
 
-// Get Lead Repeatedly
-setInterval(() => {
-	getConversationsAndUpdateLeadsUpdated(io);
-}, 8000);
+// Replace setInterval with node-cron
+cron.schedule('*/1 * * * * *', () => { // Runs every second
+    const now = new Date();
+    if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
+        getConversationsAndUpdateLeadsUpdated(io);
+    }
+}, {
+    timezone: 'Asia/Dhaka' // Set your timezone here
+});
+
+// Schedule the task to run every 10 minutes
+cron.schedule('*/10 * * * *', async () => {
+	await assignUnassignedLeads();
+}, {
+    timezone: 'Asia/Dhaka' // Set your timezone here
+});
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();

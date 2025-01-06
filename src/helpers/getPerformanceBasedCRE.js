@@ -24,13 +24,13 @@ const getPerformanceBasedCRE = async () => {
 
         // 2. Retrieve all active CREs with the role 'CRE' (not 'CRE Head') from User schema
         const activeCREs = await User.find({
-            // departmentId: creDepartment._id,
             roleId: creRole._id, // Filter by roleId for CRE
             status: 'Active', // Only active users
         }).select('_id');
 
         if (!activeCREs || activeCREs.length === 0) {
-            throw new Error('No active CREs found');
+            console.warn('No active CREs found. Assigning a default CRE.');
+            return null; // Or return a default CRE ID
         }
 
         const creIds = activeCREs.map((cre) => cre._id);
@@ -57,8 +57,10 @@ const getPerformanceBasedCRE = async () => {
         // 4. If no performance data exists, assign randomly
         if (!leadMetrics || leadMetrics.length === 0) {
             console.log('No performance data found, assigning randomly.');
-
-            // Randomly select a CRE from the list of active CREs
+            if (creIds.length === 0) {
+                console.warn('No active CREs available for random assignment.');
+                return null; // Or return a default CRE ID
+            }
             const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
             return randomCRE;
         }
@@ -101,6 +103,16 @@ const getPerformanceBasedCRE = async () => {
         }
 
         // If no CRE passes the overflow check, return the top-performing CRE
+        if (performanceScores.length === 0) {
+            console.warn('No performance scores available. Assigning randomly.');
+            if (creIds.length === 0) {
+                console.warn('No active CREs available for random assignment.');
+                return null; // Or return a default CRE ID
+            }
+            const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
+            return randomCRE;
+        }
+
         return performanceScores[0].creId;
     } catch (error) {
         console.error('Error in getPerformanceBasedCRE:', error);

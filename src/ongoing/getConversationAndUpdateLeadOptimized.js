@@ -7,7 +7,6 @@
 const axios = require('axios');
 const moment = require('moment');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
-const { el } = require('@faker-js/faker');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const People = require('../schemas/PeopleSchema');
@@ -135,7 +134,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
             [...conversation.messages.data].reverse()
         );
 
-        const lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
+        let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
 
         if (lead) {
             await updateExistingLead(
@@ -147,7 +146,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 pageInfo
             );
         } else {
-            await createNewLead(otherParticipant, processedMessages, pageInfo, io);
+            lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io); // Assign the new lead
         }
 
         // Call SholutionBot only for specific conditions
@@ -159,7 +158,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         //     await SholutionBot(lead._id, io);
         // }
 
-        await lead.save();
+        await lead.save(); // Now `lead` is guaranteed to be defined
     } catch (error) {
         logError('Error processing a single conversation', error);
     }
@@ -245,6 +244,8 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
 
     const savedNewLead = await newLead.save();
     emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
+
+    return savedNewLead; // Return the newly created lead
 };
 
 // get cre information

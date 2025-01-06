@@ -5,6 +5,59 @@ const Lead = require('../../schemas/LeadsSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
+// Utility function to add a comment to a lead and emit a Socket.io event
+const addCommentToLead = async (leadId, commentData, user, io) => {
+    const { comment, images } = commentData;
+
+    // Validate input
+    if (!comment) {
+        throw new Error('Comment is required');
+    }
+
+    // Find the lead by ID
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+        throw new Error('Lead not found');
+    }
+
+    // Create the new comment object
+    const newComment = {
+        comment,
+        images: images || [],
+        commentBy: user._id, // Use user ID from authentication middleware
+        date: new Date(),
+    };
+
+    // Add the comment to the lead's comments array
+    lead.comment.push(newComment);
+
+    // Save the lead
+    await lead.save();
+
+    // Get the newly saved comment
+    const savedComment = lead.comment[lead.comment.length - 1];
+
+    // Manually populate the `commentBy` field with user details
+    const populatedComment = {
+        ...savedComment.toObject(), // Convert Mongoose document to a plain JavaScript object
+        commentBy: {
+            _id: user._id,
+            nameAsPerNID: user.nameAsPerNID,
+            profilePicture: user.profilePicture,
+        },
+    };
+
+    // Emit Socket.io event for the new comment
+    if (io) {
+        io.emit(`newComment_${lead._id}`, {
+            leadId: lead._id,
+            comment: populatedComment,
+        });
+    }
+
+    return populatedComment;
+};
+
 // Get All Leads (with Filters)
 exports.getAllLeads = async (req, res) => {
     try {
@@ -210,12 +263,14 @@ exports.createLead = async (req, res) => {
 
         // If a comment is provided, add it to the lead
         if (comment) {
-            newLead.comment.push({
-                comment,
-                images: images || [], // Add images if provided
-                commentBy: req.user._id, // Use user ID from authentication middleware
-                date: new Date(),
-            });
+            const commentData = { comment, images };
+            const populatedComment = await addCommentToLead(
+                newLead._id,
+                commentData,
+                req.user,
+                req.io
+            );
+            newLead.comment.push(populatedComment);
         }
 
         // Save the lead to the database
@@ -231,55 +286,16 @@ exports.createLead = async (req, res) => {
 // Add a comment to a Lead
 exports.addComment = async (req, res) => {
     const { id } = req.params;
-    const { comment, images } = req.body; // Extract comment and images from the request
+    const { comment, images } = req.body;
 
     try {
-        // Find the lead by ID
-        const lead = await Lead.findById(id);
-
-        if (!lead) {
-            return res.status(404).json({ msg: 'Lead not found' });
-        }
-
-        // Create the new comment object
-        const newComment = {
-            comment,
-            images: images || [],
-            commentBy: req.user._id, // Use user ID from authentication middleware
-            date: new Date(),
-        };
-
-        // Add the comment to the lead's comments array
-        lead.comment.push(newComment);
-
-        // Save the lead
-        await lead.save();
-
-        // Get the newly saved comment
-        const savedComment = lead.comment[lead.comment.length - 1];
-
-        // Manually populate the `commentBy` field with user details
-        const populatedComment = {
-            ...savedComment.toObject(), // Convert Mongoose document to a plain JavaScript object
-            commentBy: {
-                _id: req.user._id,
-                nameAsPerNID: req.user.nameAsPerNID,
-                profilePicture: req.user.profilePicture,
-            },
-        };
-
-        console.log(populatedComment);
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
 
         // Respond to the client
         res.status(200).json({
             msg: 'Comment added successfully',
             savedComment: populatedComment,
-        });
-
-        // Emit Socket.io event for the new comment
-        req.io.emit(`newComment_${lead._id}`, {
-            leadId: lead._id,
-            comment: populatedComment,
         });
     } catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
@@ -338,8 +354,7 @@ exports.updateRequirements = async (req, res) => {
 // Add a new phone number to the lead
 exports.addPhoneNumberToLead = async (req, res) => {
     const { id } = req.params;
-    const { phoneNumber } = req.body;
-    console.log(req.body);
+    const { phoneNumber, comment } = req.body;
 
     try {
         // Find the lead by ID
@@ -368,7 +383,13 @@ exports.addPhoneNumberToLead = async (req, res) => {
         // Save the lead
         await lead.save();
 
-        // Emit Socket.io event for updated lead (if needed)
+        // If a comment is provided, add it to the lead
+        if (comment) {
+            const commentData = { comment: comment.comment, images: comment.images };
+            await addCommentToLead(id, commentData, req.user, req.io);
+        }
+
+        // Emit Socket.io event for updated phone number
         req.io.emit(`phoneUpdate${lead._id}`, {
             leadId: lead._id,
             phoneNumber: formattedPhoneNumber,
@@ -503,7 +524,7 @@ exports.addReminderWithComment = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Check if there is any incomplete reminder (status is either 'Pending' or 'Missed')
+        // Check if there is any incomplete reminder
         const hasIncompleteReminder = lead.reminder.some(
             (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
@@ -514,28 +535,17 @@ exports.addReminderWithComment = async (req, res) => {
             });
         }
 
-        // Add the comment to the lead's comments array
-        const newComment = {
-            comment,
-            commentBy: req.user._id, // Assuming user ID is available from authentication middleware
-            images: images || [],
-            date: new Date(),
-        };
-
-        lead.comment.push(newComment);
-
-        // Save the lead to get the commentId
-        const savedLead = await lead.save();
-        const savedCommentId = savedLead.comment[savedLead.comment.length - 1]._id;
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
 
         // Add the reminder with the commentId
         lead.reminder.push({
             time,
             status: 'Pending', // Default status is 'Pending'
-            commentId: savedCommentId,
+            commentId: populatedComment._id,
         });
 
-        // Save the lead again with the new reminder
+        // Save the lead
         await lead.save();
 
         // Return only the updated reminders array
