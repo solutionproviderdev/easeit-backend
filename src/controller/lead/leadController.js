@@ -58,6 +58,33 @@ const addCommentToLead = async (leadId, commentData, user, io) => {
     return populatedComment;
 };
 
+// Generic function to get users by department and role
+const getUsersByRole = async (departmentName, roleName) => {
+    // Find the department and role
+    const department = await Department.findOne(
+        { departmentName, 'roles.roleName': roleName },
+        { 'roles.$': 1 }
+    );
+
+    if (!department) return [];
+
+    // Find users with the specified roleId
+    const users = await User.find({ roleId: department.roles[0]._id }).select(
+        'nameAsPerNID profilePicture'
+    );
+    return users.map((user) => ({
+        _id: user._id,
+        name: user.nameAsPerNID,
+        profilePicture: user.profilePicture,
+    }));
+};
+
+// Helper function to get all CRE users
+const getCREUsers = async () => getUsersByRole('CRE', 'CRE');
+
+// Helper function to get all Sales users
+const getSalesUsers = async () => getUsersByRole('Sales', 'Sales');
+
 // Get All Leads (with Filters)
 exports.getAllLeads = async (req, res) => {
     try {
@@ -613,13 +640,45 @@ exports.assignCreToLead = async (req, res) => {
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
         const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
+        const userId = req.user._id;
+        // Step 1: Fetch the user's details
+        const user = await User.findById(userId)
+            .populate({
+                path: 'departmentId',
+                populate: {
+                    path: 'roles',
+                    match: { roleName: 'CRE' }, // Check if the user has a CRE role
+                },
+            })
+            .lean();
 
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found.' });
+        }
+
+        // Step 2: Determine if the user is a CRE or Admin
+        const isCRE = user.departmentId?.roles?.some((role) => role.roleName === 'CRE');
+        const isAdmin = user.type === 'Admin';
+
+        // Step 3: Build the filter based on user role
         const filter = { reminder: { $exists: true, $not: { $size: 0 } } };
+
         if (status) filter.status = status;
         if (source) filter.source = source;
-        if (assignedCre) filter.creName = assignedCre;
         if (salesExecutive) filter.salesExqName = salesExecutive;
 
+        // If the user is a CRE, only show leads assigned to them
+        if (isCRE) {
+            filter.creName = userId;
+        } else if (isAdmin) {
+            // If the user is an Admin, allow filtering by CRE
+            if (assignedCre) filter.creName = assignedCre;
+        } else {
+            // If the user is neither CRE nor Admin, deny access
+            return res.status(403).json({ msg: 'Not authorized.' });
+        }
+
+        // Step 4: Apply date range filter
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
@@ -630,26 +689,33 @@ exports.getAllLeadsWithReminders = async (req, res) => {
             filter['reminder.time'] = { $gte: start, $lte: end };
         }
 
+        // Step 5: Fetch leads based on the filter
         const leads = await Lead.find(filter)
             .select('-messages -meetingDetails -messagesSeen -callLogs')
             .populate('creName', 'name')
             .populate('salesExqName', 'name')
             .lean();
 
+        // Step 6: Map reminders to include comments
         const populatedLeads = leads.map((lead) => ({
             ...lead,
             reminder: lead.reminder.map((reminder) => ({
                 ...reminder,
                 comment:
-                    lead.comment.find((c) => c._id.toString() === reminder.commentId?.toString()) ||
-                    null,
+                    lead.comment.find((c) => c._id.toString() === reminder.commentId?.toString())
+                    || null,
             })),
             comment: [],
         }));
 
+        // Step 7: Send the response
         res.status(200).json({
             total: leads.length,
             leads: populatedLeads,
+            filterOptions: {
+                creNames: isAdmin ? await getCREUsers() : null, // Only include CRE filter for Admin
+                salesNames: await getSalesUsers(),
+            },
         });
     } catch (error) {
         console.error(error.message);

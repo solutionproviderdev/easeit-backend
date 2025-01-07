@@ -36,6 +36,7 @@ const {
 	randomlyFixMeetings,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
+const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
 
 // Initialize app
 const app = express();
@@ -140,7 +141,8 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
 
 // Schedule the task to run every 10 minutes
 cron.schedule('*/10 * * * *', async () => {
-	await assignUnassignedLeads();
+	await assignUnassignedLeads(io);
+	await checkAndUpdateMissedReminders(io);
 }, {
     timezone: 'Asia/Dhaka' // Set your timezone here
 });

@@ -45,7 +45,7 @@ leadRouter.use('/conversation', leadConversationRouter);
 leadRouter.get('/', getAllLeads);
 
 // get all the leads with reminders
-leadRouter.get('/reminders', getAllLeadsWithReminders);
+leadRouter.get('/reminders', checkAuth, getAllLeadsWithReminders);
 
 // Get single Lead Details
 leadRouter.get('/:id', getLeadById);

@@ -4,8 +4,9 @@
 const { default: mongoose } = require('mongoose');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const Lead = require('../schemas/LeadsSchema');
+const User = require('../schemas/auth/UserSchema'); // Import User schema for CRE details
 
-const assignUnassignedLeads = async () => {
+const assignUnassignedLeads = async (io) => {
     try {
         // Step 1: Find leads where creName is null or does not reference an existing user
         const invalidLeads = await Lead.aggregate([
@@ -54,6 +55,33 @@ const assignUnassignedLeads = async () => {
                     },
                 });
                 console.log(`Assigned lead ${lead._id} to CRE ${creId}.`);
+
+                // Fetch the updated lead and CRE details
+                const updatedLead = await Lead.findById(lead._id)
+                    .populate('creName', 'name profilePicture')
+                    .lean();
+
+                // Emit a socket event for the assigned lead
+                if (updatedLead) {
+                    io.emit('leadAssigned', {
+                        leadId: updatedLead._id,
+                        creName: {
+                            _id: updatedLead.creName._id,
+                            name: updatedLead.creName.name,
+                            profilePicture: updatedLead.creName.profilePicture,
+                        },
+                        leadDetails: {
+                            name: updatedLead.name,
+                            status: updatedLead.status,
+                            lastMessage:
+                                // eslint-disable-next-line prettier/prettier
+                                updatedLead.messages[updatedLead.messages.length - 1]?.content || 'sent an attachment',
+                            lastMessageTime:
+                                updatedLead.messages[updatedLead.messages.length - 1]?.date || '',
+                            pageInfo: updatedLead.pageInfo,
+                        },
+                    });
+                }
             } else {
                 console.warn(`No CRE available to assign for lead ${lead._id}.`);
             }
