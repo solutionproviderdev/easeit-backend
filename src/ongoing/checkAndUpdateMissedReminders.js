@@ -30,16 +30,24 @@ const checkAndUpdateMissedReminders = async (io) => {
             lead.reminder = updatedReminders;
             await lead.save();
 
-            // Emit a socket event for missed reminders
+            // Find newly missed reminders
             const missedReminders = updatedReminders.filter(
                 (reminder) => reminder.status === 'Missed'
             );
 
-            if (missedReminders.length > 0) {
-                io.emit('missedReminders', {
+            console.log(`Missed reminders for lead ${lead._id}:`, missedReminders);
+
+            // Emit a socket event for each new missed reminder
+            for (const reminder of missedReminders) {
+                io.emit('missedReminder', {
                     leadId: lead._id,
-                    reminders: missedReminders,
+                    reminderId: reminder._id,
+                    reminder,
                 });
+
+                console.log(
+                    `Emitted missedReminder event for reminder ${reminder._id} in lead ${lead._id}.`
+                );
             }
         }
 

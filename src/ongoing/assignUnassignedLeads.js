@@ -6,6 +6,17 @@ const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const Lead = require('../schemas/LeadsSchema');
 const User = require('../schemas/auth/UserSchema'); // Import User schema for CRE details
 
+// Get CRE information
+const getCreInfo = async (id) => {
+    try {
+        const cre = await User.findOne({ _id: id });
+        return cre || null;
+    } catch (error) {
+        console.error(`Error fetching CRE info for ID ${id}:`, error);
+        return null;
+    }
+};
+
 const assignUnassignedLeads = async (io) => {
     try {
         // Step 1: Find leads where creName is null or does not reference an existing user
@@ -54,28 +65,41 @@ const assignUnassignedLeads = async (io) => {
                         update: { $set: { creName: creId } },
                     },
                 });
-                console.log(`Assigned lead ${lead._id} to CRE ${creId}.`);
 
-                // Fetch the updated lead and CRE details
+                // Fetch the CRE information
+                const creInfo = await getCreInfo(creId);
+
+                if (!creInfo) {
+                    console.warn(`CRE not found for ID ${creId}.`);
+                    continue;
+                }
+
+                console.log(`Assigned lead ${lead._id} to CRE ${creId} (${creInfo.nameAsPerNID}).`);
+
+                // Fetch the updated lead
                 const updatedLead = await Lead.findById(lead._id)
-                    .populate('creName', 'name profilePicture')
+                    .populate('creName', 'nameAsPerNID profilePicture')
                     .lean();
+
+                console.log('CRE', updatedLead.creName);
 
                 // Emit a socket event for the assigned lead
                 if (updatedLead) {
+                    const creName = {
+                        _id: creInfo._id,
+                        name: creInfo.nameAsPerNID,
+                        profilePicture: creInfo.profilePicture,
+                    };
+
                     io.emit('leadAssigned', {
                         leadId: updatedLead._id,
-                        creName: {
-                            _id: updatedLead.creName._id,
-                            name: updatedLead.creName.name,
-                            profilePicture: updatedLead.creName.profilePicture,
-                        },
+                        creName, // Use the creName object
                         leadDetails: {
                             name: updatedLead.name,
                             status: updatedLead.status,
                             lastMessage:
-                                // eslint-disable-next-line prettier/prettier
-                                updatedLead.messages[updatedLead.messages.length - 1]?.content || 'sent an attachment',
+                                updatedLead.messages[updatedLead.messages.length - 1]?.content
+                                || 'sent an attachment',
                             lastMessageTime:
                                 updatedLead.messages[updatedLead.messages.length - 1]?.date || '',
                             pageInfo: updatedLead.pageInfo,

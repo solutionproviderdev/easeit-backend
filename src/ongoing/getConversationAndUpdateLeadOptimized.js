@@ -218,12 +218,6 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
     const cre = await getPerformanceBasedCRE();
     const firstMessageTime = processedMessages[0].date;
 
-    if (cre) {
-        console.log('CRE Found:', cre._id);
-    } else {
-        console.log('No CRE found');
-    }
-
     const newLead = new Lead({
         CID: '',
         name: otherParticipant.name,

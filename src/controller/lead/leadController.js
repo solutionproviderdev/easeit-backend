@@ -1,6 +1,7 @@
 /* eslint-disable object-curly-newline */
 const { default: mongoose } = require('mongoose');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const schedule = require('node-schedule');
 const Lead = require('../../schemas/LeadsSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
@@ -261,8 +262,9 @@ exports.getLeadById = async (req, res) => {
         }
 
         const lead = await Lead.findById(req.params.id)
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
+            .populate('creName', 'nameAsPerNID nickname profilePicture')
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture')
+            .populate('comment.commentBy', 'nameAsPerNID nickname profilePicture');
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
@@ -448,6 +450,11 @@ exports.updateLead = async (req, res) => {
     if (req.body.messagesSeen !== undefined) updateFields.messagesSeen = req.body.messagesSeen;
     if (req.body.requirements) updateFields.requirements = req.body.requirements;
 
+    if (req.body.comment) {
+        const commentData = { comment: req.body.comment.comment, images: req.body.comment.images };
+        await addCommentToLead(id, commentData, req.user, req.io);
+    }
+
     try {
         // Find the lead by ID and update with new data
         const updatedLead = await Lead.findByIdAndUpdate(id, updateFields, { new: true });
@@ -463,10 +470,10 @@ exports.updateLead = async (req, res) => {
     }
 };
 
-// Handler function to add a reminder to a Lead
+// add a reminder to the lead
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
-    const { time, commentId } = req.body; // Removed status from request body
+    const { time, commentId, completeLastReminder } = req.body;
 
     try {
         // Find the lead by ID
@@ -476,31 +483,155 @@ exports.addReminder = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Check if there is any incomplete reminder (status is either 'Pending' or 'Missed')
+        // Check if there is any incomplete reminder
         const hasIncompleteReminder = lead.reminder.some(
             (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
 
-        if (hasIncompleteReminder) {
+        if (completeLastReminder && hasIncompleteReminder) {
+            // Find the last incomplete reminder and mark it as Complete
+            const lastIncompleteReminder = lead.reminder
+                .filter((reminder) => reminder.status === 'Pending' || reminder.status === 'Missed')
+                .slice(-1)[0];
+
+            if (lastIncompleteReminder) {
+                lastIncompleteReminder.status = 'Complete';
+                // Save the lead after marking the last reminder as Complete
+                await lead.save();
+            }
+        } else if (!completeLastReminder && hasIncompleteReminder) {
+            // If completeLastReminder is false and there are incomplete reminders, return an error
             return res.status(400).json({
                 msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
             });
         }
 
-        // Add the reminder to the lead's reminders array
-        lead.reminder.push({
+        // Add the new reminder to the lead's reminders array
+        const newReminder = {
             time,
-            status: 'Pending', // Default status is 'Pending'
-            ...(commentId && { commentId }), // Only add commentId if it is provided
-        });
+            status: 'Pending',
+            ...(commentId && { commentId }),
+        };
 
-        // Save the updated lead
+        lead.reminder.push(newReminder);
+
+        // Save the updated lead after adding the new reminder
         await lead.save();
+
+        // Fetch the updated lead with populated fields (if needed)
+        const updatedLead = await Lead.findById(lead._id)
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean();
+
+        // Map reminders to include comments (if needed)
+        updatedLead.reminder = updatedLead.reminder.map((reminder) => ({
+            ...reminder,
+            comment:
+                updatedLead.comment.find(
+                    (c) => c._id.toString() === reminder.commentId?.toString()
+                ) || null,
+        }));
+        updatedLead.comment = [];
+
+        // Emit a socket event for the new reminder
+        if (req.io) {
+            req.io.emit('newReminder', {
+                lead: updatedLead, // Emit the entire lead object
+            });
+        }
 
         // Return only the updated reminders array
         res.status(200).json({ msg: 'Reminder added successfully', reminders: lead.reminder });
     } catch (error) {
         console.error(`Error adding reminder to lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Handler function to add a reminder with a comment to a Lead
+exports.addReminderWithComment = async (req, res) => {
+    const { id } = req.params;
+    const { time, comment, completeLastReminder } = req.body;
+
+    const commentData = { comment: comment.comment, images: comment.images };
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Check if there is any incomplete reminder
+        const hasIncompleteReminder = lead.reminder.some(
+            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
+        );
+
+        // If completeLastReminder is true, mark the last incomplete reminder as Complete
+        if (completeLastReminder && hasIncompleteReminder) {
+            const lastIncompleteReminder = lead.reminder.find(
+                (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
+            );
+
+            if (lastIncompleteReminder) {
+                lastIncompleteReminder.status = 'Complete';
+            }
+        } else if (hasIncompleteReminder) {
+            // If completeLastReminder is false or not provided, return an error
+            return res.status(400).json({
+                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
+            });
+        }
+
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, commentData, req.user, req.io);
+
+        // Add the reminder with the commentId
+        const newReminder = {
+            time,
+            status: 'Pending', // Default status is 'Pending'
+            commentId: populatedComment._id,
+        };
+
+        lead.reminder.push(newReminder);
+
+        // Save the lead
+        await lead.save();
+
+        // Fetch the updated lead with populated fields (if needed)
+        const updatedLead = await Lead.findById(lead._id)
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean();
+
+        // Map reminders to include comments (if needed)
+        updatedLead.reminder = updatedLead.reminder.map((reminder) => ({
+            ...reminder,
+            comment:
+                updatedLead.comment.find(
+                    (c) => c._id.toString() === reminder.commentId?.toString()
+                ) || null,
+        }));
+        updatedLead.comment = [];
+
+        // Emit a socket event for the new reminder
+        if (req.io) {
+            req.io.emit('newReminder', {
+                lead: updatedLead, // Emit the entire lead object
+            });
+        }
+
+        // Return only the updated reminders array
+        res.status(200).json({
+            msg: 'Reminder and comment added successfully',
+            reminders: lead.reminder,
+        });
+    } catch (error) {
+        console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -534,54 +665,6 @@ exports.updateReminderStatus = async (req, res) => {
         res.status(200).json({ msg: 'Reminder status updated successfully', lead });
     } catch (error) {
         console.error(`Error updating reminder status for lead ${leadId}: ${error.message}`);
-        res.status(500).json({ msg: 'Server error' });
-    }
-};
-
-// Handler function to add a reminder with a comment to a Lead
-exports.addReminderWithComment = async (req, res) => {
-    const { id } = req.params;
-    const { time, comment, images } = req.body;
-
-    try {
-        // Find the lead by ID
-        const lead = await Lead.findById(id);
-
-        if (!lead) {
-            return res.status(404).json({ msg: 'Lead not found' });
-        }
-
-        // Check if there is any incomplete reminder
-        const hasIncompleteReminder = lead.reminder.some(
-            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
-        );
-
-        if (hasIncompleteReminder) {
-            return res.status(400).json({
-                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
-            });
-        }
-
-        // Add the comment using the reusable function
-        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
-
-        // Add the reminder with the commentId
-        lead.reminder.push({
-            time,
-            status: 'Pending', // Default status is 'Pending'
-            commentId: populatedComment._id,
-        });
-
-        // Save the lead
-        await lead.save();
-
-        // Return only the updated reminders array
-        res.status(200).json({
-            msg: 'Reminder and comment added successfully',
-            reminders: lead.reminder,
-        });
-    } catch (error) {
-        console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -637,17 +720,19 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
+// GET ALL LEADS WITH REMINDERS
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
         const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
         const userId = req.user._id;
+
         // Step 1: Fetch the user's details
         const user = await User.findById(userId)
             .populate({
                 path: 'departmentId',
                 populate: {
                     path: 'roles',
-                    match: { roleName: 'CRE' }, // Check if the user has a CRE role
+                    match: { roleName: 'CRE' },
                 },
             })
             .lean();
@@ -692,8 +777,9 @@ exports.getAllLeadsWithReminders = async (req, res) => {
         // Step 5: Fetch leads based on the filter
         const leads = await Lead.find(filter)
             .select('-messages -meetingDetails -messagesSeen -callLogs')
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name')
+            .populate('creName', 'nameAsPerNID profilePicture')
+            .populate('salesExqName', 'nameAsPerNID profilePicture')
+            .populate('comment.commentBy', 'nameAsPerNID profilePicture')
             .lean();
 
         // Step 6: Map reminders to include comments
@@ -705,7 +791,6 @@ exports.getAllLeadsWithReminders = async (req, res) => {
                     lead.comment.find((c) => c._id.toString() === reminder.commentId?.toString())
                     || null,
             })),
-            comment: [],
         }));
 
         // Step 7: Send the response

@@ -66,7 +66,7 @@ leadRouter.put('/:id/requirements', validateRequirements, updateRequirements);
 leadRouter.put('/:id/add-phone-number', validatePhoneNumber, addPhoneNumberToLead);
 
 // New route for updating a lead
-leadRouter.put('/:id', validateLeadUpdate, updateLead);
+leadRouter.put('/:id', checkAuth, validateLeadUpdate, updateLead);
 
 // Updated route for adding a reminder to a lead
 leadRouter.post('/:id/reminders', validateReminder, addReminder);

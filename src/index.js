@@ -37,6 +37,7 @@ const {
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
+const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
 
 // Initialize app
 const app = express();
@@ -146,6 +147,11 @@ cron.schedule('*/10 * * * *', async () => {
 }, {
     timezone: 'Asia/Dhaka' // Set your timezone here
 });
+
+assignUnassignedLeads(io);
+
+// reschedule pending reminders
+reschedulePendingReminders();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();
