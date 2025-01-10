@@ -720,7 +720,6 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
-// GET ALL LEADS WITH REMINDERS
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
         const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
@@ -764,13 +763,17 @@ exports.getAllLeadsWithReminders = async (req, res) => {
         }
 
         // Step 4: Apply date range filter
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
             if (start > end) {
                 return res.status(400).json({ msg: 'startDate cannot be after endDate.' });
             }
-            if (startDate === endDate) end.setHours(23, 59, 59, 999);
+            if (startDate === endDate) {
+                // If startDate and endDate are the same, set end time to 23:59:59.999
+                end.setHours(23, 59, 59, 999);
+            }
             filter['reminder.time'] = { $gte: start, $lte: end };
         }
 
@@ -782,21 +785,41 @@ exports.getAllLeadsWithReminders = async (req, res) => {
             .populate('comment.commentBy', 'nameAsPerNID profilePicture')
             .lean();
 
-        // Step 6: Map reminders to include comments
-        const populatedLeads = leads.map((lead) => ({
-            ...lead,
-            reminder: lead.reminder.map((reminder) => ({
-                ...reminder,
-                comment:
-                    lead.comment.find((c) => c._id.toString() === reminder.commentId?.toString())
-                    || null,
-            })),
-        }));
+        // Step 6: Filter reminders within the specified date range
+        const populatedLeads = leads.map((lead) => {
+            const filteredReminders = lead.reminder.filter((reminder) => {
+                const reminderTime = new Date(reminder.time);
 
-        // Step 7: Send the response
+                // If startDate and endDate are the same, compare only the date part
+                if (startDate === endDate) {
+                    const reminderDate = new Date(reminderTime).setHours(0, 0, 0, 0);
+                    const startDateOnly = new Date(start).setHours(0, 0, 0, 0);
+                    return reminderDate === startDateOnly;
+                }
+
+                // Otherwise, check if the reminder is within the date range
+                return (!start || reminderTime >= start) && (!end || reminderTime <= end);
+            });
+
+            return {
+                ...lead,
+                reminder: filteredReminders.map((reminder) => ({
+                    ...reminder,
+                    comment:
+                        lead.comment.find(
+                            (c) => c._id.toString() === reminder.commentId?.toString()
+                        ) || null,
+                })),
+            };
+        });
+
+        // Step 7: Filter out leads with no reminders after date filtering
+        const filteredLeads = populatedLeads.filter((lead) => lead.reminder.length > 0);
+
+        // Step 8: Send the response
         res.status(200).json({
-            total: leads.length,
-            leads: populatedLeads,
+            total: filteredLeads.length,
+            leads: filteredLeads,
             filterOptions: {
                 creNames: isAdmin ? await getCREUsers() : null, // Only include CRE filter for Admin
                 salesNames: await getSalesUsers(),

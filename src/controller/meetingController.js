@@ -97,6 +97,92 @@ exports.fixMeeting = async (req, res) => {
     }
 };
 
+// Create a new Lead and optionally fix a meeting
+exports.createLeadAndFixMeeting = async (req, res) => {
+    const {
+        name,
+        phone,
+        source,
+        status,
+        comment,
+        images,
+        address,
+        date,
+        slot,
+        salesExecutive,
+        visitCharge,
+        projectLocation,
+        requirements,
+        projectStatus,
+    } = req.body;
+
+    try {
+        // Step 1: Create a new lead
+        const newLead = new Lead({
+            name,
+            phone,
+            source: source || 'Phone',
+            status: status || (date && slot ? 'Meeting Fixed' : 'Number Collected'), // Set status to "Meeting Fixed" if meeting details provided
+            address,
+            projectLocation,
+            requirements,
+            projectStatus: projectStatus && {
+                status: projectStatus.status,
+                subStatus: projectStatus.subStatus,
+            },
+        });
+
+        // If a comment is provided, add it to the lead
+        if (comment) {
+            const newComment = {
+                comment,
+                images: images || [],
+                commentBy: req.user._id,
+                date: new Date(),
+            };
+            newLead.comment.push(newComment);
+        }
+
+        // Save the lead to the database
+        await newLead.save();
+
+        let newMeeting = null;
+
+        // Step 2: Fix a meeting if meeting details are provided
+        if (date && slot && salesExecutive) {
+            newMeeting = new Meeting({
+                lead: newLead._id,
+                date,
+                slot,
+                salesExecutive,
+                status: 'Fixed',
+                visitCharge,
+                auditFields: {
+                    createdBy: req.user._id,
+                    updatedBy: req.user._id,
+                },
+            });
+
+            // Save the meeting to the database
+            await newMeeting.save();
+
+            // Update the lead with the meeting reference
+            newLead.meetings.push(newMeeting._id);
+            newLead.status = 'Meeting Fixed';
+            await newLead.save();
+        }
+
+        res.status(201).json({
+            msg: 'Lead created successfully',
+            lead: newLead,
+            meeting: newMeeting,
+        });
+    } catch (error) {
+        console.error('Error creating lead and fixing meeting:', error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
 // Postpone a meeting and add a new reminder
 exports.postponeMeeting = async (req, res) => {
     try {
