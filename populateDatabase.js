@@ -235,8 +235,7 @@ const isAutomatedMessage = (message) => {
 
     // Add a pattern to detect the message "You can call [name] back within the next 7 days."
     // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
-    const automatedPattern =
-        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
 
     return automatedPattern.test(lowerCaseMessage);
 };
@@ -302,7 +301,9 @@ const findHighQualityLeads = async () => {
         // Iterate over each lead
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
-            const hasHighQualityMessage = lead.messages.some((message) => isHighQualityLeadMessage(message.content));
+            const hasHighQualityMessage = lead.messages.some((message) =>
+                isHighQualityLeadMessage(message.content)
+            );
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -851,10 +852,8 @@ const randomlyFixMeetings = async () => {
 
         // Function to get a random address from mapData
         const getRandomAddress = () => {
-            const randomDistrict =
-                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
-            const randomArea =
-                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+            const randomDistrict =                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
 
             return {
                 division: mapData.division,
@@ -936,9 +935,8 @@ const randomlyFixMeetings = async () => {
 // Helper function to simulate the fixMeeting controller
 const fixMeeting = async (req) => {
     try {
-        const {
- leadId, date, slot, salesExecutive, visitCharge, address, projectLocation 
-} =            req.body;
+        const { leadId, date, slot, salesExecutive, visitCharge, address, projectLocation } =
+            req.body;
 
         const allMeetingStatus = ['Fixed', 'Postponed', 'Rescheduled', 'Canceled', 'Complete'];
 
@@ -978,7 +976,90 @@ const fixMeeting = async (req) => {
     }
 };
 
-// Run the function
+const nameBasedLeadAssign = async () => {
+    // get all the leads
+    const leads = await Lead.find({ source: 'Facebook' });
+
+    const creFacebookNamesAndCRMNames = [
+        {
+            facebookName: 'Morium Ritu',
+            crmName: 'Morium Ritu',
+        },
+        {
+            facebookName: 'Antika Sadia Islam',
+            crmName: 'Antika Sadia Islam',
+        },
+        {
+            facebookName: 'Ariha Taniya Islam',
+            crmName: 'আরিহা তানিয়া ইসলাম',
+        },
+    ];
+
+    // get CRE Department
+    const creDepartment = await Department.findOne({
+        departmentName: 'CRE',
+    });
+
+    // get CRE Role
+    const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+    // get all the CREs
+    const creUsers = await User.find({
+        roleId: creRole._id,
+    });
+
+    // get the CRE Name
+    const creNames = creUsers.map((user) => user.nameAsPerNID);
+
+    console.log(creNames);
+
+    // itarate through each lead
+    for (const lead of leads) {
+        // read all the automated messages from the lead
+        // with this pattarn "Morium Ritu assigned this conversation to Morium Ritu"
+        const automatedMessages = lead.messages.filter((message) => message?.content?.includes('assigned this conversation to'));
+
+        // get the name from the message the name could be two to three words
+        if (automatedMessages.length > 0) {
+            // exclude this "assigned this conversation to" part from the message
+            const messageWithoutAssigned = automatedMessages[0].content.replace(
+                'assigned this conversation to',
+                ''
+            );
+
+            // get the name from the message cutting half of the messagewithoutassigned
+            const facebookName = messageWithoutAssigned
+                .split(' ')
+                .slice(0, Math.floor(messageWithoutAssigned.split(' ').length / 2))
+                .join(' ')
+                .trim();
+
+            // get the CRM name for the facebook name
+            const crmName = creFacebookNamesAndCRMNames.find(
+                (cre) => cre.facebookName === facebookName
+            );
+
+            // if the name is found, then assign the lead to the CRE
+            if (crmName?.crmName) {
+                // get the cre user
+                const cre = creUsers.find((user) => user.nameAsPerNID === crmName.crmName);
+
+                if (cre) {
+                    lead.creName = cre._id;
+
+                    console.log(`Lead ${lead._id} assigned to CRE ${lead.creName}`);
+                    // save the lead
+                    await lead.save();
+                }
+            }
+        }
+
+        // if the name is found, then assign the lead to the CRE
+        // if the name is not found, then lead as it is
+    }
+
+    //
+};
 
 // Export all the functions as a module
 module.exports = {
@@ -1007,4 +1088,5 @@ module.exports = {
     assignLeadsToCREInOrder,
     deleteLeadsWithInvalidMessageIds,
     randomlyFixMeetings,
+    nameBasedLeadAssign,
 };

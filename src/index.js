@@ -34,6 +34,7 @@ const {
 	deleteLeadsWithInvalidMessageIds,
 	assignLeadsToCREInOrder,
 	randomlyFixMeetings,
+	nameBasedLeadAssign,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
@@ -160,6 +161,7 @@ reschedulePendingReminders();
 // assignLeadsToCREInOrder();
 // deleteLeadsWithInvalidMessageIds();
 // randomlyFixMeetings();
+nameBasedLeadAssign();
 
 // 404 error handling
 app.use(notFoundHandler);
