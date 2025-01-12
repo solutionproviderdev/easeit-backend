@@ -5,7 +5,6 @@ const Meeting = require('../../schemas/MeetingSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
-// Controller function to get all CREs' performance data
 const getAllCREsPerformanceData = async (req, res) => {
     try {
         // Find the department ID for "CRE" department
@@ -29,49 +28,67 @@ const getAllCREsPerformanceData = async (req, res) => {
             return res.status(404).json({ message: 'No CRE users found' });
         }
 
+        // Fetch total number of leads in the system
+        const totalLeads = await Lead.countDocuments();
+
         // Iterate over each CRE user and calculate their performance data
         const crePerformanceData = await Promise.all(
             creUsers.map(async (user) => {
-                // Fetch assigned leads count
                 const assigned = await Lead.countDocuments({ creName: user._id });
-
-                // Fetch count of leads with at least one phone number
                 const numberCollected = await Lead.countDocuments({
                     creName: user._id,
-                    phone: { $exists: true, $not: { $size: 0 } },
+                    phone: { $exists: true, $ne: [] },
                 });
-
-                // Fetch meetings set count
                 const meetingsSet = await Lead.countDocuments({
                     creName: user._id,
                     status: 'Meeting Fixed',
                 });
-
-                // Fetch leads where creName matches the user's ID
-                const leadsForUser = await Lead.find({
-                    creName: user._id,
-                }).select('_id');
+                const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
                 const leadIds = leadsForUser.map((lead) => lead._id);
-
-                // Count meetings for user's leads with status 'Complete' or 'Sold'
                 const meetingsCompleted = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: { $in: ['Complete', 'Sold'] },
                 });
-
-                // Fetch total sales count
-
-                // Count meetings where the lead is in the above list and status is 'Sold'
                 const totalSales = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: 'Sold',
                 });
-
-                // Define a target value (example target value, adjust as necessary)
                 const target = 150;
 
-                // Calculate performance percentage
-                const performancePercentage = Math.round((meetingsCompleted / target) * 100);
+                // Prepare bar chart data with percentages
+                const barChartData = [
+                    {
+                        label: 'Lead Assign Rate',
+                        value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
+                    },
+                    {
+                        label: 'Number Collection Rate',
+                        value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
+                    },
+                    {
+                        label: 'Meeting Set Rate',
+                        value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+                    },
+                    {
+                        label: 'Meeting Complete Rate',
+                        value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
+                    },
+                    {
+                        label: 'Target Achieved',
+                        value: (meetingsCompleted / target) * 100,
+                    },
+                    {
+                        label: 'Complete Performance',
+                        value:
+                            [
+                                (assigned / totalLeads) * 100,
+                                (numberCollected / assigned) * 100,
+                                (meetingsSet / numberCollected) * 100,
+                                (meetingsCompleted / meetingsSet) * 100,
+                                (meetingsCompleted / target) * 100,
+                            ].reduce((acc, val) => acc + val, 0) / 5,
+                    },
+                ];
 
                 // Return structured performance data for the user
                 return {
@@ -89,8 +106,8 @@ const getAllCREsPerformanceData = async (req, res) => {
                         meetingsCompleted,
                         totalSales,
                         target,
-                        performancePercentage,
                     },
+                    barChartData,
                 };
             })
         );
@@ -285,6 +302,7 @@ const getMeetingsData = async (req, res) => {
     }
 };
 
+// Get notifications
 const getNotifications = async (req, res) => {
     try {
         const creId = req.user._id; // Get CRE ID from authenticated user
