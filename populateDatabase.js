@@ -976,89 +976,96 @@ const fixMeeting = async (req) => {
     }
 };
 
+// name based lead assign
 const nameBasedLeadAssign = async () => {
-    // get all the leads
-    const leads = await Lead.find({ source: 'Facebook' });
+    try {
+        // Step 1: Fetch all Facebook leads
+        const leads = await Lead.find({ source: 'Facebook' }).select('messages creName');
 
-    const creFacebookNamesAndCRMNames = [
-        {
-            facebookName: 'Morium Ritu',
-            crmName: 'Morium Ritu',
-        },
-        {
-            facebookName: 'Antika Sadia Islam',
-            crmName: 'Antika Sadia Islam',
-        },
-        {
-            facebookName: 'Ariha Taniya Islam',
-            crmName: 'আরিহা তানিয়া ইসলাম',
-        },
-    ];
-
-    // get CRE Department
-    const creDepartment = await Department.findOne({
-        departmentName: 'CRE',
-    });
-
-    // get CRE Role
-    const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
-
-    // get all the CREs
-    const creUsers = await User.find({
-        roleId: creRole._id,
-    });
-
-    // get the CRE Name
-    const creNames = creUsers.map((user) => user.nameAsPerNID);
-
-    console.log(creNames);
-
-    // itarate through each lead
-    for (const lead of leads) {
-        // read all the automated messages from the lead
-        // with this pattarn "Morium Ritu assigned this conversation to Morium Ritu"
-        const automatedMessages = lead.messages.filter((message) => message?.content?.includes('assigned this conversation to'));
-
-        // get the name from the message the name could be two to three words
-        if (automatedMessages.length > 0) {
-            // exclude this "assigned this conversation to" part from the message
-            const messageWithoutAssigned = automatedMessages[0].content.replace(
-                'assigned this conversation to',
-                ''
-            );
-
-            // get the name from the message cutting half of the messagewithoutassigned
-            const facebookName = messageWithoutAssigned
-                .split(' ')
-                .slice(0, Math.floor(messageWithoutAssigned.split(' ').length / 2))
-                .join(' ')
-                .trim();
-
-            // get the CRM name for the facebook name
-            const crmName = creFacebookNamesAndCRMNames.find(
-                (cre) => cre.facebookName === facebookName
-            );
-
-            // if the name is found, then assign the lead to the CRE
-            if (crmName?.crmName) {
-                // get the cre user
-                const cre = creUsers.find((user) => user.nameAsPerNID === crmName.crmName);
-
-                if (cre) {
-                    lead.creName = cre._id;
-
-                    console.log(`Lead ${lead._id} assigned to CRE ${lead.creName}`);
-                    // save the lead
-                    await lead.save();
-                }
-            }
+        if (leads.length === 0) {
+            console.log('No leads found from Facebook.');
+            return;
         }
 
-        // if the name is found, then assign the lead to the CRE
-        // if the name is not found, then lead as it is
-    }
+        // Step 2: Map Facebook names to CRM names
+        const creFacebookNamesAndCRMNames = {
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'Ariha Taniya Islam': 'আরিহা তানিয়া ইসলাম',
+        };
 
-    //
+        // Step 3: Fetch CRE department and role
+        const creDepartment = await Department.findOne({ departmentName: 'CRE' });
+        if (!creDepartment) throw new Error('CRE department not found.');
+
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+        if (!creRole) throw new Error('CRE role not found in department.');
+
+        // Step 4: Fetch all CRE users
+        const creUsers = await User.find({ roleId: creRole._id }).select('_id nameAsPerNID');
+        if (creUsers.length === 0) throw new Error('No CRE users found.');
+
+        // Create a map for quick lookup of CRE users by name
+        const creNameToIdMap = creUsers.reduce((map, user) => {
+            map[user.nameAsPerNID] = user._id.toString();
+            return map;
+        }, {});
+
+        // Step 5: Prepare bulk update operations
+        const bulkOperations = [];
+
+        leads.forEach((lead) => {
+            // Step 5.1: Find the automated message with assignment text
+            const automatedMessage = lead.messages.find((message) =>
+                message?.content?.includes('assigned this conversation to')
+            );
+
+            if (automatedMessage) {
+                // Step 5.2: Extract Facebook name from the message
+                const facebookName = automatedMessage.content
+                    .replace('assigned this conversation to', '')
+                    .trim()
+                    .split(' ')
+                    .slice(0, Math.floor(automatedMessage.content.split(' ').length / 2))
+                    .join(' ');
+
+                // Step 5.3: Map Facebook name to CRM name
+                const crmName = creFacebookNamesAndCRMNames[facebookName];
+
+                if (crmName && creNameToIdMap[crmName]) {
+                    const creId = creNameToIdMap[crmName];
+
+                    // Step 5.4: Skip update if the lead is already assigned to the same CRE
+                    if (lead.creName?.toString() === creId) {
+                        console.log(
+                            `Lead ${lead._id} is already assigned to CRE ${crmName}. Skipping...`
+                        );
+                        return;
+                    }
+
+                    // Step 5.5: Add to bulk operations if the lead needs to be updated
+                    bulkOperations.push({
+                        updateOne: {
+                            filter: { _id: lead._id },
+                            update: { $set: { creName: creId } },
+                        },
+                    });
+
+                    console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
+                }
+            }
+        });
+
+        // Step 6: Execute bulk operations
+        if (bulkOperations.length > 0) {
+            const bulkWriteResult = await Lead.bulkWrite(bulkOperations);
+            console.log(`Assigned ${bulkWriteResult.modifiedCount} leads to CREs successfully.`);
+        } else {
+            console.log('No leads needed reassignment.');
+        }
+    } catch (error) {
+        console.error('Error in nameBasedLeadAssign:', error.message);
+    }
 };
 
 // Export all the functions as a module

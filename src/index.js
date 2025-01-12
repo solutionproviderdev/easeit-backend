@@ -145,14 +145,16 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
+	nameBasedLeadAssign();
 }, {
-    timezone: 'Asia/Dhaka' // Set your timezone here
+	timezone: 'Asia/Dhaka' // Set your timezone here
 });
 
 assignUnassignedLeads(io);
 
 // reschedule pending reminders
 reschedulePendingReminders();
+nameBasedLeadAssign();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();
@@ -161,7 +163,6 @@ reschedulePendingReminders();
 // assignLeadsToCREInOrder();
 // deleteLeadsWithInvalidMessageIds();
 // randomlyFixMeetings();
-nameBasedLeadAssign();
 
 // 404 error handling
 app.use(notFoundHandler);
