@@ -989,9 +989,9 @@ const nameBasedLeadAssign = async () => {
 
         // Step 2: Map CRM names to Facebook names
         const creCRMNamesToFacebookNames = {
-            'Morium Ritu': 'morium ritu',
-            'Antika Sadia Islam': 'antika sadia islam',
-            'আরিহা তানিয়া ইসলাম': 'ariha taniya islam',
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
         };
 
         // Helper function to normalize names
@@ -1020,7 +1020,7 @@ const nameBasedLeadAssign = async () => {
             return map;
         }, {});
 
-        // console.log('creNameToIdMap', creNameToIdMap);
+        console.log('creNameToIdMap', creNameToIdMap);
 
         // Step 5: Prepare bulk update operations
         const bulkOperations = [];
