@@ -1015,7 +1015,6 @@ const nameBasedLeadAssign = async () => {
 
         // Create a map for quick lookup of CRE users by CRM name
         const creNameToIdMap = creUsers.reduce((map, user) => {
-            console.log('user.nameAsPerNID', user.nameAsPerNID);
             map[user.nameAsPerNID] = user._id.toString();
             return map;
         }, {});
@@ -1049,11 +1048,11 @@ const nameBasedLeadAssign = async () => {
                 // Log the extracted Facebook name
 
                 const crmName = creCRMNamesToFacebookNames[facebookName];
-                console.log(`Extracted Facebook Name: ${facebookName}`, 'crmName', crmName);
+                // console.log(`Extracted Facebook Name: ${facebookName}`, 'crmName', crmName);
 
                 const creId = creNameToIdMap[crmName];
                 if (!creId) {
-                    console.warn(`CRM Name ${crmName} is not available in the database.`);
+                    // console.warn(`CRM Name ${crmName} is not available in the database.`);
                     return;
                 }
 

@@ -358,9 +358,124 @@ const getNotifications = async (req, res) => {
     }
 };
 
+const getDateWiseLeadData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Validate input dates
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
+
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Normalize start and end times to include entire day in UTC
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Initialize the date range
+        const daysArray = [];
+        const currentDate = new Date(start);
+
+        while (currentDate <= end) {
+            daysArray.push(currentDate.toISOString().split('T')[0]); // Format: YYYY-MM-DD
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+
+        // Initialize data structure for bar chart
+        const groupedData = daysArray.reduce((acc, date) => {
+            acc[date] = {
+                date,
+                leads: 0,
+                numberCollected: 0,
+                meetingsFixed: 0,
+                meetingsCompleted: 0,
+                meetingsSold: 0,
+            };
+            return acc;
+        }, {});
+
+        // Aggregate data from the Leads collection
+        const leads = await Lead.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $project: {
+                    date: {
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$createdAt',
+                            timezone: 'UTC',
+                        },
+                    },
+                    hasPhone: { $gt: [{ $size: { $ifNull: ['$phone', []] } }, 0] },
+                    isMeetingFixed: { $eq: ['$status', 'Meeting Fixed'] },
+                },
+            },
+        ]);
+
+        // Aggregate data from the Meetings collection
+        const meetings = await Meeting.aggregate([
+            {
+                $match: {
+                    date: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $project: {
+                    date: {
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$date',
+                            timezone: 'UTC',
+                        },
+                    },
+                    isMeetingCompleted: { $eq: ['$status', 'Complete'] },
+                    isMeetingSold: { $eq: ['$status', 'Sold'] },
+                },
+            },
+        ]);
+
+        // Populate grouped data for leads
+        leads.forEach((lead) => {
+            if (groupedData[lead.date]) {
+                groupedData[lead.date].leads += 1;
+                if (lead.hasPhone) groupedData[lead.date].numberCollected += 1;
+                if (lead.isMeetingFixed) groupedData[lead.date].meetingsFixed += 1;
+            }
+        });
+
+        // Populate grouped data for meetings
+        meetings.forEach((meeting) => {
+            if (groupedData[meeting.date]) {
+                if (meeting.isMeetingCompleted) groupedData[meeting.date].meetingsCompleted += 1;
+                if (meeting.isMeetingSold) groupedData[meeting.date].meetingsSold += 1;
+            }
+        });
+
+        // Prepare the response in an array format
+        const responseData = Object.values(groupedData);
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        console.error('Error fetching date-wise lead data:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
     getNotifications,
     getMeetingsData,
+    getDateWiseLeadData,
     getAllCREsPerformanceData,
     getCREPerformanceDataById,
 };
