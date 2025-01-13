@@ -989,9 +989,9 @@ const nameBasedLeadAssign = async () => {
 
         // Step 2: Map Facebook names to CRM names
         const creFacebookNamesAndCRMNames = {
-            'Morium Ritu': 'Morium Ritu',
-            'Antika Sadia Islam': 'Antika Sadia Islam',
-            'Ariha Taniya Islam': 'আরিহা তানিয়া ইসলাম',
+            'morium ritu': 'Morium Ritu',
+            'antika sadia islam': 'Antika Sadia Islam',
+            'ariha taniya islam': 'আরিহা তানিয়া ইসলাম',
         };
 
         // Step 3: Fetch CRE department and role
@@ -1007,7 +1007,7 @@ const nameBasedLeadAssign = async () => {
 
         // Create a map for quick lookup of CRE users by name
         const creNameToIdMap = creUsers.reduce((map, user) => {
-            map[user.nameAsPerNID] = user._id.toString();
+            map[user.nameAsPerNID.toLowerCase()] = user._id.toString();
             return map;
         }, {});
 
@@ -1017,23 +1017,33 @@ const nameBasedLeadAssign = async () => {
         leads.forEach((lead) => {
             // Step 5.1: Find the automated message with assignment text
             const automatedMessage = lead.messages.find((message) =>
-                message?.content?.includes('assigned this conversation to')
+                /assigned this conversation to/.test(message?.content)
             );
 
             if (automatedMessage) {
-                // Step 5.2: Extract Facebook name from the message
-                const facebookName = automatedMessage.content
-                    .replace('assigned this conversation to', '')
-                    .trim()
-                    .split(' ')
-                    .slice(0, Math.floor(automatedMessage.content.split(' ').length / 2))
-                    .join(' ');
+                // Step 5.2: Extract the assignee's name from the message
+                const assigneeNameMatch = automatedMessage.content.match(
+                    /assigned this conversation to (.+)$/
+                );
+
+                const facebookName = assigneeNameMatch
+                    ? assigneeNameMatch[1].trim().toLowerCase()
+                    : null;
+
+                if (!facebookName) {
+                    console.warn(
+                        `Unable to extract Facebook name from message: ${automatedMessage.content}`
+                    );
+                    return;
+                }
+
+                // console.log('Message', automatedMessage.content);
+                // console.log('Extracted Facebook Name:', facebookName);
 
                 // Step 5.3: Map Facebook name to CRM name
                 const crmName = creFacebookNamesAndCRMNames[facebookName];
-
-                if (crmName && creNameToIdMap[crmName]) {
-                    const creId = creNameToIdMap[crmName];
+                if (crmName && creNameToIdMap[crmName.toLowerCase()]) {
+                    const creId = creNameToIdMap[crmName.toLowerCase()];
 
                     // Step 5.4: Skip update if the lead is already assigned to the same CRE
                     if (lead.creName?.toString() === creId) {
@@ -1052,6 +1062,8 @@ const nameBasedLeadAssign = async () => {
                     });
 
                     console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
+                } else {
+                    // console.warn(`No matching CRM name for Facebook name: ${facebookName}`);
                 }
             }
         });
