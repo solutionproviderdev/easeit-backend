@@ -994,6 +994,14 @@ const nameBasedLeadAssign = async () => {
             'আরিহা তানিয়া ইসলাম': 'ariha taniya islam',
         };
 
+        // Helper function to normalize names
+        const normalizeName = (name) =>
+            name
+                // .toLowerCase() // Convert to lowercase
+                .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
+                .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '') // Remove all non-Bangla, non-English letters, and non-spaces
+                .trim(); // Trim leading/trailing whitespace
+
         // Step 3: Fetch CRE department and role
         const creDepartment = await Department.findOne({ departmentName: 'CRE' });
         if (!creDepartment) throw new Error('CRE department not found.');
@@ -1007,9 +1015,12 @@ const nameBasedLeadAssign = async () => {
 
         // Create a map for quick lookup of CRE users by CRM name
         const creNameToIdMap = creUsers.reduce((map, user) => {
+            console.log('user.nameAsPerNID', user.nameAsPerNID);
             map[user.nameAsPerNID] = user._id.toString();
             return map;
         }, {});
+
+        // console.log('creNameToIdMap', creNameToIdMap);
 
         // Step 5: Prepare bulk update operations
         const bulkOperations = [];
@@ -1026,9 +1037,7 @@ const nameBasedLeadAssign = async () => {
                     /assigned this conversation to (.+)$/
                 );
 
-                const facebookName = assigneeNameMatch
-                    ? assigneeNameMatch[1].trim().toLowerCase()
-                    : null;
+                const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
 
                 if (!facebookName) {
                     console.warn(
@@ -1037,36 +1046,36 @@ const nameBasedLeadAssign = async () => {
                     return;
                 }
 
-                console.log('Extracted Facebook Name:', facebookName);
+                // Log the extracted Facebook name
 
-                // Step 5.3: Map Facebook name to CRM name
-                const crmName = Object.keys(creCRMNamesToFacebookNames).find(
-                    (key) => creCRMNamesToFacebookNames[key] === facebookName
-                );
+                const crmName = creCRMNamesToFacebookNames[facebookName];
+                console.log(`Extracted Facebook Name: ${facebookName}`, 'crmName', crmName);
 
-                if (crmName && creNameToIdMap[crmName]) {
-                    const creId = creNameToIdMap[crmName];
-
-                    // Step 5.4: Skip update if the lead is already assigned to the same CRE
-                    if (lead.creName?.toString() === creId) {
-                        console.log(
-                            `Lead ${lead._id} is already assigned to CRE ${crmName}. Skipping...`
-                        );
-                        return;
-                    }
-
-                    // Step 5.5: Add to bulk operations if the lead needs to be updated
-                    bulkOperations.push({
-                        updateOne: {
-                            filter: { _id: lead._id },
-                            update: { $set: { creName: creId } },
-                        },
-                    });
-
-                    console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
-                } else {
-                    console.warn(`No matching CRM name for Facebook name: ${facebookName}`);
+                const creId = creNameToIdMap[crmName];
+                if (!creId) {
+                    console.warn(`CRM Name ${crmName} is not available in the database.`);
+                    return;
                 }
+
+                console.log(`CRM Name ${crmName} exists in the database.`);
+
+                // Step 5.5: Skip update if the lead is already assigned to the same CRE
+                if (lead.creName?.toString() === creId) {
+                    console.log(
+                        `Lead ${lead._id} is already assigned to CRE ${crmName}. Skipping...`
+                    );
+                    return;
+                }
+
+                // Add to bulk operations if the lead needs to be updated
+                bulkOperations.push({
+                    updateOne: {
+                        filter: { _id: lead._id },
+                        update: { $set: { creName: creId } },
+                    },
+                });
+
+                console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
             }
         });
 
