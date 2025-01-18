@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"start": "node src/index",
-		"nodemon": "nodemon src/index",
+		"dev": "nodemon src/index",
 		"ngrok": "ngrok http http://localhost:5000"
 	},
 	"repository": {

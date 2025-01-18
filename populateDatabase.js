@@ -1019,7 +1019,6 @@ const nameBasedLeadAssign = async () => {
             return map;
         }, {});
 
-        console.log('creNameToIdMap', creNameToIdMap);
 
         // Step 5: Prepare bulk update operations
         const bulkOperations = [];

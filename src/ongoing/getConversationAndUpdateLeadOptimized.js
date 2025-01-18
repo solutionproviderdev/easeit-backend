@@ -64,9 +64,25 @@ const processMessages = (messages) => {
         if (
             msg?.attachments &&
             msg?.attachments?.data?.length > 0 &&
-            msg?.attachments?.data[0]?.image_data
+            (msg?.attachments?.data[0]?.image_data ||
+                msg?.attachments?.data[0]?.video_data ||
+                msg?.attachments?.data[0]?.file_url)
         ) {
-            fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
+            fileUrl = msg?.attachments?.data?.map((att) => {
+                if (att.image_data) {
+                    // console.log('image data found', att.image_data.url);
+                    return att.image_data.url;
+                }
+                if (att.video_data) {
+                    // console.log('video data found', att.video_data.url);
+                    return att.video_data.url;
+                }
+                if (att.file_url) {
+                    // console.log('file url found', att.file_url);
+                    return att.file_url;
+                }
+                return [];
+            });
         }
 
         return {
@@ -114,7 +130,7 @@ const getCREMapping = async () => {
 const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
             { timeout: 20000 }
         );
         return response.data.data;
@@ -146,7 +162,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 pageInfo
             );
         } else {
-            lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io); // Assign the new lead
+            lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io);
         }
 
         // Call SholutionBot only for specific conditions

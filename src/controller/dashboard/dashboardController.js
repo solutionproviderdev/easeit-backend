@@ -277,8 +277,7 @@ const getMeetingsData = async (req, res) => {
 
         // Count meetings and populate groupedMeetings
         meetings.forEach((meeting) => {
-            const dayLabel =
-                timeLength === 'week'
+            const dayLabel =                timeLength === 'week'
                     ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
                     : moment(meeting.date).format('D'); // Day of the month as a number
 
@@ -472,6 +471,56 @@ const getDateWiseLeadData = async (req, res) => {
     }
 };
 
+const getWeeklyLeadData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const creId = req.user._id;
+
+        // Validate input dates
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
+
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Normalize start and end times to include entire day in UTC
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Initialize the date range
+        const daysArray = [];
+        const currentDate = new Date(start);
+
+        while (currentDate <= end) {
+            daysArray.push(currentDate.toISOString().split('T')[0]); // Format: YYYY-MM-DD
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+
+        // Initialize data structure for bar chart
+        const groupedData = daysArray.reduce((acc, date) => {
+            acc[date] = {
+                date,
+                leads: 0,
+                numberCollected: 0,
+                meetingsFixed: 0,
+                meetingsCompleted: 0,
+                meetingsSold: 0,
+            };
+            return acc;
+        }, {});
+
+        // Aggregate data from the Leads collection
+    } catch (error) {
+        console.error('Error fetching weekly lead data:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
 module.exports = {
     getNotifications,
     getMeetingsData,
