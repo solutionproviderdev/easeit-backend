@@ -1019,21 +1019,20 @@ const nameBasedLeadAssign = async () => {
             return map;
         }, {});
 
-
         // Step 5: Prepare bulk update operations
         const bulkOperations = [];
 
         leads.forEach((lead) => {
             // Step 5.1: Find the automated message with assignment text
-            const automatedMessage = lead.messages.find((message) =>
+            const automatedMessage = lead.messages.filter((message) =>
                 /assigned this conversation to/.test(message?.content)
             );
 
-            if (automatedMessage) {
+            if (automatedMessage.length > 0) {
                 // Step 5.2: Extract the assignee's Facebook name from the message
-                const assigneeNameMatch = automatedMessage.content.match(
-                    /assigned this conversation to (.+)$/
-                );
+                const assigneeNameMatch = automatedMessage[
+                    automatedMessage.length - 1
+                ].content.match(/assigned this conversation to (.+)$/);
 
                 const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
 
