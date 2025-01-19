@@ -330,4 +330,7 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     // console.timeEnd('getConversationsAndUpdateLeads');
 };
 
-module.exports = getConversationsAndUpdateLeadsUpdated;
+module.exports = {
+    getConversationsAndUpdateLeadsUpdated,
+    emitSocketEventsForNewMessage,
+};

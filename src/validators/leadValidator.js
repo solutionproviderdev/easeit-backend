@@ -232,9 +232,9 @@ const validateCallLog = [
 ];
 
 const validateCreAssignment = [
-    body('creName')
+    body('newCREId')
         .notEmpty()
-        .withMessage('CRE name is required')
+        .withMessage('CRE ID is required')
         .custom(async (value) => {
             if (!mongoose.Types.ObjectId.isValid(value)) {
                 return Promise.reject('Invalid CRE ID format');
@@ -249,17 +249,17 @@ const validateCreAssignment = [
             }
 
             const department = await Department.findOne({
-                _id: user.departmentId,
                 departmentName: 'CRE',
             });
-            if (!department) {
-                return Promise.reject('User is not in the CRE department');
-            }
+            console.log('department id', department._id);
+            console.log('user department id', user.departmentId._id);
+            console.log(
+                'department._id.equals(user.departmentId._id)',
+                department._id.equals(user.departmentId._id)
+            );
 
-            // eslint-disable-next-line no-shadow
-            const role = department.roles.find((role) => role._id.equals(user.roleId));
-            if (!role || role.roleName !== 'CRE Head') {
-                return Promise.reject('User does not have the role of CRE Head');
+            if (!department._id.equals(user.departmentId._id)) {
+                return Promise.reject('User is not in the CRE department');
             }
         }),
     (req, res, next) => {

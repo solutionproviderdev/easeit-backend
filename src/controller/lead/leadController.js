@@ -5,6 +5,9 @@ const schedule = require('node-schedule');
 const Lead = require('../../schemas/LeadsSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
+const {
+    emitSocketEventsForNewMessage,
+} = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 
 // Utility function to add a comment to a lead and emit a Socket.io event
 const addCommentToLead = async (leadId, commentData, user, io) => {
@@ -705,14 +708,17 @@ exports.addCallLog = async (req, res) => {
 // assigned cre need update
 exports.assignCreToLead = async (req, res) => {
     const { id } = req.params;
-    const { creName } = req.body;
+    const { newCREId } = req.body;
 
     try {
         // Find the lead by ID and update the CRE assignment
-        const lead = await Lead.findByIdAndUpdate(id, { creName }, { new: true });
+        const lead = await Lead.findByIdAndUpdate(id, { creName: newCREId }, { new: true });
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
         }
+
+        // emit socket event for lead update
+        emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
     } catch (error) {
