@@ -9,27 +9,43 @@ const moment = require('moment');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
-const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../../populateDatabase');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
+const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
 
-// Convert Bengali numerals to English numerals
-const convertBengaliToEnglishNumbers = (input) => {
-    const bengaliToEnglishMap = {
-        '০': '0',
-        '১': '1',
-        '২': '2',
-        '৩': '3',
-        '৪': '4',
-        '৫': '5',
-        '৬': '6',
-        '৭': '7',
-        '৮': '8',
-        '৯': '9',
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // Convert Bengali numerals to English numerals
+    const convertBengaliToEnglishNumbers = (input) => {
+        const bengaliToEnglishMap = {
+            '০': '0',
+            '১': '1',
+            '২': '2',
+            '৩': '3',
+            '৪': '4',
+            '৫': '5',
+            '৬': '6',
+            '৭': '7',
+            '৮': '8',
+            '৯': '9',
+        };
+        return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
     };
-    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+
+    // Sanitize and extract the number
+    const sanitizedContent = convertBengaliToEnglishNumbers(
+        content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+    );
+
+    // Validate the number using libphonenumber-js
+    if (sanitizedContent) {
+        const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
+        if (parsedNumber && parsedNumber.isValid()) {
+            return parsedNumber;
+        }
+    }
+    return null;
 };
 
 const processMessages = (messages) => {
@@ -39,23 +55,34 @@ const processMessages = (messages) => {
 
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
-            const potentialNumber = convertBengaliToEnglishNumbers(
-                content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
-            );
-            if (potentialNumber) {
-                const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
-                if (parsedNumber && parsedNumber.isValid()) {
-                    phoneNumber = parsedNumber; // Update phoneNumber only if valid
-                }
+            const extractedNumber = extractValidPhoneNumber(content, 'BD');
+            if (extractedNumber) {
+                phoneNumber = extractedNumber; // Update phoneNumber only if valid
             }
         }
 
         if (
             msg?.attachments &&
             msg?.attachments?.data?.length > 0 &&
-            msg?.attachments?.data[0]?.image_data
+            (msg?.attachments?.data[0]?.image_data ||
+                msg?.attachments?.data[0]?.video_data ||
+                msg?.attachments?.data[0]?.file_url)
         ) {
-            fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
+            fileUrl = msg?.attachments?.data?.map((att) => {
+                if (att.image_data) {
+                    // console.log('image data found', att.image_data.url);
+                    return att.image_data.url;
+                }
+                if (att.video_data) {
+                    // console.log('video data found', att.video_data.url);
+                    return att.video_data.url;
+                }
+                if (att.file_url) {
+                    // console.log('file url found', att.file_url);
+                    return att.file_url;
+                }
+                return [];
+            });
         }
 
         return {
@@ -103,7 +130,7 @@ const getCREMapping = async () => {
 const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
             { timeout: 20000 }
         );
         return response.data.data;
@@ -113,7 +140,6 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     }
 };
 
-// Process each conversation to update or create leads
 const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
     try {
         const otherParticipant = conversation.participants.data.find(
@@ -124,7 +150,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
             [...conversation.messages.data].reverse()
         );
 
-        const lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
+        let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
 
         if (lead) {
             await updateExistingLead(
@@ -136,8 +162,19 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 pageInfo
             );
         } else {
-            await createNewLead(otherParticipant, processedMessages, pageInfo, io);
+            lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io);
         }
+
+        // Call SholutionBot only for specific conditions
+        // if (
+        //     lead?._id.toString() === '66e277615ed719dde5ba5036' ||
+        //     lead?._id.toString() === '6763bf1c007e8833d2770e53'
+        // ) {
+        //     // console.log('Triggering SholutionBot for lead:', lead._id);
+        //     await SholutionBot(lead._id, io);
+        // }
+
+        await lead.save(); // Now `lead` is guaranteed to be defined
     } catch (error) {
         logError('Error processing a single conversation', error);
     }
@@ -217,6 +254,8 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
 
     const savedNewLead = await newLead.save();
     emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
+
+    return savedNewLead; // Return the newly created lead
 };
 
 // get cre information
@@ -263,7 +302,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
 
 // Main function to fetch conversations and update leads
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
-    console.time('getConversationsAndUpdateLeads');
+    // console.time('getConversationsAndUpdateLeads');
     try {
         const pages = await fetchFacebookSettings();
         const nameToCreId = await getCREMapping();
@@ -288,7 +327,10 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeads');
+    // console.timeEnd('getConversationsAndUpdateLeads');
 };
 
-module.exports = getConversationsAndUpdateLeadsUpdated;
+module.exports = {
+    getConversationsAndUpdateLeadsUpdated,
+    emitSocketEventsForNewMessage,
+};

@@ -156,6 +156,9 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
 
         const leadsWithLastMessage = await Lead.aggregate([
             {
+                $match: { source: 'Facebook' },
+            },
+            {
                 $addFields: {
                     lastMessage: { $last: '$messages.content' },
                     lastMessageTime: { $last: '$messages.date' },
@@ -192,9 +195,10 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
             path: 'creName',
             select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
         });
 
-        const totalLeads = await Lead.countDocuments();
+        const totalLeads = await Lead.countDocuments({ source: 'Facebook' }); // Count only Facebook leads
 
         // Extract unique statuses
         const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];

@@ -4,6 +4,7 @@
 /* eslint-disable max-len */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-use-before-define */
+
 const mongoose = require('mongoose');
 const fs = require('fs');
 const { Parser } = require('json2csv');
@@ -11,12 +12,14 @@ const dayjs = require('dayjs');
 const { faker } = require('@faker-js/faker');
 const bcrypt = require('bcrypt');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const { all } = require('axios');
 const Lead = require('./src/schemas/LeadsSchema');
 const Department = require('./src/schemas/auth/DepartmentSchema');
 const User = require('./src/schemas/auth/UserSchema');
 const findCREWithLowestLeads = require('./src/helpers/findCREWithLowestLeads');
 const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE');
 const Meeting = require('./src/schemas/MeetingSchema');
+const MapData = require('./src/schemas/MapData'); // Adjust the path as needed
 
 // Function to generate random departments
 const generateDepartments = (num) => {
@@ -299,7 +302,8 @@ const findHighQualityLeads = async () => {
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
             const hasHighQualityMessage = lead.messages.some((message) =>
-                isHighQualityLeadMessage(message.content));
+                isHighQualityLeadMessage(message.content)
+            );
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -558,26 +562,6 @@ const updateLeadsWithPhoneNumbers = async () => {
     }
 };
 
-const updateLeadsStatusToMeetingFixed = async () => {
-    try {
-        // Retrieve all meetings
-        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
-
-        for (const meeting of meetings) {
-            // Check if the lead's status is not already 'Meeting Fixed'
-            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
-                meeting.lead.status = 'Meeting Fixed'; // Update status
-                await meeting.lead.save(); // Save the updated lead
-                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
-            }
-        }
-
-        console.log('All relevant lead statuses updated to "Meeting Fixed".');
-    } catch (error) {
-        console.error('Error updating lead statuses:', error);
-    }
-};
-
 const updateLeadStatusBasedOnPhoneNumber = async () => {
     try {
         // Retrieve all leads
@@ -604,6 +588,26 @@ const updateLeadStatusBasedOnPhoneNumber = async () => {
         console.log('Lead statuses updated based on phone number presence.');
     } catch (error) {
         console.error('Error updating lead statuses based on phone number:', error);
+    }
+};
+
+const updateLeadsStatusToMeetingFixed = async () => {
+    try {
+        // Retrieve all meetings
+        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
+
+        for (const meeting of meetings) {
+            // Check if the lead's status is not already 'Meeting Fixed'
+            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
+                meeting.lead.status = 'Meeting Fixed'; // Update status
+                await meeting.lead.save(); // Save the updated lead
+                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
+            }
+        }
+
+        console.log('All relevant lead statuses updated to "Meeting Fixed".');
+    } catch (error) {
+        console.error('Error updating lead statuses:', error);
     }
 };
 
@@ -636,6 +640,454 @@ const updateMeetingStatuses = async () => {
     }
 };
 
+// Helper function to extract valid phone numbers from a message
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // Convert Bengali numerals to English and remove non-numeric characters
+    const sanitizedContent = convertBengaliToEnglishNumbers(
+        content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+    );
+
+    // Validate the number using libphonenumber-js
+    if (sanitizedContent) {
+        const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
+        if (parsedNumber && parsedNumber.isValid()) {
+            return parsedNumber.formatInternational(); // Return formatted number
+        }
+    }
+    return null;
+};
+
+// Unified function to process leads
+const updateLeadsWithPhoneNumbersAndStatus = async () => {
+    try {
+        let totalNewLeadsUpdated = 0; // Count of leads updated to "New"
+        let totalNumberCollectedLeadsUpdated = 0; // Count of leads updated to "Number Collected"
+
+        let totalNewLeads = 0; // Total leads with "New" status
+        let totalNumberCollectedLeads = 0; // Total leads with "Number Collected" status
+        let totalLeads = 0; // Total number of leads
+
+        // Fetch all leads
+        const leads = await Lead.find({});
+        totalLeads = leads.length;
+
+        for (const lead of leads) {
+            let newPhoneAdded = false;
+
+            // Process each message in the lead
+            for (const message of lead.messages) {
+                if (!message.sentByMe && message.content) {
+                    const validPhoneNumber = extractValidPhoneNumber(message.content);
+                    if (validPhoneNumber) {
+                        // Add the phone number if not already in the lead's phone array
+                        if (!lead.phone.includes(validPhoneNumber)) {
+                            lead.phone.push(validPhoneNumber);
+                            newPhoneAdded = true;
+                        }
+                    }
+                }
+            }
+
+            // Update the lead's status based on whether a new phone number was added
+            if (newPhoneAdded) {
+                if (lead.status !== 'Number Collected') {
+                    lead.status = 'Number Collected';
+                    totalNumberCollectedLeadsUpdated++;
+                }
+            } else if (!lead.phone.length && lead.status === 'Number Collected') {
+                lead.status = 'New'; // Reset status if no phone numbers are found
+                totalNewLeadsUpdated++;
+            }
+
+            // Save the updated lead
+            await lead.save();
+            console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
+        }
+
+        // Fetch total counts of leads by status
+        totalNumberCollectedLeads = await Lead.countDocuments({ status: 'Number Collected' });
+        totalNewLeads = await Lead.countDocuments({ status: 'New' });
+
+        // Calculate percentages
+        const percentNumberCollected = ((totalNumberCollectedLeads / totalLeads) * 100).toFixed(2);
+        const percentNew = ((totalNewLeads / totalLeads) * 100).toFixed(2);
+
+        // Log the summary
+        console.log(
+            `Total leads updated to 'Number Collected': ${totalNumberCollectedLeadsUpdated}`
+        );
+        console.log(`Total leads updated to 'New': ${totalNewLeadsUpdated}`);
+        console.log(
+            `Total leads with 'Number Collected' status: ${totalNumberCollectedLeads} (${percentNumberCollected}%)`
+        );
+        console.log(`Total leads with 'New' status: ${totalNewLeads} (${percentNew}%)`);
+        console.log(`Total leads processed: ${totalLeads}`);
+        console.log('All leads processed and updated.');
+    } catch (error) {
+        console.error('Error processing leads for phone number updates:', error);
+    }
+};
+
+const assignLeadsToCREInOrder = async () => {
+    try {
+        // Fetch all active CREs
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
+
+        if (!creDepartment || !creDepartment.roles) {
+            throw new Error('CRE department or roles not found');
+        }
+
+        // Filter the CRE role from the department roles (excluding CRE Head)
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+        if (!creRole) {
+            throw new Error('CRE role not found in department');
+        }
+
+        // Retrieve all active CREs with the role 'CRE'
+        const activeCREs = await User.find({
+            roleId: creRole._id, // Filter by roleId for CRE
+            status: 'Active', // Only active users
+        }).select('_id');
+
+        if (!activeCREs || activeCREs.length === 0) {
+            console.error('No active CREs available for assignment.');
+            return;
+        }
+
+        const creIds = activeCREs.map((cre) => cre._id);
+
+        // Fetch unassigned leads (leads without a CRE assigned)
+        const unassignedLeads = await Lead.find();
+
+        if (unassignedLeads.length === 0) {
+            console.log('No unassigned leads found.');
+            return;
+        }
+
+        // Assign leads to CREs in round-robin order
+        let creIndex = 0;
+
+        for (const lead of unassignedLeads) {
+            // Assign the lead to the current CRE
+            lead.creName = creIds[creIndex];
+
+            // Save the updated lead
+            await lead.save();
+
+            console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
+
+            // Move to the next CRE in the list, wrapping around if necessary
+            creIndex = (creIndex + 1) % creIds.length;
+        }
+
+        console.log('Leads have been assigned to CREs in round-robin order.');
+    } catch (error) {
+        console.error('Error assigning leads to CREs in order:', error);
+        throw error;
+    }
+};
+
+const deleteLeadsWithInvalidMessageIds = async () => {
+    try {
+        // Find leads with invalid `_id` values in the `messages` array
+        const invalidLeads = await Lead.find({
+            'messages._id': { $type: 'number' },
+        });
+
+        if (invalidLeads.length === 0) {
+            console.log('No leads with invalid message IDs found.');
+            return;
+        }
+
+        console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
+
+        // Delete all invalid leads
+        const invalidLeadIds = invalidLeads.map((lead) => lead._id);
+
+        await Lead.deleteMany({ _id: { $in: invalidLeadIds } });
+
+        console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
+    } catch (error) {
+        console.error('Error deleting leads with invalid message IDs:', error.message);
+    }
+};
+
+// Function to randomly fix meetings for leads
+const randomlyFixMeetings = async () => {
+    try {
+        // Fetch all leads
+        const leads = await Lead.find({ status: { $ne: 'Meeting Fixed' } }); // Exclude leads already in "Meeting Fixed" status
+
+        if (leads.length === 0) {
+            console.log('No leads available to fix meetings.');
+            return;
+        }
+
+        // Fetch map data for visit charges
+        const mapData = await MapData.findOne({});
+        if (!mapData) {
+            console.log('Map data not found. Cannot determine visit charges.');
+            return;
+        }
+
+        // Log the mapData to debug its structure
+        console.log('Map Data:', JSON.stringify(mapData, null, 2));
+
+        // Fetch a sales executive from the User collection
+        const salesExecutive = await User.findOne({
+            departmentId: '67729dfc8110182641cd44d1',
+        });
+
+        if (!salesExecutive) {
+            console.log('No sales executive found in the Sales department.');
+            return;
+        }
+
+        // Randomly select a subset of leads (e.g., 30% of leads)
+        const numberOfLeadsToFix = Math.ceil(leads.length * 0.3); // Adjust the percentage as needed
+        const leadsToFix = leads.sort(() => 0.5 - Math.random()).slice(0, numberOfLeadsToFix);
+
+        // Function to get a random address from mapData
+        const getRandomAddress = () => {
+            const randomDistrict =                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+
+            return {
+                division: mapData.division,
+                district: randomDistrict.name,
+                area: randomArea.name,
+            };
+        };
+
+        // Iterate through selected leads and fix meetings
+        for (const lead of leadsToFix) {
+            const { _id: leadId, address: leadAddress, projectLocation } = lead;
+
+            // If the lead has no address, assign a random address from mapData
+            const address = leadAddress || getRandomAddress();
+
+            // Determine visit charge based on lead's address and project location
+            const district = mapData.districts.find((dist) => dist.name === address.district);
+            if (!district) {
+                console.log(`District not found for lead: ${leadId}`);
+                continue;
+            }
+
+            const area = district.areas.find((a) => a.name === address.area);
+            const visitCharge = area?.visitCharge || 0; // Default to 0 if no visit charge is found
+
+            // Generate a random date and time slot for the meeting
+            const date = new Date(Date.now() + Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000); // Random date within the next 7 days
+            const slots = [
+                '10:00 AM',
+                '11:00 AM',
+                '12:00 PM',
+                '01:00 PM',
+                '02:00 PM',
+                '03:00 PM',
+                '04:00 PM',
+                '05:00 PM',
+                '06:00 PM',
+                '07:00 PM',
+                '08:00 PM',
+                '09:00 PM',
+                '10:00 PM',
+                '11:00 PM',
+                '12:00 AM',
+                '01:00 AM',
+                '02:00 AM',
+                '03:00 AM',
+                '04:00 AM',
+                '05:00 AM',
+                '06:00 AM',
+                '07:00 AM',
+                '08:00 AM',
+                '09:00 AM',
+            ];
+            const slot = slots[Math.floor(Math.random() * slots.length)];
+
+            // Fix the meeting using the existing controller function
+            await fixMeeting({
+                body: {
+                    leadId,
+                    date,
+                    slot,
+                    salesExecutive: salesExecutive._id, // Use the fetched sales executive's ID
+                    visitCharge,
+                    address, // Use the assigned address (either existing or random)
+                    projectLocation: lead.projectLocation,
+                },
+                user: { _id: salesExecutive._id }, // Simulate the user object for audit fields
+            });
+
+            console.log(`Meeting fixed for lead: ${leadId}`);
+        }
+
+        console.log(`Successfully fixed meetings for ${leadsToFix.length} leads.`);
+    } catch (error) {
+        console.error('Error fixing meetings:', error);
+    }
+};
+
+// Helper function to simulate the fixMeeting controller
+const fixMeeting = async (req) => {
+    try {
+        const { leadId, date, slot, salesExecutive, visitCharge, address, projectLocation } =
+            req.body;
+
+        const allMeetingStatus = ['Fixed', 'Postponed', 'Rescheduled', 'Canceled', 'Complete'];
+
+        // get a random meeting status
+        const randomStatusIndex = Math.floor(Math.random() * allMeetingStatus.length);
+        const randomStatus = allMeetingStatus[randomStatusIndex];
+
+        // Create a new meeting
+        const newMeeting = new Meeting({
+            lead: leadId,
+            date,
+            slot,
+            salesExecutive,
+            status: randomStatus,
+            visitCharge,
+            auditFields: {
+                createdBy: req.user._id,
+                updatedBy: req.user._id,
+            },
+        });
+
+        // Save the new meeting
+        await newMeeting.save();
+
+        // Update the lead's reference to this meeting
+        await Lead.findByIdAndUpdate(leadId, {
+            $push: { meetings: newMeeting._id },
+            status: 'Meeting Fixed',
+            address,
+            projectLocation,
+        });
+
+        return newMeeting;
+    } catch (error) {
+        console.error('Error in fixMeeting:', error);
+        throw error;
+    }
+};
+
+// name based lead assign
+const nameBasedLeadAssign = async () => {
+    try {
+        // Step 1: Fetch all Facebook leads
+        const leads = await Lead.find({ source: 'Facebook' }).select('messages creName');
+
+        if (leads.length === 0) {
+            console.log('No leads found from Facebook.');
+            return;
+        }
+
+        // Step 2: Map CRM names to Facebook names
+        const creCRMNamesToFacebookNames = {
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
+        };
+
+        // Helper function to normalize names
+        const normalizeName = (name) =>
+            name
+                // .toLowerCase() // Convert to lowercase
+                .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
+                .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '') // Remove all non-Bangla, non-English letters, and non-spaces
+                .trim(); // Trim leading/trailing whitespace
+
+        // Step 3: Fetch CRE department and role
+        const creDepartment = await Department.findOne({ departmentName: 'CRE' });
+        if (!creDepartment) throw new Error('CRE department not found.');
+
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+        if (!creRole) throw new Error('CRE role not found in department.');
+
+        // Step 4: Fetch all CRE users
+        const creUsers = await User.find({ roleId: creRole._id }).select('_id nameAsPerNID');
+        if (creUsers.length === 0) throw new Error('No CRE users found.');
+
+        // Create a map for quick lookup of CRE users by CRM name
+        const creNameToIdMap = creUsers.reduce((map, user) => {
+            map[user.nameAsPerNID] = user._id.toString();
+            return map;
+        }, {});
+
+        // Step 5: Prepare bulk update operations
+        const bulkOperations = [];
+
+        leads.forEach((lead) => {
+            // Step 5.1: Find the automated message with assignment text
+            const automatedMessage = lead.messages.filter((message) =>
+                /assigned this conversation to/.test(message?.content)
+            );
+
+            if (automatedMessage.length > 0) {
+                // Step 5.2: Extract the assignee's Facebook name from the message
+                const assigneeNameMatch = automatedMessage[
+                    automatedMessage.length - 1
+                ].content.match(/assigned this conversation to (.+)$/);
+
+                const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
+
+                if (!facebookName) {
+                    console.warn(
+                        `Unable to extract Facebook name from message: ${automatedMessage.content}`
+                    );
+                    return;
+                }
+
+                // Log the extracted Facebook name
+
+                const crmName = creCRMNamesToFacebookNames[facebookName];
+                // console.log(`Extracted Facebook Name: ${facebookName}`, 'crmName', crmName);
+
+                const creId = creNameToIdMap[crmName];
+                if (!creId) {
+                    // console.warn(`CRM Name ${crmName} is not available in the database.`);
+                    return;
+                }
+
+                console.log(`CRM Name ${crmName} exists in the database.`);
+
+                // Step 5.5: Skip update if the lead is already assigned to the same CRE
+                if (lead.creName?.toString() === creId) {
+                    console.log(
+                        `Lead ${lead._id} is already assigned to CRE ${crmName}. Skipping...`
+                    );
+                    return;
+                }
+
+                // Add to bulk operations if the lead needs to be updated
+                bulkOperations.push({
+                    updateOne: {
+                        filter: { _id: lead._id },
+                        update: { $set: { creName: creId } },
+                    },
+                });
+
+                console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
+            }
+        });
+
+        // Step 6: Execute bulk operations
+        if (bulkOperations.length > 0) {
+            const bulkWriteResult = await Lead.bulkWrite(bulkOperations);
+            console.log(`Assigned ${bulkWriteResult.modifiedCount} leads to CREs successfully.`);
+        } else {
+            console.log('No leads needed reassignment.');
+        }
+    } catch (error) {
+        console.error('Error in nameBasedLeadAssign:', error.message);
+    }
+};
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -659,4 +1111,9 @@ module.exports = {
     generateAllLeadsMessagesCsv,
     updateLeadsStatusToMeetingFixed,
     updateLeadStatusBasedOnPhoneNumber,
+    updateLeadsWithPhoneNumbersAndStatus,
+    assignLeadsToCREInOrder,
+    deleteLeadsWithInvalidMessageIds,
+    randomlyFixMeetings,
+    nameBasedLeadAssign,
 };

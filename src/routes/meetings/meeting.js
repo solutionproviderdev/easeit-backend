@@ -11,6 +11,7 @@ const {
     getMeetingById,
     updateMeetingDetails,
     reassignOrSwapMeeting,
+    createLeadAndFixMeeting,
 } = require('../../controller/meetingController');
 const timeSlotsRouter = require('./timeSlots');
 const {
@@ -31,6 +32,9 @@ meetingsRouter.use('/timeslots', timeSlotsRouter);
 
 // Route to fix a new meeting
 meetingsRouter.post('/fix', checkAuth, meetingValidationRules, validateMeeting, fixMeeting);
+
+// create a new lead & fix Meeting
+meetingsRouter.post('/new-Meeting', checkAuth, createLeadAndFixMeeting);
 
 // Route to postpone a meeting
 meetingsRouter.patch(

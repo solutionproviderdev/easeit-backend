@@ -10,7 +10,11 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const swaggerUi = require('swagger-ui-express');
+<<<<<<< HEAD
 const swaggerAutogen = require('swagger-autogen')();
+=======
+const cron = require('node-cron');
+>>>>>>> c9a570d2c96315c17740d65dd3e22ff6cb8d6383
 const swaggerFile = require('../swagger_output.json');
 
 // internal imports
@@ -23,9 +27,22 @@ const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const mapDataRouter = require('./routes/mapDataRouters');
 const meetingsRouter = require('./routes/meetings/meeting');
-const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
+const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
+const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const {
+	updateLeadsWithPhoneNumbersAndStatus,
+	updateLeadsStatusToMeetingFixed,
+	assignLeadsToCRE,
+	deleteLeadsWithInvalidMessageIds,
+	assignLeadsToCREInOrder,
+	randomlyFixMeetings,
+	nameBasedLeadAssign,
+} = require('../populateDatabase');
+const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
+const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
+const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
 
 // Initialize app
 const app = express();
@@ -78,6 +95,11 @@ app.use(
 				'https://crm.solutionprovider.com.bd',
 				'http://192.168.218.103:5173',
 				'http://192.168.68.123:5173',
+				'http://localhost:3000',
+				'http://localhost:5000',
+				'http://192.168.68.130:3000',
+				'http://192.168.68.130:5000',
+				'http://192.168.68.130',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
@@ -106,11 +128,10 @@ app.get('/', (req, res) => {
 
 // io connection start
 io.on('connection', (socket) => {
-	console.log(`User connected ID: ${socket.id}`);
-
-	socket.on('disconnect', () => {
-		console.log('User Disconnected', socket.id);
-	});
+    console.log(`User connected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+        console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
+    });
 });
 
 // Attach io instance to the req object to access it in routes
@@ -131,10 +152,38 @@ app.use('/dashboard', dashBoardRouter);
 // seetings router
 app.use('/settings', settingsRouter);
 
-// Get Lead Repeatedly
-setInterval(() => {
-	getConversationsAndUpdateLeadsUpdated(io);
-}, 8000);
+// Replace setInterval with node-cron
+cron.schedule('*/1 * * * * *', () => { // Runs every second
+    const now = new Date();
+    if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
+        getConversationsAndUpdateLeadsUpdated(io);
+    }
+}, {
+    timezone: 'Asia/Dhaka' // Set your timezone here
+});
+
+// Schedule the task to run every 10 minutes
+cron.schedule('*/10 * * * *', async () => {
+	await assignUnassignedLeads(io);
+	await checkAndUpdateMissedReminders(io);
+	nameBasedLeadAssign();
+}, {
+	timezone: 'Asia/Dhaka' // Set your timezone here
+});
+
+assignUnassignedLeads(io);
+
+// reschedule pending reminders
+reschedulePendingReminders();
+nameBasedLeadAssign();
+
+// updateLeadsWithPhoneNumbersAndStatus();
+// updateLeadsStatusToMeetingFixed();
+// assignLeadsToCRE();
+// getPerformanceBasedCRE();
+// assignLeadsToCREInOrder();
+// deleteLeadsWithInvalidMessageIds();
+// randomlyFixMeetings();
 
 // 404 error handling
 app.use(notFoundHandler);
@@ -144,7 +193,7 @@ app.use(errorHandler);
 
 // Start the server
 if (require.main === module) {
-	server.listen(process.env.PORT, () => {
+	server.listen(process.env.PORT, '0.0.0.0', () => {
 		const environment = process.env.NODE_ENV || 'development';
 		const nodeVersion = process.version;
 		const currentTime = new Date().toLocaleString();

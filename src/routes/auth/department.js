@@ -10,6 +10,7 @@ const {
     deleteRoleFromDepartment,
     updateRolePermissions,
     getAllPermissions,
+    initializeDefaultDepartments,
 } = require('../../controller/auth/departmentController');
 const {
     validateDepartment,
@@ -57,5 +58,7 @@ departmentRouter.delete('/:id/roles/:roleId', checkAuth, deleteRoleFromDepartmen
 //     validatePermissions,
 //     updateRolePermissions
 // );
+
+initializeDefaultDepartments();
 
 module.exports = departmentRouter;

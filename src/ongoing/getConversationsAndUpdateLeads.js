@@ -42,8 +42,12 @@ const processMessages = (messages) => {
             }
         }
 
-        if (msg?.attachments && msg?.attachments?.data?.length > 0 && msg?.attachments?.data[0]?.image_data) {
-            fileUrl = msg?.attachments?.data?.map((att) => att.image_data.url);
+		console.log('attachments', msg?.attachments?.data[0]);
+
+        if (msg?.attachments && msg?.attachments?.data?.length > 0 && (msg?.attachments?.data[0]?.image_data || msg?.attachments?.data[0]?.video_data)) {
+            fileUrl = msg?.attachments?.data?.map(
+							(att) => att.image_data?.url || att.video_data?.url || att?.file_url
+						);
         }
 
         return {

@@ -5,7 +5,6 @@ const Meeting = require('../../schemas/MeetingSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
-// Controller function to get all CREs' performance data
 const getAllCREsPerformanceData = async (req, res) => {
     try {
         // Find the department ID for "CRE" department
@@ -29,49 +28,67 @@ const getAllCREsPerformanceData = async (req, res) => {
             return res.status(404).json({ message: 'No CRE users found' });
         }
 
+        // Fetch total number of leads in the system
+        const totalLeads = await Lead.countDocuments();
+
         // Iterate over each CRE user and calculate their performance data
         const crePerformanceData = await Promise.all(
             creUsers.map(async (user) => {
-                // Fetch assigned leads count
                 const assigned = await Lead.countDocuments({ creName: user._id });
-
-                // Fetch count of leads with at least one phone number
                 const numberCollected = await Lead.countDocuments({
                     creName: user._id,
-                    phone: { $exists: true, $not: { $size: 0 } },
+                    phone: { $exists: true, $ne: [] },
                 });
-
-                // Fetch meetings set count
                 const meetingsSet = await Lead.countDocuments({
                     creName: user._id,
                     status: 'Meeting Fixed',
                 });
-
-                // Fetch leads where creName matches the user's ID
-                const leadsForUser = await Lead.find({
-                    creName: user._id,
-                }).select('_id');
+                const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
                 const leadIds = leadsForUser.map((lead) => lead._id);
-
-                // Count meetings for user's leads with status 'Complete' or 'Sold'
                 const meetingsCompleted = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: { $in: ['Complete', 'Sold'] },
                 });
-
-                // Fetch total sales count
-
-                // Count meetings where the lead is in the above list and status is 'Sold'
                 const totalSales = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: 'Sold',
                 });
-
-                // Define a target value (example target value, adjust as necessary)
                 const target = 150;
 
-                // Calculate performance percentage
-                const performancePercentage = Math.round((meetingsCompleted / target) * 100);
+                // Prepare bar chart data with percentages
+                const barChartData = [
+                    {
+                        label: 'Lead Assign Rate',
+                        value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
+                    },
+                    {
+                        label: 'Number Collection Rate',
+                        value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
+                    },
+                    {
+                        label: 'Meeting Set Rate',
+                        value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+                    },
+                    {
+                        label: 'Meeting Complete Rate',
+                        value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
+                    },
+                    {
+                        label: 'Target Achieved',
+                        value: (meetingsCompleted / target) * 100,
+                    },
+                    {
+                        label: 'Complete Performance',
+                        value:
+                            [
+                                (assigned / totalLeads) * 100,
+                                (numberCollected / assigned) * 100,
+                                (meetingsSet / numberCollected) * 100,
+                                (meetingsCompleted / meetingsSet) * 100,
+                                (meetingsCompleted / target) * 100,
+                            ].reduce((acc, val) => acc + val, 0) / 5,
+                    },
+                ];
 
                 // Return structured performance data for the user
                 return {
@@ -89,8 +106,8 @@ const getAllCREsPerformanceData = async (req, res) => {
                         meetingsCompleted,
                         totalSales,
                         target,
-                        performancePercentage,
                     },
+                    barChartData,
                 };
             })
         );
@@ -118,43 +135,75 @@ const getCREPerformanceDataById = async (req, res) => {
         // Ensure the user's department and role match 'CRE'
         const department = await Department.findById(user.departmentId._id);
         const role = department.roles.find(
-            (role) => role._id.equals(user.roleId) && role.roleName === 'CRE'
+            (r) => r._id.toString() === user.roleId.toString() && r.roleName === 'CRE'
         );
         if (!role) {
             console.log('User is not a CRE.');
             return res.status(400).json({ message: 'User is not a CRE' });
         }
 
-        // Calculate performance metrics
-        const assigned = await Lead.countDocuments({ creName: user._id });
+        // Fetch total number of leads in the system
+        const totalLeads = await Lead.countDocuments();
 
+        // Calculate raw performance metrics
+        const assigned = await Lead.countDocuments({ creName: user._id });
         const numberCollected = await Lead.countDocuments({
             creName: user._id,
             phone: { $exists: true, $ne: [] },
         });
-
         const meetingsSet = await Lead.countDocuments({
             creName: user._id,
             status: 'Meeting Fixed',
         });
-
         const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
         const leadIds = leadsForUser.map((lead) => lead._id);
-
         const meetingsCompleted = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: { $in: ['Complete', 'Sold'] },
         });
+        const target = 100; // Fixed target for everyone
 
         const totalSales = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: 'Sold',
         });
 
-        const target = 150;
-        const performancePercentage = Math.round((meetingsCompleted / target) * 100);
+        // Prepare bar chart data with percentages
+        const barChartData = [
+            {
+                label: 'Lead Assign Rate',
+                value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
+            },
+            {
+                label: 'Number Collection Rate',
+                value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
+            },
+            {
+                label: 'Meeting Set Rate',
+                value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+            },
+            {
+                label: 'Meeting Complete Rate',
+                value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
+            },
+            {
+                label: 'Target Achieved',
+                value: (meetingsCompleted / target) * 100,
+            },
+            {
+                label: 'Complete Performance',
+                value:
+                    [
+                        (assigned / totalLeads) * 100,
+                        (numberCollected / assigned) * 100,
+                        (meetingsSet / numberCollected) * 100,
+                        (meetingsCompleted / meetingsSet) * 100,
+                        (meetingsCompleted / target) * 100,
+                    ].reduce((acc, val) => acc + val, 0) / 5,
+            },
+        ];
 
-        // Structure response
+        // Structure response with raw performance metrics
         const response = {
             id: user._id.toString(),
             name: user.nameAsPerNID,
@@ -170,8 +219,8 @@ const getCREPerformanceDataById = async (req, res) => {
                 meetingsCompleted,
                 totalSales,
                 target,
-                performancePercentage,
             },
+            barChartData,
         };
 
         console.log('Returning performance data for the specified CRE.');
@@ -228,8 +277,7 @@ const getMeetingsData = async (req, res) => {
 
         // Count meetings and populate groupedMeetings
         meetings.forEach((meeting) => {
-            const dayLabel =
-                timeLength === 'week'
+            const dayLabel =                timeLength === 'week'
                     ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
                     : moment(meeting.date).format('D'); // Day of the month as a number
 
@@ -253,22 +301,23 @@ const getMeetingsData = async (req, res) => {
     }
 };
 
-// Controller function to get notifications
+// Get notifications
 const getNotifications = async (req, res) => {
     try {
         const creId = req.user._id; // Get CRE ID from authenticated user
 
         // Fetch the user to verify the role and department
-        const user = await User.findById(creId).populate('departmentId');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        const { user } = req;
+
+        // Fetch the department and role details
+        const department = await Department.findById(user.departmentId);
+        const role = department.roles.find((role) => role._id.equals(user.roleId));
+
+        // Log the department name and role name
+        console.log('Department Name:', department.departmentName);
+        console.log('Role Name:', role.roleName);
 
         // Check if the user is a CRE by verifying role and department
-        const department = await Department.findById(user.departmentId._id);
-        const role = department.roles.find(
-            (role) => role._id.equals(user.roleId) && role.roleName === 'CRE'
-        );
         if (!role || department.departmentName !== 'CRE') {
             return res.status(403).json({ message: 'User is not authorized as CRE' });
         }
@@ -308,9 +357,174 @@ const getNotifications = async (req, res) => {
     }
 };
 
+const getDateWiseLeadData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Validate input dates
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
+
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Normalize start and end times to include entire day in UTC
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Initialize the date range
+        const daysArray = [];
+        const currentDate = new Date(start);
+
+        while (currentDate <= end) {
+            daysArray.push(currentDate.toISOString().split('T')[0]); // Format: YYYY-MM-DD
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+
+        // Initialize data structure for bar chart
+        const groupedData = daysArray.reduce((acc, date) => {
+            acc[date] = {
+                date,
+                leads: 0,
+                numberCollected: 0,
+                meetingsFixed: 0,
+                meetingsCompleted: 0,
+                meetingsSold: 0,
+            };
+            return acc;
+        }, {});
+
+        // Aggregate data from the Leads collection
+        const leads = await Lead.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $project: {
+                    date: {
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$createdAt',
+                            timezone: 'UTC',
+                        },
+                    },
+                    hasPhone: { $gt: [{ $size: { $ifNull: ['$phone', []] } }, 0] },
+                    isMeetingFixed: { $eq: ['$status', 'Meeting Fixed'] },
+                },
+            },
+        ]);
+
+        // Aggregate data from the Meetings collection
+        const meetings = await Meeting.aggregate([
+            {
+                $match: {
+                    date: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $project: {
+                    date: {
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$date',
+                            timezone: 'UTC',
+                        },
+                    },
+                    isMeetingCompleted: { $eq: ['$status', 'Complete'] },
+                    isMeetingSold: { $eq: ['$status', 'Sold'] },
+                },
+            },
+        ]);
+
+        // Populate grouped data for leads
+        leads.forEach((lead) => {
+            if (groupedData[lead.date]) {
+                groupedData[lead.date].leads += 1;
+                if (lead.hasPhone) groupedData[lead.date].numberCollected += 1;
+                if (lead.isMeetingFixed) groupedData[lead.date].meetingsFixed += 1;
+            }
+        });
+
+        // Populate grouped data for meetings
+        meetings.forEach((meeting) => {
+            if (groupedData[meeting.date]) {
+                if (meeting.isMeetingCompleted) groupedData[meeting.date].meetingsCompleted += 1;
+                if (meeting.isMeetingSold) groupedData[meeting.date].meetingsSold += 1;
+            }
+        });
+
+        // Prepare the response in an array format
+        const responseData = Object.values(groupedData);
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        console.error('Error fetching date-wise lead data:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const getWeeklyLeadData = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const creId = req.user._id;
+
+        // Validate input dates
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
+
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Normalize start and end times to include entire day in UTC
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Initialize the date range
+        const daysArray = [];
+        const currentDate = new Date(start);
+
+        while (currentDate <= end) {
+            daysArray.push(currentDate.toISOString().split('T')[0]); // Format: YYYY-MM-DD
+            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+
+        // Initialize data structure for bar chart
+        const groupedData = daysArray.reduce((acc, date) => {
+            acc[date] = {
+                date,
+                leads: 0,
+                numberCollected: 0,
+                meetingsFixed: 0,
+                meetingsCompleted: 0,
+                meetingsSold: 0,
+            };
+            return acc;
+        }, {});
+
+        // Aggregate data from the Leads collection
+    } catch (error) {
+        console.error('Error fetching weekly lead data:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
 module.exports = {
     getNotifications,
     getMeetingsData,
+    getDateWiseLeadData,
     getAllCREsPerformanceData,
     getCREPerformanceDataById,
 };

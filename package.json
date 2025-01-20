@@ -8,9 +8,14 @@
 	},
 	"scripts": {
 		"start": "node src/index",
+<<<<<<< HEAD
 		"nodemon": "nodemon src/index",
 		"ngrok": "ngrok http http://localhost:5000",
         "docs":"node swagger.js"
+=======
+		"dev": "nodemon src/index",
+		"ngrok": "ngrok http http://localhost:5000"
+>>>>>>> c9a570d2c96315c17740d65dd3e22ff6cb8d6383
 	},
 	"repository": {
 		"type": "git",
@@ -33,6 +38,7 @@
 		"prettier": "^3.1.0"
 	},
 	"dependencies": {
+		"@google/generative-ai": "^0.21.0",
 		"axios": "^1.6.2",
 		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.2",
@@ -49,6 +55,9 @@
 		"moment": "^2.30.1",
 		"mongoose": "^8.0.1",
 		"multer": "^1.4.5-lts.1",
+		"node-cron": "^3.0.3",
+		"node-schedule": "^2.1.1",
+		"openai": "^4.77.0",
 		"path": "^0.12.7",
 		"socket.io": "^4.7.4",
 		"swagger-autogen": "^2.23.7",

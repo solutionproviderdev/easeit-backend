@@ -6,6 +6,7 @@ const {
     getCREPerformanceDataById,
     getMeetingsData,
     getNotifications,
+    getDateWiseLeadData,
 } = require('../../controller/dashboard/dashboardController');
 
 // Router declaration
@@ -22,5 +23,8 @@ dashBoardRouter.get('/meetings', checkAuth, getMeetingsData);
 
 // Get notifications
 dashBoardRouter.get('/notifications', checkAuth, getNotifications);
+
+// Date wise lead data
+dashBoardRouter.get('/date-wise-lead-data', checkAuth, getDateWiseLeadData);
 
 module.exports = dashBoardRouter;

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../../schemas/auth/UserSchema');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
+const mongoose = require('mongoose');
 
 // Create a new user
 exports.createUser = async (req, res) => {

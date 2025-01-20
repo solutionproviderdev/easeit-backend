@@ -1,8 +1,10 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const permissionsData = require('../../routes/auth/permissionsData');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const User = require('../../schemas/auth/UserSchema');
+const defaultDepartments = require('../../../defaultDocuments/easeit.departments.json');
 
 // Create a new department function
 exports.createDepartment = async (req, res) => {
@@ -276,3 +278,37 @@ exports.getAllPermissions = (req, res) => {
 //         res.status(500).json({ msg: 'Server error' });
 //     }
 // };
+
+exports.initializeDefaultDepartments = async () => {
+    try {
+        // Loop through each default department
+        for (const defaultDepartment of defaultDepartments) {
+            // Check if the department already exists in the database
+            const existingDepartment = await Department.findOne({
+                departmentName: defaultDepartment.departmentName,
+            });
+
+            if (existingDepartment) {
+                console.log(
+                    `Default department "${defaultDepartment.departmentName}" already exists.`
+                );
+            } else {
+                // Create the department if it doesn't exist
+                const newDepartment = new Department({
+                    departmentName: defaultDepartment.departmentName,
+                    description: defaultDepartment.description,
+                    roles: defaultDepartment.roles,
+                });
+
+                await newDepartment.save();
+                console.log(
+                    `Default department "${defaultDepartment.departmentName}" has been created.`
+                );
+            }
+        }
+
+        console.log('Default departments initialization complete.');
+    } catch (error) {
+        console.error('Error initializing default departments:', error);
+    }
+};

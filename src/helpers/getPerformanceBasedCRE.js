@@ -23,13 +23,13 @@ const getPerformanceBasedCRE = async () => {
 
         // 2. Retrieve all active CREs with the role 'CRE' (not 'CRE Head') from User schema
         const activeCREs = await User.find({
-            departmentId: creDepartment._id,
             roleId: creRole._id, // Filter by roleId for CRE
             status: 'Active', // Only active users
         }).select('_id');
 
         if (!activeCREs || activeCREs.length === 0) {
-            return null;
+            console.warn('No active CREs found. Assigning a default CRE.');
+            return null; // Or return a default CRE ID
         }
 
         const creIds = activeCREs.map((cre) => cre._id);
@@ -42,6 +42,10 @@ const getPerformanceBasedCRE = async () => {
                     status: {
                         $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
                     },
+                    // only for leads that came in last 3 days
+                    createdAt: {
+                        $gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+                    },
                 },
             },
             {
@@ -49,19 +53,24 @@ const getPerformanceBasedCRE = async () => {
                     _id: '$creName',
                     assignCount: { $sum: 1 },
                     numberCount: { $sum: { $size: '$phone' } },
-                    // meetingCount: { $sum: { $size: '$meetingDetails' } },
                 },
             },
         ]);
 
+        // 4. If no performance data exists, assign randomly
         if (!leadMetrics || leadMetrics.length === 0) {
-            return null;
+            console.log('No performance data found, assigning randomly.');
+            if (creIds.length === 0) {
+                console.warn('No active CREs available for random assignment.');
+                return null; // Or return a default CRE ID
+            }
+            const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
+            return randomCRE;
         }
 
-        // 4. Map performance scores for each CRE
+        // 5. Map performance scores for each CRE
         const performanceScores = leadMetrics.map((metric) => {
             const N = (metric.numberCount * 100) / metric.assignCount;
-            // const M = (metric.meetingCount * 100) / metric.numberCount;
             const T = (metric.meetingCount * 100) / 200; // Example target value
 
             // Calculate overall performance
@@ -74,7 +83,7 @@ const getPerformanceBasedCRE = async () => {
             };
         });
 
-        // 5. Sort the CREs based on performance in descending order
+        // 6. Sort the CREs based on performance in descending order
         performanceScores.sort((a, b) => b.performance - a.performance);
 
         // Calculate total leads
@@ -86,7 +95,7 @@ const getPerformanceBasedCRE = async () => {
             0
         );
 
-        // 6. Check for overflow and find the suitable CRE
+        // 7. Check for overflow and find the suitable CRE
         for (const cre of performanceScores) {
             const leadAssignmentRate = (cre.assignCount * 100) / totalLeads;
             const allowedAssignmentRate = (cre.performance * 100) / activeTotalPerformance;
@@ -97,6 +106,16 @@ const getPerformanceBasedCRE = async () => {
         }
 
         // If no CRE passes the overflow check, return the top-performing CRE
+        if (performanceScores.length === 0) {
+            console.warn('No performance scores available. Assigning randomly.');
+            if (creIds.length === 0) {
+                console.warn('No active CREs available for random assignment.');
+                return null; // Or return a default CRE ID
+            }
+            const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
+            return randomCRE;
+        }
+
         return performanceScores[0].creId;
     } catch (error) {
         console.error('Error in getPerformanceBasedCRE:', error);
