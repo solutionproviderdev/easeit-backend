@@ -1,4 +1,3 @@
-const { all } = require('axios');
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const Lead = require('../schemas/LeadsSchema');
@@ -42,6 +41,10 @@ const getPerformanceBasedCRE = async () => {
                     creName: { $in: creIds },
                     status: {
                         $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
+                    },
+                    // only for leads that came in last 3 days
+                    createdAt: {
+                        $gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
                     },
                 },
             },
