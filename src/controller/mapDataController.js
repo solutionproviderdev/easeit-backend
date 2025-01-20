@@ -1,5 +1,5 @@
- const MapData = require('../schemas/MapData');
 const mongoose = require('mongoose');
+const MapData = require('../schemas/MapData');
 
 
 // Controller function to get all divisions

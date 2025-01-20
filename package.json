@@ -9,7 +9,8 @@
 	"scripts": {
 		"start": "node src/index",
 		"nodemon": "nodemon src/index",
-		"ngrok": "ngrok http http://localhost:5000"
+		"ngrok": "ngrok http http://localhost:5000",
+        "docs":"node swagger.js"
 	},
 	"repository": {
 		"type": "git",

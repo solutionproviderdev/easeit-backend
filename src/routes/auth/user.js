@@ -36,10 +36,10 @@ const departmentRouter = require('./department');
 
 // Router Declaration
 const userRouter = express.Router();
-
+ 
 userRouter.use('/activity-logs', activityLogRouter);
 userRouter.use('/departments', departmentRouter);
-
+   
 // Get All Users
 userRouter.get('/', getAllUsers);
 

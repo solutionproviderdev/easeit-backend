@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const swaggerUi = require('swagger-ui-express');
+const swaggerAutogen = require('swagger-autogen')();
 const swaggerFile = require('../swagger_output.json');
 
 // internal imports
@@ -35,6 +36,22 @@ const io = new Server(server, {
 		origin: '*',
 	},
 });
+
+const doc = {
+  info: {
+    title: 'My API',
+    description: 'Description'
+  },
+  host: 'localhost:3000'
+};
+
+const outputFile = './swagger-output.json';
+const routes = ['./path/userRoutes.js', './path/bookRoutes.js'];
+
+/* NOTE: If you are using the express Router, you must pass in the 'routes' only the
+root file where the route starts, such as index.js, app.js, routes.js, etc ... */
+
+swaggerAutogen(outputFile, routes, doc);
 
 // Database connection
 mongoose
@@ -107,7 +124,8 @@ app.use('/users', userRouter);
 app.use('/upload', uploadRouter);
 app.use('/lead', leadRouter);
 app.use('/meeting', meetingsRouter);
-app.use('/map', mapDataRouter);
+
+app.use('/map', mapDataRouter); 
 app.use('/dashboard', dashBoardRouter);
 
 // seetings router

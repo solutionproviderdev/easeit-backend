@@ -251,7 +251,7 @@ exports.getComments = async (req, res) => {
 };
 
 // Handler function to add or update requirements of a Lead
-exports.updateRequirements = async (req, res) => {
+exports.updateRequirements = async (req, res)=>{
     const { id } = req.params;
     const { requirements } = req.body;
     console.log('id and requirement for update', id, requirements);

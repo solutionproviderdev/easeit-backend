@@ -30,3 +30,4 @@ const mapDataSchema = new mongoose.Schema({
 const MapData = mongoose.model('MapData', mapDataSchema);
 
 module.exports = MapData;
+
