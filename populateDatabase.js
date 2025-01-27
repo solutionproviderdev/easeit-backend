@@ -979,112 +979,165 @@ const fixMeeting = async (req) => {
 // name based lead assign
 const nameBasedLeadAssign = async () => {
     try {
-        // Step 1: Fetch all Facebook leads
         const leads = await Lead.find({ source: 'Facebook' }).select('messages creName');
+        if (leads.length === 0) return;
 
-        if (leads.length === 0) {
-            console.log('No leads found from Facebook.');
-            return;
-        }
-
-        // Step 2: Map CRM names to Facebook names
         const creCRMNamesToFacebookNames = {
             'Morium Ritu': 'Morium Ritu',
             'Antika Sadia Islam': 'Antika Sadia Islam',
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
         };
 
-        // Helper function to normalize names
         const normalizeName = (name) =>
             name
-                // .toLowerCase() // Convert to lowercase
-                .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
-                .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '') // Remove all non-Bangla, non-English letters, and non-spaces
-                .trim(); // Trim leading/trailing whitespace
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '')
+                .trim();
 
-        // Step 3: Fetch CRE department and role
         const creDepartment = await Department.findOne({ departmentName: 'CRE' });
         if (!creDepartment) throw new Error('CRE department not found.');
 
         const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
         if (!creRole) throw new Error('CRE role not found in department.');
 
-        // Step 4: Fetch all CRE users
         const creUsers = await User.find({ roleId: creRole._id }).select('_id nameAsPerNID');
         if (creUsers.length === 0) throw new Error('No CRE users found.');
 
-        // Create a map for quick lookup of CRE users by CRM name
         const creNameToIdMap = creUsers.reduce((map, user) => {
             map[user.nameAsPerNID] = user._id.toString();
             return map;
         }, {});
 
-        // Step 5: Prepare bulk update operations
         const bulkOperations = [];
 
         leads.forEach((lead) => {
-            // Step 5.1: Find the automated message with assignment text
             const automatedMessage = lead.messages.filter((message) =>
                 /assigned this conversation to/.test(message?.content)
             );
 
             if (automatedMessage.length > 0) {
-                // Step 5.2: Extract the assignee's Facebook name from the message
                 const assigneeNameMatch = automatedMessage[
                     automatedMessage.length - 1
                 ].content.match(/assigned this conversation to (.+)$/);
 
                 const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
-
-                if (!facebookName) {
-                    console.warn(
-                        `Unable to extract Facebook name from message: ${automatedMessage.content}`
-                    );
-                    return;
-                }
-
-                // Log the extracted Facebook name
+                if (!facebookName) return;
 
                 const crmName = creCRMNamesToFacebookNames[facebookName];
-                // console.log(`Extracted Facebook Name: ${facebookName}`, 'crmName', crmName);
-
                 const creId = creNameToIdMap[crmName];
-                if (!creId) {
-                    // console.warn(`CRM Name ${crmName} is not available in the database.`);
-                    return;
-                }
+                if (!creId) return;
 
-                console.log(`CRM Name ${crmName} exists in the database.`);
+                if (lead.creName?.toString() === creId) return;
 
-                // Step 5.5: Skip update if the lead is already assigned to the same CRE
-                if (lead.creName?.toString() === creId) {
-                    console.log(
-                        `Lead ${lead._id} is already assigned to CRE ${crmName}. Skipping...`
-                    );
-                    return;
-                }
-
-                // Add to bulk operations if the lead needs to be updated
                 bulkOperations.push({
                     updateOne: {
                         filter: { _id: lead._id },
                         update: { $set: { creName: creId } },
                     },
                 });
-
-                console.log(`Prepared to assign Lead ${lead._id} to CRE ${crmName}`);
             }
         });
 
-        // Step 6: Execute bulk operations
         if (bulkOperations.length > 0) {
-            const bulkWriteResult = await Lead.bulkWrite(bulkOperations);
-            console.log(`Assigned ${bulkWriteResult.modifiedCount} leads to CREs successfully.`);
-        } else {
-            console.log('No leads needed reassignment.');
+            await Lead.bulkWrite(bulkOperations);
         }
     } catch (error) {
         console.error('Error in nameBasedLeadAssign:', error.message);
+    }
+};
+
+const imageLinkChange = async () => {
+    try {
+        const users = await User.find({});
+        const bulkOperations = [];
+        const oldDomainPattern = /http:\/\/192\.168\.68\.130/;
+        const newDomain = 'https://crm.solutionprovider.com.bd';
+
+        users.forEach((user) => {
+            const updates = {};
+
+            // Update profile picture
+            if (user.profilePicture?.includes('192.168.68.130')) {
+                updates.profilePicture = user.profilePicture.replace(oldDomainPattern, newDomain);
+            }
+
+            // Update cover photo
+            if (user.coverPhoto?.includes('192.168.68.130')) {
+                updates.coverPhoto = user.coverPhoto.replace(oldDomainPattern, newDomain);
+            }
+
+            if (Object.keys(updates).length > 0) {
+                bulkOperations.push({
+                    updateOne: {
+                        filter: { _id: user._id },
+                        update: { $set: updates },
+                    },
+                });
+            }
+        });
+
+        if (bulkOperations.length > 0) {
+            const result = await User.bulkWrite(bulkOperations);
+            console.log(`Updated ${result.modifiedCount} user records`);
+        }
+    } catch (error) {
+        console.error('Image link update failed:', error.message);
+    }
+};
+
+const imageLinkChangeLead = async () => {
+    try {
+        const leads = await Lead.find({});
+        console.log(`Processing ${leads.length} leads`);
+
+        const bulkOperations = [];
+        const oldDomainPattern = /http:\/\/(192\.168\.68\.130|localhost:5000)/;
+        const newDomain = 'https://crm.solutionprovider.com.bd';
+
+        leads.forEach((lead, index) => {
+            console.log(`\nProcessing lead ${index + 1}/${leads.length}: ${lead._id}`);
+
+            // Check nested property existence
+            const profilePic = lead.pageInfo?.pageProfilePicture;
+            console.log('Current profile picture:', profilePic);
+
+            if (profilePic && oldDomainPattern.test(profilePic)) {
+                console.log('Found matching URL:', profilePic);
+
+                try {
+                    const updatedProfilePicture = profilePic.replace(oldDomainPattern, newDomain);
+                    console.log('Updated URL:', updatedProfilePicture);
+
+                    bulkOperations.push({
+                        updateOne: {
+                            filter: { _id: lead._id },
+                            update: {
+                                $set: {
+                                    'pageInfo.pageProfilePicture': updatedProfilePicture, // Fixed field name
+                                },
+                            },
+                        },
+                    });
+                } catch (replaceError) {
+                    console.error('Replace error:', replaceError.message);
+                }
+            } else {
+                console.log('No matching URL found - skipping');
+            }
+        });
+
+        console.log('\nBulk operations to execute:', bulkOperations.length);
+        console.log('Sample operation:', bulkOperations[0]);
+
+        if (bulkOperations.length > 0) {
+            const result = await Lead.bulkWrite(bulkOperations);
+            console.log(`Successfully updated ${result.modifiedCount} lead profile pictures`);
+            return result.modifiedCount;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Lead image link update failed:', error);
+        throw error;
     }
 };
 
@@ -1116,4 +1169,6 @@ module.exports = {
     deleteLeadsWithInvalidMessageIds,
     randomlyFixMeetings,
     nameBasedLeadAssign,
+    imageLinkChange,
+    imageLinkChangeLead,
 };

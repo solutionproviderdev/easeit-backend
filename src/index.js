@@ -35,6 +35,8 @@ const {
 	assignLeadsToCREInOrder,
 	randomlyFixMeetings,
 	nameBasedLeadAssign,
+	imageLinkChange,
+	imageLinkChangeLead,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
@@ -136,6 +138,7 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
     const now = new Date();
     if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
         getConversationsAndUpdateLeadsUpdated(io);
+		nameBasedLeadAssign();
     }
 }, {
     timezone: 'Asia/Dhaka' // Set your timezone here
@@ -145,7 +148,6 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
-	nameBasedLeadAssign();
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
@@ -155,6 +157,8 @@ assignUnassignedLeads(io);
 // reschedule pending reminders
 reschedulePendingReminders();
 nameBasedLeadAssign();
+// imageLinkChange();
+// imageLinkChangeLead();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();
