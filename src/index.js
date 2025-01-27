@@ -35,6 +35,8 @@ const {
 	assignLeadsToCREInOrder,
 	randomlyFixMeetings,
 	nameBasedLeadAssign,
+	imageLinkChange,
+	imageLinkChangeLead,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
@@ -155,6 +157,8 @@ assignUnassignedLeads(io);
 // reschedule pending reminders
 reschedulePendingReminders();
 nameBasedLeadAssign();
+// imageLinkChange();
+// imageLinkChangeLead();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();

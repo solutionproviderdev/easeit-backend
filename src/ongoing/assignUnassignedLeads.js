@@ -45,7 +45,7 @@ const assignUnassignedLeads = async (io) => {
             return;
         }
 
-        console.log(`Found ${invalidLeads.length} unassigned or invalid leads.`);
+        // console.log(`Found ${invalidLeads.length} unassigned or invalid leads.`);
 
         // Step 2: Assign a new creName to each invalid lead
         const leadsToUpdate = [];
