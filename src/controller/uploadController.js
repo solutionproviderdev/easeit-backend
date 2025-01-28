@@ -1,4 +1,3 @@
-// controllers/uploadController.js
 const path = require('path');
 
 exports.uploadImage = (req, res) => {
@@ -17,4 +16,26 @@ exports.uploadFile = (req, res) => {
 
     const fileUrl = `${req.protocol}://${req.get('host')}/api/files/${req.file.filename}`;
     res.status(200).json({ fileUrl });
+};
+
+exports.uploadMultipleImages = (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ msg: 'No images uploaded' });
+    }
+
+    const fileUrls = req.files.map(
+        (file) => `${req.protocol}://${req.get('host')}/api/images/${file.filename}`
+    );
+    res.status(200).json({ fileUrls });
+};
+
+exports.uploadMultipleFiles = (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ msg: 'No files uploaded' });
+    }
+
+    const fileUrls = req.files.map(
+        (file) => `${req.protocol}://${req.get('host')}/api/files/${file.filename}`
+    );
+    res.status(200).json({ fileUrls });
 };
