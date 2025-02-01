@@ -986,6 +986,7 @@ const nameBasedLeadAssign = async () => {
             'Morium Ritu': 'Morium Ritu',
             'Antika Sadia Islam': 'Antika Sadia Islam',
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
+            'Joynob Islam': 'Joynob Islam',
         };
 
         const normalizeName = (name) =>
@@ -1045,7 +1046,7 @@ const nameBasedLeadAssign = async () => {
         console.error('Error in nameBasedLeadAssign:', error.message);
     }
 };
- 
+
 const imageLinkChange = async () => {
     try {
         const users = await User.find({});
