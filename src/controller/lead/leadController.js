@@ -286,16 +286,34 @@ exports.createLead = async (req, res) => {
     const { name, phone, source, status, comment, images, cre } = req.body;
 
     try {
-        // Create a new lead
+        // Normalize the input phone number
+        const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
+
+        if (!parsedNumber || !parsedNumber.isValid()) {
+            return res.status(400).json({ msg: 'Invalid phone number format.' });
+        }
+
+        const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
+
+        // Step 1: Check if the phone number exists in any lead's phone array
+        const existingLead = await Lead.findOne({
+            phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
+        });
+
+        if (existingLead) {
+            return res.status(400).json({ msg: 'Phone number already exists in another lead.' });
+        }
+
+        // Step 2: Create the new lead
         const newLead = new Lead({
             name,
-            phone,
+            phone: formattedPhone, // Save in normalized format
             source: source || 'Phone',
             status: status || 'Number Collected',
             creName: cre,
         });
 
-        // If a comment is provided, add it to the lead
+        // Step 3: Add comment if provided
         if (comment) {
             const commentData = { comment, images };
             const populatedComment = await addCommentToLead(
@@ -307,16 +325,15 @@ exports.createLead = async (req, res) => {
             newLead.comment.push(populatedComment);
         }
 
-        // Save the lead to the database
+        // Save the new lead
         await newLead.save();
 
-        res.status(201).json({ msg: 'Lead and comment created successfully', lead: newLead });
+        res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
-        console.error(`Error creating lead with comment: ${error.message}`);
+        console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
-
 // Add a comment to a Lead
 exports.addComment = async (req, res) => {
     const { id } = req.params;

@@ -41,6 +41,7 @@ const {
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
 const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
+const webhookRouter = require('./routes/webhook');
 
 // Initialize app
 const app = express();
@@ -129,6 +130,7 @@ app.use('/lead', leadRouter);
 app.use('/meeting', meetingsRouter);
 app.use('/map', mapDataRouter);
 app.use('/dashboard', dashBoardRouter);
+app.use('/webhook', webhookRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
