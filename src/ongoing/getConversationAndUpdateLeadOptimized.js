@@ -213,7 +213,7 @@ const updateExistingLead = async (
         lead.creName = newCreId;
 
         if (phoneNumber?.number?.length === 14) {
-            const formattedPhoneNumber = phoneNumber.formatInternational();
+            const formattedPhoneNumber = phoneNumber.number;
             if (!lead.phone.includes(formattedPhoneNumber)) {
                 lead.phone.push(formattedPhoneNumber);
             }
