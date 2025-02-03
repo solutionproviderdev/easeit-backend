@@ -333,4 +333,5 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
 module.exports = {
     getConversationsAndUpdateLeadsUpdated,
     emitSocketEventsForNewMessage,
+    getCreInfo,
 };

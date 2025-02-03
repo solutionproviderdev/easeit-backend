@@ -3,6 +3,7 @@
 const { default: axios } = require('axios');
 const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
+const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 
 // reused Functions for only this files.
 exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
@@ -22,14 +23,28 @@ exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUr
 };
 
 // Emit Socket.io events for new messages or leads
-const emitSocketEventsForNewMessage = (io, savedLead, pageInfo) => {
+const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
+    // get cre information
+    const cre = await getCreInfo(savedLead.creName);
+
+    // make crename as object if it is not null
+    let creName = null;
+    if (cre) {
+        creName = {
+            _id: cre._id,
+            name: cre.name,
+            profilePicture: cre.profilePicture,
+            nickName: cre.nickName,
+        };
+    }
+
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
-        creName: savedLead.creName,
+        creName,
         pageInfo: {
             pageName: pageInfo.pageName,
             pageId: pageInfo.pageId,
@@ -380,6 +395,7 @@ exports.sendMetaMessage = async (req, res) => {
                     true
                 );
                 lead.messages.push(newMessage);
+                lead.messagesSeen = true;
                 await lead.save();
 
                 // Emit Conversation Updated event
@@ -412,6 +428,7 @@ exports.sendMetaMessage = async (req, res) => {
                         url
                     );
                     lead.messages.push(newMessage);
+                    lead.messagesSeen = true;
                     await lead.save();
 
                     this.emitNewMessage(req, leadId, newMessage);
@@ -440,6 +457,7 @@ exports.sendMetaMessage = async (req, res) => {
                     content.sticker_id
                 );
                 lead.messages.push(newMessage);
+                lead.messagesSeen = true;
                 await lead.save();
 
                 this.emitNewMessage(req, leadId, newMessage);
