@@ -7,6 +7,25 @@ const Department = require('../../schemas/auth/DepartmentSchema');
 
 const getAllCREsPerformanceData = async (req, res) => {
     try {
+        const { startDate, endDate } = req.query;
+
+        // Validate input dates
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
+
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Normalize start and end times to cover the entire day
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
         // Find the department ID for "CRE" department
         const department = await Department.findOne({ departmentName: 'CRE' });
         if (!department) {
@@ -24,35 +43,55 @@ const getAllCREsPerformanceData = async (req, res) => {
             departmentId: department._id,
             roleId: creRole._id,
         });
+
         if (creUsers.length === 0) {
             return res.status(404).json({ message: 'No CRE users found' });
         }
 
-        // Fetch total number of leads in the system
-        const totalLeads = await Lead.countDocuments();
+        // Fetch total number of leads within the date range
+        const totalLeads = await Lead.countDocuments({
+            createdAt: { $gte: start, $lte: end },
+        });
 
-        // Iterate over each CRE user and calculate their performance data
+        // Iterate over each CRE user and calculate their performance data within the date range
         const crePerformanceData = await Promise.all(
             creUsers.map(async (user) => {
-                const assigned = await Lead.countDocuments({ creName: user._id });
+                const assigned = await Lead.countDocuments({
+                    creName: user._id,
+                    createdAt: { $gte: start, $lte: end },
+                });
+
                 const numberCollected = await Lead.countDocuments({
                     creName: user._id,
                     phone: { $exists: true, $ne: [] },
+                    createdAt: { $gte: start, $lte: end },
                 });
+
                 const meetingsSet = await Lead.countDocuments({
                     creName: user._id,
                     status: 'Meeting Fixed',
+                    createdAt: { $gte: start, $lte: end },
                 });
-                const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
+
+                const leadsForUser = await Lead.find({
+                    creName: user._id,
+                    createdAt: { $gte: start, $lte: end },
+                }).select('_id');
+
                 const leadIds = leadsForUser.map((lead) => lead._id);
+
                 const meetingsCompleted = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: { $in: ['Complete', 'Sold'] },
+                    date: { $gte: start, $lte: end },
                 });
+
                 const totalSales = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: 'Sold',
+                    date: { $gte: start, $lte: end },
                 });
+
                 const target = 150;
 
                 // Prepare bar chart data with percentages
@@ -123,6 +162,7 @@ const getAllCREsPerformanceData = async (req, res) => {
 const getCREPerformanceDataById = async (req, res) => {
     try {
         const { creId } = req.params;
+
         console.log(`Fetching performance data for CRE ID: ${creId}`);
 
         // Find the user by ID and populate department information
