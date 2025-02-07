@@ -42,9 +42,9 @@ const getPerformanceBasedCRE = async () => {
                     status: {
                         $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
                     },
-                    // only for leads that came in last 3 days
+                    // only for leads that came in last 30 days
                     createdAt: {
-                        $gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                     },
                 },
             },
