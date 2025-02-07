@@ -76,11 +76,10 @@ const getPerformanceBasedCRE = async () => {
             const N = (metric.numberCount * 100) / metric.assignCount;
             const T = (metric.meetingCount * 100) / 100; // Example target value
 
-            console.log('N:', N);
-            console.log('T:', T);
-
             // Calculate overall performance
             const P = (N + T) / 4;
+
+            console.log(P);
 
             return {
                 creId: metric._id,
