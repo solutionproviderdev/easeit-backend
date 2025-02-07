@@ -161,6 +161,7 @@ reschedulePendingReminders();
 nameBasedLeadAssign();
 // imageLinkChange();
 // imageLinkChangeLead();
+getPerformanceBasedCRE();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();

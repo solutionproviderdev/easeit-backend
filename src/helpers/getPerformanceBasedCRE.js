@@ -39,9 +39,9 @@ const getPerformanceBasedCRE = async () => {
             {
                 $match: {
                     creName: { $in: creIds },
-                    status: {
-                        $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
-                    },
+                    // status: {
+                    //     $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
+                    // },
                     // only for leads that came in last 30 days
                     createdAt: {
                         $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -53,6 +53,9 @@ const getPerformanceBasedCRE = async () => {
                     _id: '$creName',
                     assignCount: { $sum: 1 },
                     numberCount: { $sum: { $size: '$phone' } },
+                    meetingCount: {
+                        $sum: { $cond: [{ $eq: ['$status', 'Meeting Fixed'] }, 1, 0] },
+                    },
                 },
             },
         ]);
@@ -71,7 +74,10 @@ const getPerformanceBasedCRE = async () => {
         // 5. Map performance scores for each CRE
         const performanceScores = leadMetrics.map((metric) => {
             const N = (metric.numberCount * 100) / metric.assignCount;
-            const T = (metric.meetingCount * 100) / 200; // Example target value
+            const T = (metric.meetingCount * 100) / 100; // Example target value
+
+            console.log('N:', N);
+            console.log('T:', T);
 
             // Calculate overall performance
             const P = (N + T) / 4;
