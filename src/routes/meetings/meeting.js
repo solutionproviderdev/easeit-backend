@@ -12,6 +12,7 @@ const {
     updateMeetingDetails,
     reassignOrSwapMeeting,
     createLeadAndFixMeeting,
+    deleteMeeting,
 } = require('../../controller/meetingController');
 const timeSlotsRouter = require('./timeSlots');
 const {
@@ -86,5 +87,8 @@ meetingsRouter.patch(
     validateMeeting,
     reassignOrSwapMeeting
 );
+
+// Delete a meeting
+meetingsRouter.delete('/:id', checkAuth, deleteMeeting);
 
 module.exports = meetingsRouter;

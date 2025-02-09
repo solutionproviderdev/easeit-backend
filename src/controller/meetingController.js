@@ -538,3 +538,28 @@ exports.reassignOrSwapMeeting = async (req, res) => {
         res.status(500).json({ msg: 'Server error' });
     }
 };
+
+exports.deleteMeeting = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the meeting by ID
+        const meeting = await Meeting.findById(id);
+        if (!meeting) {
+            return res.status(404).json({ msg: 'Meeting not found' });
+        }
+
+        // Remove the meeting reference from the lead's meetings array
+        await Lead.findByIdAndUpdate(meeting.lead, {
+            $pull: { meetings: meeting._id },
+        });
+
+        // Delete the meeting
+        await Meeting.findByIdAndDelete(id);
+
+        res.status(200).json({ msg: 'Meeting deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
