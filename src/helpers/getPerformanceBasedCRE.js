@@ -79,8 +79,6 @@ const getPerformanceBasedCRE = async () => {
             // Calculate overall performance
             const P = (N + T) / 4;
 
-            console.log(P);
-
             return {
                 creId: metric._id,
                 performance: P,
