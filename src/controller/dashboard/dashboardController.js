@@ -152,6 +152,8 @@ const getAllCREsPerformanceData = async (req, res) => {
         );
 
         res.status(200).json(crePerformanceData);
+        // **Emit data to all connected clients using Socket.IO**
+        req.io.emit('crePerformanceUpdated', crePerformanceData);
     } catch (error) {
         console.error('Error fetching CRE performance data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
