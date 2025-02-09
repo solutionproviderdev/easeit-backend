@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const { default: axios } = require('axios');
+const { default: mongoose } = require('mongoose');
 const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
@@ -475,5 +476,172 @@ exports.sendMetaMessage = async (req, res) => {
     } catch (error) {
         console.error('Error sending message:', error);
         return res.status(500).json({ error: error.toString() });
+    }
+};
+
+exports.searchLeads = async (req, res) => {
+    const searchParam = req.params.pharams;
+    // Read creName from query parameters instead of req.body
+    const { creName } = req.query;
+    try {
+        // --- Search by lead name ---
+        const pipelineForNameMatches = [
+            {
+                $match: { name: { $regex: searchParam, $options: 'i' } },
+            },
+            // If creName is provided, filter leads that belong to that CRE.
+            ...(creName
+                ? [
+                      {
+                          $match: { creName: new mongoose.Types.ObjectId(creName) },
+                      },
+                  ]
+                : []),
+            {
+                $addFields: {
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            // Populate creName details from the User collection
+            {
+                $lookup: {
+                    from: 'users', // collection name for User
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$creName',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    creName: {
+                        _id: '$creName._id',
+                        name: '$creName.nameAsPerNID',
+                        profilePicture: '$creName.profilePicture',
+                    },
+                },
+            },
+            { $sort: { lastMessageTime: -1 } },
+        ];
+
+        const nameMatches = await Lead.aggregate(pipelineForNameMatches);
+
+        // --- Search by phone number ---
+        const pipelineForPhoneMatches = [
+            {
+                // Find leads where at least one phone number matches the search parameter
+                $match: {
+                    phone: { $elemMatch: { $regex: searchParam, $options: 'i' } },
+                },
+            },
+            // If creName is provided, filter leads that belong to that CRE.
+            ...(creName
+                ? [
+                      {
+                          $match: { creName: new mongoose.Types.ObjectId(creName) },
+                      },
+                  ]
+                : []),
+            {
+                $addFields: {
+                    matchingPhone: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: '$phone',
+                                    as: 'p',
+                                    cond: {
+                                        $regexMatch: {
+                                            input: '$$p',
+                                            regex: searchParam,
+                                            options: 'i',
+                                        },
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                    // Include additional fields for sorting and display
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            // Populate creName details from the User collection
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$creName',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                // Instead of "lastMessage", we return the matching phone number in a field called "phone"
+                $project: {
+                    name: 1,
+                    phone: '$matchingPhone',
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    creName: {
+                        _id: '$creName._id',
+                        name: '$creName.nameAsPerNID',
+                        profilePicture: '$creName.profilePicture',
+                    },
+                },
+            },
+            { $sort: { lastMessageTime: -1 } },
+        ];
+
+        const phoneMatches = await Lead.aggregate(pipelineForPhoneMatches);
+
+        return res.status(200).json({
+            matchedNames: nameMatches,
+            matchPhoneNumber: phoneMatches,
+        });
+    } catch (error) {
+        console.error('Error searching leads:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
