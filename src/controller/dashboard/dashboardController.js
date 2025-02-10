@@ -67,12 +67,6 @@ const getAllCREsPerformanceData = async (req, res) => {
                     createdAt: { $gte: start, $lte: end },
                 });
 
-                const meetingsSet = await Lead.countDocuments({
-                    creName: user._id,
-                    status: 'Meeting Fixed',
-                    createdAt: { $gte: start, $lte: end },
-                });
-
                 const leadsForUser = await Lead.find({
                     creName: user._id,
                     createdAt: { $gte: start, $lte: end },
@@ -80,9 +74,20 @@ const getAllCREsPerformanceData = async (req, res) => {
 
                 const leadIds = leadsForUser.map((lead) => lead._id);
 
+                const meetingsSet = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    date: { $gte: start, $lte: end },
+                });
+
                 const meetingsCompleted = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: { $in: ['Complete', 'Sold'] },
+                    date: { $gte: start, $lte: end },
+                });
+
+                const meetingsNotCompleted = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: { $in: ['Rescheduled', 'Canceled', 'Postponed'] },
                     date: { $gte: start, $lte: end },
                 });
 
@@ -107,6 +112,10 @@ const getAllCREsPerformanceData = async (req, res) => {
                     {
                         label: 'Meeting Set Rate',
                         value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+                    },
+                    {
+                        label: 'Meeting Rescheduled & Postponed Rate',
+                        value: meetingsSet > 0 ? (meetingsNotCompleted / meetingsSet) * 100 : 0,
                     },
                     {
                         label: 'Meeting Complete Rate',

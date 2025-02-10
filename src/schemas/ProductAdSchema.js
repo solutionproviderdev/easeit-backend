@@ -3,11 +3,12 @@ const mongoose = require('mongoose');
 const adImageSchema = new mongoose.Schema(
     {
         url: { type: String, required: true },
-        project: { type: String }, // Optional project/location details
-        sqft: { type: Number }, // Optional area information
-        budget: { type: Number }, // Optional budget information
+        project: { type: String },
+        sqft: { type: Number },
+        budget: { type: Number },
+        pageId: { type: String }, // New field for the pageId
     },
-    { _id: false } // No individual _id for each image
+    { _id: true }
 );
 
 const productAdSchema = new mongoose.Schema(
