@@ -211,6 +211,49 @@ const updateVisitCharge = async (req, res) => {
     }
 };
 
+const addDistrictToDivision = async (req, res) => {
+    const { divisionId } = req.params;
+    const { name, areas } = req.body;
+    try {
+        const updatedMapData = await MapData.findByIdAndUpdate(
+            divisionId,
+            { $push: { districts: { name, areas: areas || [] } } },
+            { new: true, runValidators: true }
+        );
+        if (!updatedMapData) {
+            return res.status(404).json({ message: 'Division not found' });
+        }
+        res.status(200).json(updatedMapData);
+    } catch (error) {
+        console.error('Error adding district:', error);
+        res.status(500).json({ message: `Error adding district: ${error.message}` });
+    }
+};
+
+const addAreaToDistrict = async (req, res) => {
+    const { districtId } = req.params;
+    const { name, visitCharge } = req.body;
+    try {
+        // Use updateOne to push a new area into the appropriate district's areas array.
+        const result = await MapData.updateOne(
+            { 'districts._id': districtId },
+            { $push: { 'districts.$.areas': { name, visitCharge } } },
+            { runValidators: true }
+        );
+        if (result.modifiedCount === 0) {
+            return res.status(404).json({ message: 'District not found or no changes made' });
+        }
+        // Optionally, return the updated MapData document:
+        const updatedMapData = await MapData.findOne({
+            'districts._id': districtId,
+        });
+        res.status(200).json(updatedMapData);
+    } catch (error) {
+        console.error('Error adding area:', error);
+        res.status(500).json({ message: `Error adding area: ${error.message}` });
+    }
+};
+
 module.exports = {
     addMapData,
     getDivisions,
@@ -221,4 +264,6 @@ module.exports = {
     getAreasByDistrict,
     getDistrictsByDivision,
     updateVisitCharge,
+    addDistrictToDivision,
+    addAreaToDistrict,
 };
