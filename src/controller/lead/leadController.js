@@ -723,20 +723,25 @@ exports.addCallLog = async (req, res) => {
     }
 };
 
-// assigned cre need update
 exports.assignCreToLead = async (req, res) => {
     const { id } = req.params;
     const { newCREId } = req.body;
 
     try {
-        // Find the lead by ID and update the CRE assignment
-        const lead = await Lead.findByIdAndUpdate(id, { creName: newCREId }, { new: true });
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // emit socket event for lead update
+        // Update the property and mark it as modified
+        lead.creName = newCREId;
+        lead.markModified('creName'); // Ensure the change is detected
+
+        // Emit socket event for lead update
         emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
+
+        await lead.save();
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
     } catch (error) {

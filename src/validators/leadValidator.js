@@ -244,19 +244,10 @@ const validateCreAssignment = [
             if (!user) {
                 return Promise.reject('CRE not found');
             }
-            if (user.type !== 'Operator') {
-                return Promise.reject('User is not a valid CRE');
-            }
 
             const department = await Department.findOne({
                 departmentName: 'CRE',
             });
-            console.log('department id', department._id);
-            console.log('user department id', user.departmentId._id);
-            console.log(
-                'department._id.equals(user.departmentId._id)',
-                department._id.equals(user.departmentId._id)
-            );
 
             if (!department._id.equals(user.departmentId._id)) {
                 return Promise.reject('User is not in the CRE department');
