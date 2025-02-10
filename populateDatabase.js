@@ -979,7 +979,12 @@ const fixMeeting = async (req) => {
 // name based lead assign
 const nameBasedLeadAssign = async () => {
     try {
-        const leads = await Lead.find({ source: 'Facebook' }).select('messages creName');
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const leads = await Lead.find({
+            source: 'Facebook',
+            createdAt: { $gte: oneHourAgo },
+        }).select('messages creName');
+
         if (leads.length === 0) return;
 
         const creCRMNamesToFacebookNames = {
