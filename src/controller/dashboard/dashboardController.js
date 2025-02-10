@@ -92,7 +92,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     date: { $gte: start, $lte: end },
                 });
 
-                const target = 150;
+                const target = 100;
 
                 // Prepare bar chart data with percentages
                 const barChartData = [
