@@ -70,9 +70,10 @@ const getAllCREsPerformanceData = async (req, res) => {
                 }).select('_id');
                 const leadIds = leadsForUser.map((lead) => lead._id);
 
-                const meetingsSet = await Meeting.countDocuments({
-                    lead: { $in: leadIds },
-                    date: { $gte: start, $lte: end },
+                const meetingsSet = await Lead.countDocuments({
+                    creName: user._id,
+                    status: 'Meeting Fixed',
+                    createdAt: { $gte: start, $lte: end },
                 });
 
                 const meetingsCompleted = await Meeting.countDocuments({
@@ -239,16 +240,17 @@ const getCREPerformanceDataById = async (req, res) => {
             createdAt: { $gte: start, $lte: end },
         });
 
+        const meetingsSet = await Lead.countDocuments({
+            creName: user._id,
+            status: 'Meeting Fixed',
+            createdAt: { $gte: start, $lte: end },
+        });
+
         const leadsForUser = await Lead.find({
             creName: user._id,
             createdAt: { $gte: start, $lte: end },
         }).select('_id');
         const leadIds = leadsForUser.map((lead) => lead._id);
-
-        const meetingsSet = await Meeting.countDocuments({
-            lead: { $in: leadIds },
-            date: { $gte: start, $lte: end },
-        });
 
         const meetingsCompleted = await Meeting.countDocuments({
             lead: { $in: leadIds },
