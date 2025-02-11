@@ -70,6 +70,8 @@ const getAllCREsPerformanceData = async (req, res) => {
                 }).select('_id');
                 const leadIds = leadsForUser.map((lead) => lead._id);
 
+                // Note: meetingsSet here is obtained from Lead with status 'Meeting Fixed'
+                // (as in your original code for getAllCREsPerformanceData)
                 const meetingsSet = await Lead.countDocuments({
                     creName: user._id,
                     status: 'Meeting Fixed',
@@ -101,57 +103,43 @@ const getAllCREsPerformanceData = async (req, res) => {
                     date: { $gte: start, $lte: end },
                 });
 
-                const target = 100;
+                const target = 200;
 
-                // Calculate individual percentages
+                // Calculate individual percentages:
+                // LAR = (assigned / totalLeads) * 100
                 const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
+                // NCR = (numberCollected / assigned) * 100
                 const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
+                // MSR = (meetingsSet / numberCollected) * 100
                 const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
+                // MCR = (meetingsCompleted / meetingsSet) * 100
                 const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
+                // TA = (meetingsCompleted / target) * 100
                 const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
+                // MRR = (meetingRscheduled / meetingsSet) * 100
                 const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
+                // MPR = (meetingPostponed / meetingsSet) * 100
                 const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+                // SR (Sold Rate) = (totalSales / meetingsCompleted) * 100
+                const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
-                // Calculate complete performance using the new formula:
-                // Complete Performance = (LAR + NCR + MSR + MCR + TA)/5 - (MRR + MPR)/2
-                const positiveAverage = (LAR + NCR + MSR + MCR + TA) / 5;
+                // New complete performance formula:
+                // (LAR + NCR + MSR + MCR + TA + SR)/6 - (MRR + MPR)/2
+                const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
                 const penalty = (MRR + MPR) / 2;
                 const completePerformance = positiveAverage - penalty;
 
-                // Prepare bar chart data with the new complete performance calculation
+                // Prepare bar chart data with new metrics
                 const barChartData = [
-                    {
-                        label: 'Lead Assign Rate',
-                        value: LAR,
-                    },
-                    {
-                        label: 'Number Collection Rate',
-                        value: NCR,
-                    },
-                    {
-                        label: 'Meeting Set Rate',
-                        value: MSR,
-                    },
-                    {
-                        label: 'Meeting Reschedule Rate',
-                        value: MRR,
-                    },
-                    {
-                        label: 'Meeting Postpone Rate',
-                        value: MPR,
-                    },
-                    {
-                        label: 'Meeting Complete Rate',
-                        value: MCR,
-                    },
-                    {
-                        label: 'Target Achieved',
-                        value: TA,
-                    },
-                    {
-                        label: 'Complete Performance',
-                        value: completePerformance,
-                    },
+                    { label: 'Lead Assign Rate', value: LAR },
+                    { label: 'Number Collection Rate', value: NCR },
+                    { label: 'Meeting Set Rate', value: MSR },
+                    { label: 'Meeting Reschedule Rate', value: MRR },
+                    { label: 'Meeting Postpone Rate', value: MPR },
+                    { label: 'Meeting Complete Rate', value: MCR },
+                    { label: 'Target Achieved', value: TA },
+                    { label: 'Sold Rate', value: SR },
+                    { label: 'Complete Performance', value: completePerformance },
                 ];
 
                 return {
@@ -240,6 +228,7 @@ const getCREPerformanceDataById = async (req, res) => {
             createdAt: { $gte: start, $lte: end },
         });
 
+        // "Meetings Set" is taken from Leads with status 'Meeting Fixed'
         const meetingsSet = await Lead.countDocuments({
             creName: user._id,
             status: 'Meeting Fixed',
@@ -277,9 +266,9 @@ const getCREPerformanceDataById = async (req, res) => {
             date: { $gte: start, $lte: end },
         });
 
-        const target = 100;
+        const target = 200; // Use same target as in the getAllCREsPerformanceData endpoint
 
-        // Calculate individual percentages (if denominators are > 0; else default to 0)
+        // Calculate individual percentages:
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
         const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
         const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
@@ -287,14 +276,15 @@ const getCREPerformanceDataById = async (req, res) => {
         const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
         const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
         const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+        const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
-        // Calculate complete performance using the new formula:
-        // Complete Performance = (LAR + NCR + MSR + MCR + TA) / 5 - (MRR + MPR) / 2
-        const positiveAverage = (LAR + NCR + MSR + MCR + TA) / 5;
+        // New complete performance formula:
+        // Complete Performance = (LAR + NCR + MSR + MCR + TA + SR)/6 - (MRR + MPR)/2
+        const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
         const penalty = (MRR + MPR) / 2;
         const completePerformance = positiveAverage - penalty;
 
-        // Prepare bar chart data with the new performance percentages
+        // Prepare bar chart data with new metrics
         const barChartData = [
             { label: 'Lead Assign Rate', value: LAR },
             { label: 'Number Collection Rate', value: NCR },
@@ -303,6 +293,7 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Meeting Postpone Rate', value: MPR },
             { label: 'Meeting Complete Rate', value: MCR },
             { label: 'Target Achieved', value: TA },
+            { label: 'Sold Rate', value: SR },
             { label: 'Complete Performance', value: completePerformance },
         ];
 
@@ -323,6 +314,7 @@ const getCREPerformanceDataById = async (req, res) => {
                 meetingRscheduled,
                 meetingPostponed,
                 totalSales,
+                soldRate: SR,
                 completePerformance,
                 target: target - meetingsCompleted, // remaining target
             },
