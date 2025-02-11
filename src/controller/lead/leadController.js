@@ -285,6 +285,8 @@ exports.getLeadById = async (req, res) => {
 exports.createLead = async (req, res) => {
     const { name, phone, source, status, comment, images, cre } = req.body;
 
+    console.log(req.body);
+
     try {
         // Normalize the input phone number
         const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
@@ -313,6 +315,9 @@ exports.createLead = async (req, res) => {
             creName: cre,
         });
 
+        // Save the new lead
+        await newLead.save();
+
         // Step 3: Add comment if provided
         if (comment) {
             const commentData = { comment, images };
@@ -325,15 +330,16 @@ exports.createLead = async (req, res) => {
             newLead.comment.push(populatedComment);
         }
 
-        // Save the new lead
-        await newLead.save();
+        console.log(newLead);
 
         res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
+        console.log(error);
         console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
+
 // Add a comment to a Lead
 exports.addComment = async (req, res) => {
     const { id } = req.params;
