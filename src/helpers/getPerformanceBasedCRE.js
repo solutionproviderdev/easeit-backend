@@ -1,30 +1,28 @@
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const Lead = require('../schemas/LeadsSchema');
+const Meeting = require('../schemas/MeetingSchema');
 
-/* eslint-disable no-restricted-syntax */
 const getPerformanceBasedCRE = async () => {
     try {
         // 1. Get the CRE department and roles from the Department schema
         const creDepartment = await Department.findOne({
             departmentName: 'CRE',
         }).select('roles');
-
         if (!creDepartment || !creDepartment.roles) {
             throw new Error('CRE department or roles not found');
         }
 
         // Filter the CRE role from the department roles (excluding CRE Head)
         const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
-
         if (!creRole) {
             throw new Error('CRE role not found in department');
         }
 
-        // 2. Retrieve all active CREs with the role 'CRE' (not 'CRE Head') from User schema
+        // 2. Retrieve all active CREs with the role 'CRE' from User schema
         const activeCREs = await User.find({
-            roleId: creRole._id, // Filter by roleId for CRE
-            status: 'Active', // Only active users
+            roleId: creRole._id,
+            status: 'Active',
         }).select('_id');
 
         if (!activeCREs || activeCREs.length === 0) {
@@ -34,92 +32,100 @@ const getPerformanceBasedCRE = async () => {
 
         const creIds = activeCREs.map((cre) => cre._id);
 
-        // 3. Aggregate the metrics for each active CRE
-        const leadMetrics = await Lead.aggregate([
-            {
-                $match: {
-                    creName: { $in: creIds },
-                    // status: {
-                    //     $in: ['Number Collected', 'Meeting Fixed', 'Ongoing', 'Close'],
-                    // },
-                    // only for leads that came in last 7 days
-                    createdAt: {
-                        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: '$creName',
-                    assignCount: { $sum: 1 },
-                    numberCount: { $sum: { $size: '$phone' } },
-                    meetingCount: {
-                        $sum: { $cond: [{ $eq: ['$status', 'Meeting Fixed'] }, 1, 0] },
-                    },
-                },
-            },
-        ]);
+        // 3. Aggregate performance metrics for each CRE
+        const leadMetrics = await Promise.all(
+            creIds.map(async (creId) => {
+                const assigned = await Lead.countDocuments({
+                    creName: creId,
+                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
 
-        // 4. If no performance data exists, assign randomly
+                const numberCollected = await Lead.countDocuments({
+                    creName: creId,
+                    phone: { $exists: true, $ne: [] },
+                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const meetingsSet = await Lead.countDocuments({
+                    creName: creId,
+                    status: 'Meeting Fixed',
+                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const leadsForCRE = await Lead.find({
+                    creName: creId,
+                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                }).select('_id');
+                const leadIds = leadsForCRE.map((lead) => lead._id);
+
+                const meetingsCompleted = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: { $in: ['Complete', 'Sold'] },
+                    date: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const meetingRescheduled = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: 'Rescheduled',
+                    date: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const meetingPostponed = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: 'Postponed',
+                    date: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const totalSales = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: 'Sold',
+                    date: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+                });
+
+                const target = 200;
+
+                // Calculate performance metrics (if denominators > 0; else default to 0)
+                const LAR = assigned > 0 ? (assigned / assigned) * 100 : 0;
+                const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
+                const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
+                const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
+                const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
+                const MRR = meetingsSet > 0 ? (meetingRescheduled / meetingsSet) * 100 : 0;
+                const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+                const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
+
+                // **Performance Calculation:**
+                // (LAR + NCR + MSR + MCR + TA + SR)/6 - (MRR + MPR)/4
+                const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
+                const penalty = (MRR + MPR) / 4;
+                const completePerformance = positiveAverage - penalty;
+
+                return {
+                    creId,
+                    performance: completePerformance,
+                    assigned,
+                };
+            })
+        );
+
+        // If no performance data exists, assign randomly
         if (!leadMetrics || leadMetrics.length === 0) {
             console.log('No performance data found, assigning randomly.');
             if (creIds.length === 0) {
                 console.warn('No active CREs available for random assignment.');
-                return null; // Or return a default CRE ID
+                return null;
             }
             const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
             return randomCRE;
         }
 
-        // 5. Map performance scores for each CRE
-        const performanceScores = leadMetrics.map((metric) => {
-            const N = (metric.numberCount * 100) / metric.assignCount;
-            const T = (metric.meetingCount * 100) / 100; // Example target value
+        // Sort CREs by performance
+        leadMetrics.sort((a, b) => b.performance - a.performance);
 
-            // Calculate overall performance
-            const P = (N + T) / 4;
+        console.log('Lead Metrics:', leadMetrics);
 
-            return {
-                creId: metric._id,
-                performance: P,
-                assignCount: metric.assignCount,
-            };
-        });
-
-        // 6. Sort the CREs based on performance in descending order
-        performanceScores.sort((a, b) => b.performance - a.performance);
-
-        // Calculate total leads
-        const totalLeads = leadMetrics.reduce((sum, metric) => sum + metric.assignCount, 0);
-
-        // Calculate active total performance
-        const activeTotalPerformance = performanceScores.reduce(
-            (sum, score) => sum + score.performance,
-            0
-        );
-
-        // 7. Check for overflow and find the suitable CRE
-        for (const cre of performanceScores) {
-            const leadAssignmentRate = (cre.assignCount * 100) / totalLeads;
-            const allowedAssignmentRate = (cre.performance * 100) / activeTotalPerformance;
-
-            if (leadAssignmentRate <= allowedAssignmentRate) {
-                return cre.creId; // Assign the lead to this CRE
-            }
-        }
-
-        // If no CRE passes the overflow check, return the top-performing CRE
-        if (performanceScores.length === 0) {
-            console.warn('No performance scores available. Assigning randomly.');
-            if (creIds.length === 0) {
-                console.warn('No active CREs available for random assignment.');
-                return null; // Or return a default CRE ID
-            }
-            const randomCRE = creIds[Math.floor(Math.random() * creIds.length)];
-            return randomCRE;
-        }
-
-        return performanceScores[0].creId;
+        // Get the best-performing CRE
+        return leadMetrics[0].creId;
     } catch (error) {
         console.error('Error in getPerformanceBasedCRE:', error);
         throw error;
