@@ -17,11 +17,9 @@ const getAllCREsPerformanceData = async (req, res) => {
         // Parse and normalize start and end dates
         const start = new Date(startDate);
         const end = new Date(endDate);
-
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             return res.status(400).json({ message: 'Invalid date format' });
         }
-
         // Normalize start and end times to cover the entire day
         start.setUTCHours(0, 0, 0, 0);
         end.setUTCHours(23, 59, 59, 999);
@@ -43,7 +41,6 @@ const getAllCREsPerformanceData = async (req, res) => {
             departmentId: department._id,
             roleId: creRole._id,
         });
-
         if (creUsers.length === 0) {
             return res.status(404).json({ message: 'No CRE users found' });
         }
@@ -71,7 +68,6 @@ const getAllCREsPerformanceData = async (req, res) => {
                     creName: user._id,
                     createdAt: { $gte: start, $lte: end },
                 }).select('_id');
-
                 const leadIds = leadsForUser.map((lead) => lead._id);
 
                 const meetingsSet = await Meeting.countDocuments({
@@ -85,9 +81,16 @@ const getAllCREsPerformanceData = async (req, res) => {
                     date: { $gte: start, $lte: end },
                 });
 
-                const meetingsNotCompleted = await Meeting.countDocuments({
+                // Calculate separate counts for rescheduled and postponed meetings
+                const meetingRscheduled = await Meeting.countDocuments({
                     lead: { $in: leadIds },
-                    status: { $in: ['Rescheduled', 'Canceled', 'Postponed'] },
+                    status: 'Rescheduled',
+                    date: { $gte: start, $lte: end },
+                });
+
+                const meetingPostponed = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: 'Postponed',
                     date: { $gte: start, $lte: end },
                 });
 
@@ -99,46 +102,57 @@ const getAllCREsPerformanceData = async (req, res) => {
 
                 const target = 100;
 
-                // Prepare bar chart data with percentages
+                // Calculate individual percentages
+                const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
+                const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
+                const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
+                const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
+                const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
+                const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
+                const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+
+                // Calculate complete performance using the new formula:
+                // Complete Performance = (LAR + NCR + MSR + MCR + TA)/5 - (MRR + MPR)/2
+                const positiveAverage = (LAR + NCR + MSR + MCR + TA) / 5;
+                const penalty = (MRR + MPR) / 2;
+                const completePerformance = positiveAverage - penalty;
+
+                // Prepare bar chart data with the new complete performance calculation
                 const barChartData = [
                     {
                         label: 'Lead Assign Rate',
-                        value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
+                        value: LAR,
                     },
                     {
                         label: 'Number Collection Rate',
-                        value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
+                        value: NCR,
                     },
                     {
                         label: 'Meeting Set Rate',
-                        value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
+                        value: MSR,
                     },
                     {
-                        label: 'Meeting Rescheduled & Postponed Rate',
-                        value: meetingsSet > 0 ? (meetingsNotCompleted / meetingsSet) * 100 : 0,
+                        label: 'Meeting Reschedule Rate',
+                        value: MRR,
+                    },
+                    {
+                        label: 'Meeting Postpone Rate',
+                        value: MPR,
                     },
                     {
                         label: 'Meeting Complete Rate',
-                        value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
+                        value: MCR,
                     },
                     {
                         label: 'Target Achieved',
-                        value: (meetingsCompleted / target) * 100,
+                        value: TA,
                     },
                     {
                         label: 'Complete Performance',
-                        value:
-                            [
-                                (assigned / totalLeads) * 100,
-                                (numberCollected / assigned) * 100,
-                                (meetingsSet / numberCollected) * 100,
-                                (meetingsCompleted / meetingsSet) * 100,
-                                (meetingsCompleted / target) * 100,
-                            ].reduce((acc, val) => acc + val, 0) / 5,
+                        value: completePerformance,
                     },
                 ];
 
-                // Return structured performance data for the user
                 return {
                     id: user._id.toString(),
                     name: user.nameAsPerNID,
@@ -152,8 +166,11 @@ const getAllCREsPerformanceData = async (req, res) => {
                         numberCollected,
                         meetingsSet,
                         meetingsCompleted,
+                        meetingRscheduled,
+                        meetingPostponed,
                         totalSales,
-                        target,
+                        completePerformance,
+                        target: target - meetingsCompleted, // remaining target
                     },
                     barChartData,
                 };
@@ -161,7 +178,7 @@ const getAllCREsPerformanceData = async (req, res) => {
         );
 
         res.status(200).json(crePerformanceData);
-        // **Emit data to all connected clients using Socket.IO**
+        // Emit data to all connected clients using Socket.IO
         req.io.emit('crePerformanceUpdated', crePerformanceData);
     } catch (error) {
         console.error('Error fetching CRE performance data:', error);
@@ -173,88 +190,121 @@ const getAllCREsPerformanceData = async (req, res) => {
 const getCREPerformanceDataById = async (req, res) => {
     try {
         const { creId } = req.params;
+        const { startDate, endDate } = req.query;
 
-        console.log(`Fetching performance data for CRE ID: ${creId}`);
+        // Validate date parameters
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start date and end date are required' });
+        }
 
-        // Find the user by ID and populate department information
+        // Parse and normalize start and end dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+        // Normalize times to cover the entire days
+        start.setUTCHours(0, 0, 0, 0);
+        end.setUTCHours(23, 59, 59, 999);
+
+        // Find the CRE user by ID and populate its department info
         const user = await User.findById(creId).populate('departmentId');
         if (!user) {
-            console.log('CRE not found.');
             return res.status(404).json({ message: 'CRE not found' });
         }
 
-        // Ensure the user's department and role match 'CRE'
+        // Ensure the user's department and role match "CRE"
         const department = await Department.findById(user.departmentId._id);
         const role = department.roles.find(
             (r) => r._id.toString() === user.roleId.toString() && r.roleName === 'CRE'
         );
         if (!role) {
-            console.log('User is not a CRE.');
             return res.status(400).json({ message: 'User is not a CRE' });
         }
 
-        // Fetch total number of leads in the system
-        const totalLeads = await Lead.countDocuments();
+        // Fetch total number of leads within the date range
+        const totalLeads = await Lead.countDocuments({
+            createdAt: { $gte: start, $lte: end },
+        });
 
-        // Calculate raw performance metrics
-        const assigned = await Lead.countDocuments({ creName: user._id });
+        // Calculate performance metrics for this CRE using date filtering
+        const assigned = await Lead.countDocuments({
+            creName: user._id,
+            createdAt: { $gte: start, $lte: end },
+        });
+
         const numberCollected = await Lead.countDocuments({
             creName: user._id,
             phone: { $exists: true, $ne: [] },
+            createdAt: { $gte: start, $lte: end },
         });
-        const meetingsSet = await Lead.countDocuments({
+
+        const leadsForUser = await Lead.find({
             creName: user._id,
-            status: 'Meeting Fixed',
-        });
-        const leadsForUser = await Lead.find({ creName: user._id }).select('_id');
+            createdAt: { $gte: start, $lte: end },
+        }).select('_id');
         const leadIds = leadsForUser.map((lead) => lead._id);
+
+        const meetingsSet = await Meeting.countDocuments({
+            lead: { $in: leadIds },
+            date: { $gte: start, $lte: end },
+        });
+
         const meetingsCompleted = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: { $in: ['Complete', 'Sold'] },
+            date: { $gte: start, $lte: end },
         });
-        const target = 100; // Fixed target for everyone
+
+        // Calculate separate counts for rescheduled and postponed meetings
+        const meetingRscheduled = await Meeting.countDocuments({
+            lead: { $in: leadIds },
+            status: 'Rescheduled',
+            date: { $gte: start, $lte: end },
+        });
+
+        const meetingPostponed = await Meeting.countDocuments({
+            lead: { $in: leadIds },
+            status: 'Postponed',
+            date: { $gte: start, $lte: end },
+        });
 
         const totalSales = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: 'Sold',
+            date: { $gte: start, $lte: end },
         });
 
-        // Prepare bar chart data with percentages
+        const target = 100;
+
+        // Calculate individual percentages (if denominators are > 0; else default to 0)
+        const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
+        const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
+        const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
+        const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
+        const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
+        const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
+        const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+
+        // Calculate complete performance using the new formula:
+        // Complete Performance = (LAR + NCR + MSR + MCR + TA) / 5 - (MRR + MPR) / 2
+        const positiveAverage = (LAR + NCR + MSR + MCR + TA) / 5;
+        const penalty = (MRR + MPR) / 2;
+        const completePerformance = positiveAverage - penalty;
+
+        // Prepare bar chart data with the new performance percentages
         const barChartData = [
-            {
-                label: 'Lead Assign Rate',
-                value: totalLeads > 0 ? (assigned / totalLeads) * 100 : 0,
-            },
-            {
-                label: 'Number Collection Rate',
-                value: assigned > 0 ? (numberCollected / assigned) * 100 : 0,
-            },
-            {
-                label: 'Meeting Set Rate',
-                value: numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0,
-            },
-            {
-                label: 'Meeting Complete Rate',
-                value: meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0,
-            },
-            {
-                label: 'Target Achieved',
-                value: (meetingsCompleted / target) * 100,
-            },
-            {
-                label: 'Complete Performance',
-                value:
-                    [
-                        (assigned / totalLeads) * 100,
-                        (numberCollected / assigned) * 100,
-                        (meetingsSet / numberCollected) * 100,
-                        (meetingsCompleted / meetingsSet) * 100,
-                        (meetingsCompleted / target) * 100,
-                    ].reduce((acc, val) => acc + val, 0) / 5,
-            },
+            { label: 'Lead Assign Rate', value: LAR },
+            { label: 'Number Collection Rate', value: NCR },
+            { label: 'Meeting Set Rate', value: MSR },
+            { label: 'Meeting Reschedule Rate', value: MRR },
+            { label: 'Meeting Postpone Rate', value: MPR },
+            { label: 'Meeting Complete Rate', value: MCR },
+            { label: 'Target Achieved', value: TA },
+            { label: 'Complete Performance', value: completePerformance },
         ];
 
-        // Structure response with raw performance metrics
+        // Structure the response data similar to getAllCREsPerformanceData
         const response = {
             id: user._id.toString(),
             name: user.nameAsPerNID,
@@ -268,13 +318,15 @@ const getCREPerformanceDataById = async (req, res) => {
                 numberCollected,
                 meetingsSet,
                 meetingsCompleted,
+                meetingRscheduled,
+                meetingPostponed,
                 totalSales,
-                target,
+                completePerformance,
+                target: target - meetingsCompleted, // remaining target
             },
             barChartData,
         };
 
-        console.log('Returning performance data for the specified CRE.');
         res.status(200).json(response);
     } catch (error) {
         console.error('Error fetching CRE performance data:', error);
