@@ -126,7 +126,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                 // New complete performance formula:
                 // (LAR + NCR + MSR + MCR + TA + SR)/6 - (MRR + MPR)/2
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-                const penalty = (MRR + MPR) / 2;
+                const penalty = (MRR + MPR) / 4;
                 const completePerformance = positiveAverage - penalty;
 
                 // Prepare bar chart data with new metrics
@@ -281,7 +281,7 @@ const getCREPerformanceDataById = async (req, res) => {
         // New complete performance formula:
         // Complete Performance = (LAR + NCR + MSR + MCR + TA + SR)/6 - (MRR + MPR)/2
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-        const penalty = (MRR + MPR) / 2;
+        const penalty = (MRR + MPR) / 4;
         const completePerformance = positiveAverage - penalty;
 
         // Prepare bar chart data with new metrics
