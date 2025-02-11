@@ -122,8 +122,9 @@ const getPerformanceBasedCRE = async () => {
         // Sort CREs by performance
         leadMetrics.sort((a, b) => b.performance - a.performance);
 
-        console.log('Lead Metrics:', leadMetrics);
-
+        leadMetrics.map((metric) => {
+            console.log(`CRE ${metric.creId} - Performance: ${metric.performance}`);
+        });
         // Get the best-performing CRE
         return leadMetrics[0].creId;
     } catch (error) {
