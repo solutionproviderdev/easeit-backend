@@ -146,16 +146,16 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
     if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
         getConversationsAndUpdateLeadsUpdated(io);
 		nameBasedLeadAssign();
-		checkProductAdForLeadMessages();
     }
 }, {
-    timezone: 'Asia/Dhaka' // Set your timezone here
+	timezone: 'Asia/Dhaka' // Set your timezone here
 });
 
 // Schedule the task to run every 10 minutes
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
+	await checkProductAdForLeadMessages();
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });

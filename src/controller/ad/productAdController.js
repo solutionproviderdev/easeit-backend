@@ -1,3 +1,4 @@
+const { default: mongoose } = require('mongoose');
 const Lead = require('../../schemas/LeadsSchema');
 const ProductAd = require('../../schemas/ProductAdSchema');
 
@@ -16,6 +17,11 @@ exports.getAllProductAds = async (req, res) => {
 exports.getProductAdById = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Validate leadId presence and format
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Valid Product ID is required' });
+        }
         const productAd = await ProductAd.findById(id);
         if (!productAd) {
             return res.status(404).json({ error: 'Product Ad not found' });
@@ -102,6 +108,11 @@ exports.getProductAdsForLead = async (req, res) => {
     try {
         const { leadId } = req.params;
 
+        // Validate leadId presence and format
+        if (!leadId || !mongoose.Types.ObjectId.isValid(leadId)) {
+            return res.status(400).json({ error: 'Valid Lead ID is required' });
+        }
+
         // Fetch the lead by ID
         const lead = await Lead.findById(leadId);
         if (!lead) {
@@ -115,7 +126,7 @@ exports.getProductAdsForLead = async (req, res) => {
 
         // Check if the lead has any product relation
         if (!lead.productAds || lead.productAds.length === 0) {
-            return res.status(200).json({ message: 'This lead has no product relation' });
+            return res.status(400).json({ message: 'This lead has no product relation' });
         }
 
         // If productAds exist, fetch only the related product ads.
