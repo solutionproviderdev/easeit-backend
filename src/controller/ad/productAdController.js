@@ -1,3 +1,4 @@
+const Lead = require('../../schemas/LeadsSchema');
 const ProductAd = require('../../schemas/ProductAdSchema');
 
 // Get all product ads
@@ -93,6 +94,43 @@ exports.addProductAdImage = async (req, res) => {
         res.status(200).json(productAd);
     } catch (error) {
         console.error('Error adding image to product ad:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getProductAdsForLead = async (req, res) => {
+    try {
+        const { leadId } = req.params;
+
+        // Fetch the lead by ID
+        const lead = await Lead.findById(leadId);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+
+        const pageId = lead.pageInfo && lead.pageInfo.pageId;
+        if (!pageId) {
+            return res.status(400).json({ error: 'Lead does not have a pageId' });
+        }
+
+        // Check if the lead has any product relation
+        if (!lead.productAds || lead.productAds.length === 0) {
+            return res.status(200).json({ message: 'This lead has no product relation' });
+        }
+
+        // If productAds exist, fetch only the related product ads.
+        const productAds = await ProductAd.find({ _id: { $in: lead.productAds } });
+
+        // Map each product ad to a simplified response object, filtering images by matching pageId.
+        const response = productAds.map((ad) => ({
+            name: ad.name,
+            description: ad.description,
+            images: ad.images.filter((img) => img.pageId === pageId),
+        }));
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('Error fetching product ads for lead:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

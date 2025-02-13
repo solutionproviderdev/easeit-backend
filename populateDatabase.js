@@ -20,6 +20,7 @@ const findCREWithLowestLeads = require('./src/helpers/findCREWithLowestLeads');
 const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE');
 const Meeting = require('./src/schemas/MeetingSchema');
 const MapData = require('./src/schemas/MapData'); // Adjust the path as needed
+const ProductAd = require('./src/schemas/ProductAdSchema');
 
 // Function to generate random departments
 const generateDepartments = (num) => {
@@ -1147,6 +1148,144 @@ const imageLinkChangeLead = async () => {
     }
 };
 
+const findDuplicateMeetings = async () => {
+    try {
+        // Retrieve all leads with their meetings array and name field
+        const leads = await Lead.find({}).select('meetings name');
+        // Loop over each lead
+        for (const lead of leads) {
+            if (lead.meetings && lead.meetings.length > 1) {
+                console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
+
+                // Retrieve the meeting documents referenced in the lead.meetings array,
+                // sorted by date descending (most recent first)
+                const meetings = await Meeting.find({
+                    _id: { $in: lead.meetings },
+                }).sort({ date: -1 });
+
+                if (meetings.length > 1) {
+                    // Keep the first meeting (most recent) and consider the rest as duplicates
+                    const meetingToKeep = meetings[0];
+                    const duplicateMeetingIds = meetings.slice(1).map((m) => m._id);
+
+                    // Delete duplicate meetings from the Meeting collection
+                    const deleteResult = await Meeting.deleteMany({
+                        _id: { $in: duplicateMeetingIds },
+                    });
+                    console.log(
+                        `Deleted ${deleteResult.deletedCount} duplicate meetings for lead "${lead.name}".`
+                    );
+
+                    // Update the lead's meetings array to only contain the kept meeting's ID
+                    lead.meetings = [meetingToKeep._id];
+                    await lead.save();
+                    console.log(
+                        `Updated lead "${lead.name}" to keep only meeting ${meetingToKeep._id}.`
+                    );
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Error in findDuplicateMeetings:', error.message);
+    }
+};
+
+// Function to check if a product ad is mentioned in a lead message
+async function checkProductAdForLeadMessages() {
+    try {
+        // Fetch all leads from the database
+        const leads = await Lead.find({});
+
+        // Regex pattern:
+        // ^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$
+        // Group 1: Lead's first name (or text between "Hi " and "!")
+        // Group 2: Product name (between "with " and " Solutions?")
+        const pattern =
+            /^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$/i;
+
+        let overallFoundCount = 0;
+        let overallNotFoundCount = 0;
+        // Map to keep stats per product name
+        const productStats = new Map();
+
+        for (const lead of leads) {
+            if (Array.isArray(lead.messages)) {
+                for (const msg of lead.messages) {
+                    const content = msg.content || '';
+                    const match = pattern.exec(content);
+                    if (match) {
+                        const extractedProductName = match[2].trim();
+
+                        // Initialize stats for this product if not present
+                        if (!productStats.has(extractedProductName)) {
+                            productStats.set(extractedProductName, { found: 0, notFound: 0 });
+                        }
+
+                        // Check if the extracted product name exists in the ProductAd collection (case-insensitive exact match)
+                        const productAd = await ProductAd.findOne({
+                            name: { $regex: `^${extractedProductName}$`, $options: 'i' },
+                        });
+
+                        // Get the lead's pageId
+                        const leadPageId =
+                            lead.pageInfo && lead.pageInfo.pageId ? lead.pageInfo.pageId : null;
+
+                        if (productAd) {
+                            // Check if any image in productAd has a matching pageId
+                            let pageIdMatch = false;
+                            if (leadPageId) {
+                                pageIdMatch = productAd.images.some(
+                                    (img) => img.pageId === leadPageId
+                                );
+                            }
+                            if (pageIdMatch) {
+                                // Check if the relation already exists
+                                const productAdIdStr = productAd._id.toString();
+                                const leadProductAds = (lead.productAds || []).map((id) =>
+                                    id.toString()
+                                );
+                                if (!leadProductAds.includes(productAdIdStr)) {
+                                    await Lead.updateOne(
+                                        { _id: lead._id },
+                                        { $addToSet: { productAds: productAd._id } }
+                                    );
+                                }
+                                console.log(
+                                    `Product ad found and added to lead ${lead._id}:`,
+                                    productAd.name
+                                );
+                                overallFoundCount++;
+                                productStats.get(extractedProductName).found++;
+                            } else {
+                                overallNotFoundCount++;
+                                productStats.get(extractedProductName).notFound++;
+                            }
+                        } else {
+                            overallNotFoundCount++;
+                            productStats.get(extractedProductName).notFound++;
+                        }
+                    }
+                }
+            }
+        }
+
+        console.log('\n--- Detailed Product Stats ---');
+        for (const [product, stats] of productStats.entries()) {
+            console.log(
+                `Product: "${product}"  |  Found: ${stats.found}  |  Not Found: ${stats.notFound}`
+            );
+        }
+        console.log('--------------------------------');
+        console.log(`Overall Found: ${overallFoundCount}`);
+        console.log(`Overall Not Found: ${overallNotFoundCount}`);
+    } catch (error) {
+        console.error('Error checking product ads:', error);
+    }
+}
+
+// To run the function immediately (or export it for use elsewhere)
+// findAdMessagePatterns();
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -1177,4 +1316,6 @@ module.exports = {
     nameBasedLeadAssign,
     imageLinkChange,
     imageLinkChangeLead,
+    findDuplicateMeetings,
+    checkProductAdForLeadMessages,
 };
