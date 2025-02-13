@@ -146,7 +146,7 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
     if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
         getConversationsAndUpdateLeadsUpdated(io);
 		nameBasedLeadAssign();
-		checkProductAdForLeadMessages();
+		// checkProductAdForLeadMessages();
     }
 }, {
     timezone: 'Asia/Dhaka' // Set your timezone here
