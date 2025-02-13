@@ -7,7 +7,7 @@ const meetingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Lead', // Reference to the Lead collection
             required: true,
-            unique: true,
+            // unique: true,
         },
         date: {
             type: Date,
