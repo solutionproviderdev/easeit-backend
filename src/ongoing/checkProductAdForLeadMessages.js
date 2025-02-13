@@ -13,55 +13,62 @@ async function checkProductAdForLeadMessages() {
         // Fetch all leads from the database
         const leads = await Lead.find({});
 
-        // Regex pattern:
-        // ^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$
-        // Group 1: Lead's first name
-        // Group 2: Product name
+        // Cache for product ads: key is product name in lowercase, value is ProductAd document (or null if not found)
+        const productAdCache = new Map();
+
+        // Regex pattern to capture:
+        // Group 1: Lead's first name (unused here)
+        // Group 2: Product name (between "with " and " Solutions?")
         const pattern =
             /^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$/i;
 
         for (const lead of leads) {
-            let leadUpdated = false; // Flag to track if relation was created/linked for this lead
+            let leadUpdated = false;
 
-            if (Array.isArray(lead.messages)) {
-                for (const msg of lead.messages) {
-                    const content = msg.content || '';
-                    const match = pattern.exec(content);
-                    if (match) {
-                        const extractedProductName = match[2].trim();
+            if (!Array.isArray(lead.messages)) continue;
 
-                        // Look up the product ad by name (case-insensitive exact match)
-                        const productAd = await ProductAd.findOne({
-                            name: { $regex: `^${extractedProductName}$`, $options: 'i' },
-                        });
+            // Get lead's pageId; if missing, skip this lead
+            const leadPageId = (lead.pageInfo && lead.pageInfo.pageId) || null;
+            if (!leadPageId) continue;
 
-                        // Get the lead's pageId
-                        const leadPageId =
-                            lead.pageInfo && lead.pageInfo.pageId ? lead.pageInfo.pageId : null;
+            // Process each message until a relation is added
+            for (const msg of lead.messages) {
+                const content = msg.content || '';
+                const match = pattern.exec(content);
+                if (!match) continue;
 
-                        if (productAd && leadPageId) {
-                            // Check if any image in productAd has a matching pageId
-                            const pageIdMatch = productAd.images.some(
-                                (img) => img.pageId === leadPageId
-                            );
-                            if (pageIdMatch) {
-                                const productAdIdStr = productAd._id.toString();
-                                const leadProductAds = (lead.productAds || []).map((id) =>
-                                    id.toString()
-                                );
-                                if (!leadProductAds.includes(productAdIdStr)) {
-                                    // Add the product ad relation if it doesn't exist
-                                    await Lead.updateOne(
-                                        { _id: lead._id },
-                                        { $addToSet: { productAds: productAd._id } }
-                                    );
-                                    leadUpdated = true;
-                                }
-                            }
-                        }
-                    }
+                const extractedProductName = match[2].trim();
+                const key = extractedProductName.toLowerCase();
+
+                // Check cache first
+                let productAd = productAdCache.get(key);
+                if (productAd === undefined) {
+                    productAd = await ProductAd.findOne({
+                        name: { $regex: `^${extractedProductName}$`, $options: 'i' },
+                    });
+                    productAdCache.set(key, productAd);
+                }
+
+                if (!productAd) continue;
+
+                // Check if any image in the product ad has a matching pageId
+                const pageIdMatch = productAd.images.some((img) => img.pageId === leadPageId);
+                if (!pageIdMatch) continue;
+
+                // Check if the relation already exists
+                const productAdIdStr = productAd._id.toString();
+                const leadProductAds = (lead.productAds || []).map((id) => id.toString());
+                if (!leadProductAds.includes(productAdIdStr)) {
+                    await Lead.updateOne(
+                        { _id: lead._id },
+                        { $addToSet: { productAds: productAd._id } }
+                    );
+                    leadUpdated = true;
+                    // Once a relation is created for this lead, exit the inner loop.
+                    break;
                 }
             }
+
             if (leadUpdated) {
                 console.log(`Lead ${lead._id}: Product ad relation created/linked.`);
             }
