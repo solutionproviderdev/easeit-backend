@@ -1155,13 +1155,17 @@ const findDuplicateMeetings = async () => {
         // Loop over each lead
         for (const lead of leads) {
             if (lead.meetings && lead.meetings.length > 1) {
-                console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
-
                 // Retrieve the meeting documents referenced in the lead.meetings array,
                 // sorted by date descending (most recent first)
+
+                console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
+                // make the metings array to string
+                const meetingsString = lead.meetings.map((m) => m.toString());
                 const meetings = await Meeting.find({
-                    _id: { $in: lead.meetings },
+                    _id: { $in: meetingsString },
                 }).sort({ date: -1 });
+
+                console.log(meetings.length);
 
                 if (meetings.length > 1) {
                     // Keep the first meeting (most recent) and consider the rest as duplicates

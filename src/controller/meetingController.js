@@ -386,7 +386,7 @@ exports.cancelMeeting = async (req, res) => {
 // Get all meetings with filtering options
 exports.getAllMeetings = async (req, res) => {
     try {
-        const { status, dateRange, salesExecutiveId } = req.query;
+        const { status, dateRange, salesExecutiveId, creId } = req.query;
         const filter = {};
 
         // Filter by status if provided
@@ -396,17 +396,15 @@ exports.getAllMeetings = async (req, res) => {
         if (dateRange) {
             const [startDate, endDate] = dateRange.split('_');
 
-            // Check if both startDate and endDate are the same
             if (startDate === endDate) {
-                // Match meetings for the specific day
+                // Specific day: set time range for that day
                 const startOfDay = new Date(startDate);
                 startOfDay.setHours(0, 0, 0, 0);
                 const endOfDay = new Date(endDate);
                 endOfDay.setHours(23, 59, 59, 999);
-
                 filter.date = { $gte: startOfDay, $lte: endOfDay };
             } else {
-                // Match meetings for the date range
+                // Date range
                 filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
             }
         }
@@ -414,9 +412,18 @@ exports.getAllMeetings = async (req, res) => {
         // Filter by sales executive ID if provided
         if (salesExecutiveId) filter.salesExecutive = salesExecutiveId;
 
-        // Fetch meetings with applied filters
+        // Filter by CRE ID if provided
+        if (creId) {
+            // Find leads that belong to the given creId
+            const leadsMatching = await Lead.find({ creName: creId }).select('_id');
+            const leadIds = leadsMatching.map((lead) => lead._id);
+            // If no leads match, ensure no meetings are returned.
+            filter.lead = { $in: leadIds.length > 0 ? leadIds : [null] };
+        }
+
+        // Fetch meetings with applied filters, populating lead and salesExecutive details.
         const meetings = await Meeting.find(filter)
-            .populate('lead', 'name address phone')
+            .populate('lead', 'name address phone creName')
             .populate('salesExecutive', 'nickname email');
 
         res.status(200).json(meetings);
