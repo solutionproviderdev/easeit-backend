@@ -6,6 +6,7 @@ const {
     updateProductAd,
     deleteProductAd,
     addProductAdImage,
+    getProductAdsForLead,
 } = require('../../controller/ad/productAdController');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
@@ -25,6 +26,9 @@ productAdRouter.put('/:id', checkAuth, updateProductAd);
 
 // Add a new image to an existing product ad
 productAdRouter.post('/:id/images', checkAuth, addProductAdImage);
+
+// New route: Get product ads for a specific lead by lead ID
+productAdRouter.get('/for-lead/:leadId', checkAuth, getProductAdsForLead);
 
 // Delete a product ad
 productAdRouter.delete('/:id', checkAuth, deleteProductAd);

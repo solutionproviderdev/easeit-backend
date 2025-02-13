@@ -37,12 +37,15 @@ const {
 	nameBasedLeadAssign,
 	imageLinkChange,
 	imageLinkChangeLead,
+	findDuplicateMeetings,
+	findAdMessagePatterns,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
 const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
 const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
+const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
 
 // Initialize app
 const app = express();
@@ -143,6 +146,7 @@ cron.schedule('*/1 * * * * *', () => { // Runs every second
     if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
         getConversationsAndUpdateLeadsUpdated(io);
 		nameBasedLeadAssign();
+		checkProductAdForLeadMessages();
     }
 }, {
     timezone: 'Asia/Dhaka' // Set your timezone here
@@ -161,9 +165,12 @@ assignUnassignedLeads(io);
 // reschedule pending reminders
 reschedulePendingReminders();
 nameBasedLeadAssign();
+checkProductAdForLeadMessages();
+
 // imageLinkChange();
 // imageLinkChangeLead();
-getPerformanceBasedCRE();
+// getPerformanceBasedCRE();
+// findDuplicateMeetings();
 
 // updateLeadsWithPhoneNumbersAndStatus();
 // updateLeadsStatusToMeetingFixed();

@@ -158,6 +158,9 @@ const leadSchema = mongoose.Schema(
         messagesSeen: { type: Boolean, default: false },
         requirements: [String], // New simple array for requirements
         botResponded: { type: Boolean, default: false },
+
+        // field for product ad relations:
+        productAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ProductAd' }],
     },
     {
         timestamps: true,
