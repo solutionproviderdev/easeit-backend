@@ -102,6 +102,10 @@ exports.getProductAdsForLead = async (req, res) => {
     try {
         const { leadId } = req.params;
 
+        if (!leadId) {
+            return res.status(400).json({ error: 'Lead ID is required' });
+        }
+
         // Fetch the lead by ID
         const lead = await Lead.findById(leadId);
         if (!lead) {
@@ -115,7 +119,7 @@ exports.getProductAdsForLead = async (req, res) => {
 
         // Check if the lead has any product relation
         if (!lead.productAds || lead.productAds.length === 0) {
-            return res.status(200).json({ message: 'This lead has no product relation' });
+            return res.status(400).json({ message: 'This lead has no product relation' });
         }
 
         // If productAds exist, fetch only the related product ads.
