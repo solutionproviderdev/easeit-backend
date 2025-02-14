@@ -53,6 +53,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         },
         status: savedLead.status,
         _id: savedLead._id,
+        messagesSeen: savedLead.messagesSeen,
     };
 
     io.emit('conversation', socketPayload);

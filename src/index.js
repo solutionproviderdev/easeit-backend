@@ -39,6 +39,7 @@ const {
 	imageLinkChangeLead,
 	findDuplicateMeetings,
 	findAdMessagePatterns,
+	findDuplicateLeads,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
@@ -171,14 +172,9 @@ checkProductAdForLeadMessages();
 // imageLinkChangeLead();
 // getPerformanceBasedCRE();
 // findDuplicateMeetings();
+// findDuplicateLeads();
 
-// updateLeadsWithPhoneNumbersAndStatus();
-// updateLeadsStatusToMeetingFixed();
-// assignLeadsToCRE();
 // getPerformanceBasedCRE();
-// assignLeadsToCREInOrder();
-// deleteLeadsWithInvalidMessageIds();
-// randomlyFixMeetings();
 
 // 404 error handling
 app.use(notFoundHandler);

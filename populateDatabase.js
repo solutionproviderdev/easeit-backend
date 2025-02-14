@@ -1287,8 +1287,47 @@ async function checkProductAdForLeadMessages() {
     }
 }
 
-// To run the function immediately (or export it for use elsewhere)
-// findAdMessagePatterns();
+// Function to find and delete duplicate leads
+const findDuplicateLeads = async () => {
+    try {
+        // Group leads by pageInfo.pageId and pageInfo.fbSenderID where both exist
+        const duplicates = await Lead.aggregate([
+            {
+                $match: {
+                    'pageInfo.pageId': { $exists: true, $ne: null },
+                    'pageInfo.fbSenderID': { $exists: true, $ne: null },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        pageId: '$pageInfo.pageId',
+                        fbSenderID: '$pageInfo.fbSenderID',
+                    },
+                    count: { $sum: 1 },
+                    ids: { $push: '$_id' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let totalDeleted = 0;
+        for (const group of duplicates) {
+            // Keep the first id and delete the rest
+            const idsToDelete = group.ids.slice(1);
+            const result = await Lead.deleteMany({ _id: { $in: idsToDelete } });
+            totalDeleted += result.deletedCount || 0;
+        }
+
+        console.log(`Deleted ${totalDeleted} duplicate leads.`);
+    } catch (error) {
+        console.error('Error finding duplicate leads:', error);
+    }
+};
 
 // Export all the functions as a module
 module.exports = {
@@ -1322,4 +1361,5 @@ module.exports = {
     imageLinkChangeLead,
     findDuplicateMeetings,
     checkProductAdForLeadMessages,
+    findDuplicateLeads,
 };
