@@ -14,6 +14,7 @@ const { isAutomatedMessage } = require('../../populateDatabase');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
 const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
+const checkProductAdForLeadMessages = require('./checkProductAdForLeadMessages');
 
 const extractValidPhoneNumber = (content, countryCode = 'BD') => {
     // Convert Bengali numerals to English numerals
@@ -302,7 +303,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
 
 // Main function to fetch conversations and update leads
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
-    // console.time('getConversationsAndUpdateLeads');
+    console.time('getConversationsAndUpdateLeads');
     try {
         const pages = await fetchFacebookSettings();
         const nameToCreId = await getCREMapping();
@@ -323,11 +324,13 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
             for (const conversation of conversations) {
                 await processConversation(conversation, nameToCreId, io, pageInfo);
             }
+
+            await checkProductAdForLeadMessages();
         }
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    // console.timeEnd('getConversationsAndUpdateLeads');
+    console.timeEnd('getConversationsAndUpdateLeads');
 };
 
 module.exports = {
