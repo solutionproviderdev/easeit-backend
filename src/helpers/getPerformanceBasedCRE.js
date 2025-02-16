@@ -111,7 +111,7 @@ const getPerformanceBasedCRE = async () => {
                 // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR) / 4
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
                 const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
-                const penaltyForCancel = MCeR * 0.75; // 75% for canceled meetings
+                const penaltyForCancel = MCeR * 0.5; // 50% for canceled meetings
                 const performance = positiveAverage - penalty - penaltyForCancel;
 
                 return {
