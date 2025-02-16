@@ -75,6 +75,7 @@ exports.getLeadControl = async (req, res) => {
                     department: user.departmentId,
                     assign: assignCount,
                     performance,
+                    active: user.status === 'Active',
                     manual: !!override,
                     manualLeadAssignRate: override ? override.manualLeadAssignRate : null,
                     manualLeadAssignEndTime: override ? override.manualLeadAssignEndTime : null,
