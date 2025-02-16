@@ -97,7 +97,7 @@ const getAllCREsPerformanceData = async (req, res) => {
 
                 const meetingCancelled = await Meeting.countDocuments({
                     lead: { $in: leadIds },
-                    status: 'Cancelled',
+                    status: 'Canceled',
                     date: { $gte: start, $lte: end },
                 });
 
@@ -133,7 +133,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     { label: 'Meeting Set Rate', value: MSR },
                     { label: 'Meeting Reschedule Rate', value: MRR },
                     { label: 'Meeting Postpone Rate', value: MPR },
-                    { label: 'Meeting Cancelled Rate', value: MCeR },
+                    { label: 'Meeting Canceled Rate', value: MCeR },
                     { label: 'Meeting Complete Rate', value: MCR },
                     { label: 'Target Achieved', value: TA },
                     { label: 'Sold Rate', value: SR },
@@ -256,7 +256,7 @@ const getCREPerformanceDataById = async (req, res) => {
 
         const meetingCancelled = await Meeting.countDocuments({
             lead: { $in: leadIds },
-            status: 'Cancelled',
+            status: 'Canceled',
             date: { $gte: start, $lte: end },
         });
 
@@ -288,7 +288,7 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Meeting Set Rate', value: MSR },
             { label: 'Meeting Reschedule Rate', value: MRR },
             { label: 'Meeting Postpone Rate', value: MPR },
-            { label: 'Meeting Cancelled Rate', value: MCeR },
+            { label: 'Meeting Canceled Rate', value: MCeR },
             { label: 'Meeting Complete Rate', value: MCR },
             { label: 'Target Achieved', value: TA },
             { label: 'Sold Rate', value: SR },
