@@ -1,10 +1,10 @@
 const User = require('../../schemas/auth/UserSchema');
 const Settings = require('../../schemas/SettingsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
+
 const getCREPerformance = require('../../helpers/getCREPerformance');
 
-// Helper to get (or create) the lead settings document
-const getLeadSettingsDoc = async () => {
+exports.getLeadSettingsDoc = async () => {
     let settings = await Settings.findOne({ name: 'lead' });
     if (!settings) {
         settings = new Settings({
@@ -26,7 +26,7 @@ const getLeadSettingsDoc = async () => {
 exports.getLeadControl = async (req, res) => {
     try {
         // Retrieve the global settings
-        const settings = await getLeadSettingsDoc();
+        const settings = await exports.getLeadSettingsDoc();
         if (!settings) {
             return res.status(404).json({ error: 'Lead control settings not found' });
         }
@@ -99,12 +99,17 @@ exports.updateGlobalSettings = async (req, res) => {
         if (!global) {
             return res.status(400).json({ error: 'Global settings are required' });
         }
-        const settings = await getLeadSettingsDoc();
-        settings.settingsData.global = {
-            ...settings.settingsData.global,
-            ...global,
-        };
-        await settings.save();
+
+        const oldSettings = await exports.getLeadSettingsDoc();
+        const { global: oldGlobal } = oldSettings.settingsData;
+
+        // Use findOneAndUpdate to update (or create) the settings document with name "lead"
+        const settings = await Settings.findOneAndUpdate(
+            { name: 'lead' },
+            { $set: { 'settingsData.global': { ...oldGlobal, ...global } } },
+            { new: true, upsert: true }
+        );
+
         res.status(200).json(settings.settingsData.global);
     } catch (error) {
         console.error('Error updating global settings:', error);
@@ -114,7 +119,7 @@ exports.updateGlobalSettings = async (req, res) => {
 
 exports.getManualOverrides = async (req, res) => {
     try {
-        const settings = await getLeadSettingsDoc();
+        const settings = await exports.getLeadSettingsDoc();
         const overrides = settings.settingsData.creManualOverrides || [];
         res.status(200).json(overrides);
     } catch (error) {
@@ -129,7 +134,7 @@ exports.getManualOverrideById = async (req, res) => {
         if (!creId) {
             return res.status(400).json({ error: 'creId is required' });
         }
-        const settings = await getLeadSettingsDoc();
+        const settings = await exports.getLeadSettingsDoc();
         const override = (settings.settingsData.creManualOverrides || []).find(
             (o) => o.creId === creId
         );
@@ -149,7 +154,7 @@ exports.createManualOverride = async (req, res) => {
         if (!creId) {
             return res.status(400).json({ error: 'creId is required' });
         }
-        const settings = await getLeadSettingsDoc();
+        const settings = await exports.getLeadSettingsDoc();
         const existing = (settings.settingsData.creManualOverrides || []).find(
             (o) => o.creId === creId
         );
