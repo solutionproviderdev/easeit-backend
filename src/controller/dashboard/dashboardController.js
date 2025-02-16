@@ -121,10 +121,10 @@ const getAllCREsPerformanceData = async (req, res) => {
                 const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
                 // New complete performance formula:
-                // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR + MCeR) / 6
+                // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR) / 4
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-                const penalty = (MRR + MPR) / 2;
-                const penaltyForCancel = MCeR * 0.1;
+                const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
+                const penaltyForCancel = MCeR * 0.75; // 75% for canceled meetings
                 const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
                 // Prepare bar chart data with new metrics
@@ -280,8 +280,8 @@ const getCREPerformanceDataById = async (req, res) => {
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-        const penalty = (MRR + MPR) / 2;
-        const penaltyForCancel = MCeR * 0.1;
+        const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
+        const penaltyForCancel = MCeR * 0.75; // 75% for canceled meetings
         const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
         const barChartData = [
