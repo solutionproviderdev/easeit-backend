@@ -6,8 +6,6 @@ const getCREPerformance = async (
     startDate,
     endDate = new Date().setHours(23, 23, 59, 59, 999)
 ) => {
-    console.log('startDate', startDate);
-    console.log('endDate', endDate);
     try {
         const startDateinUTC = new Date(startDate).setHours(0, 0, 0, 0);
 

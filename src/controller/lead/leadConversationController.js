@@ -398,6 +398,8 @@ exports.sendMetaMessage = async (req, res) => {
                 );
                 lead.messages.push(newMessage);
                 lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
+                lead.repliedFromSystem = true;
                 await lead.save();
 
                 // Emit Conversation Updated event
@@ -431,6 +433,7 @@ exports.sendMetaMessage = async (req, res) => {
                     );
                     lead.messages.push(newMessage);
                     lead.messagesSeen = true;
+                    lead.repliedFromSystem = true;
                     await lead.save();
 
                     this.emitNewMessage(req, leadId, newMessage);
@@ -460,6 +463,7 @@ exports.sendMetaMessage = async (req, res) => {
                 );
                 lead.messages.push(newMessage);
                 lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
                 await lead.save();
 
                 this.emitNewMessage(req, leadId, newMessage);
