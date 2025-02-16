@@ -11,7 +11,7 @@ const getLeadSettingsDoc = async () => {
             name: 'lead',
             settingsData: {
                 global: {
-                    performanceRangeDays: 3,
+                    performanceRangeDays: 7,
                     messageSeenTimeMin: 5,
                     messageReplyTimeMin: 10,
                 },
@@ -26,7 +26,7 @@ const getLeadSettingsDoc = async () => {
 exports.getLeadControl = async (req, res) => {
     try {
         // Retrieve the global settings
-        const settings = await Settings.findOne({ name: 'lead' });
+        const settings = await getLeadSettingsDoc();
         if (!settings) {
             return res.status(404).json({ error: 'Lead control settings not found' });
         }
