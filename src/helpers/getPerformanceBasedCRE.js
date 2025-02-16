@@ -35,12 +35,12 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0) => {
 
     let selectedCRE;
     if (underQuota.length > 0) {
-        // Choose the one with the largest gap.
-        underQuota.sort((a, b) => b.gap - a.gap);
-        selectedCRE = underQuota[0];
+        // Choose the one with the lowese gap.
+        underQuota.sort((a, b) => a.gap - b.gap);
+        selectedCRE = underQuota[position];
     } else {
-        // All CREs are at or above quota; choose the one with the lowest ratio.
-        metricsWithGap.sort((a, b) => a.ratio - b.ratio);
+        // All CREs are at or above quota; choose the one with the highest ratio.
+        metricsWithGap.sort((a, b) => b.ratio - a.ratio);
         selectedCRE = metricsWithGap[position];
     }
 
