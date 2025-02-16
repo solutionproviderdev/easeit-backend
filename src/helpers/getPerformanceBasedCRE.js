@@ -104,14 +104,15 @@ const getPerformanceBasedCRE = async () => {
                 const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
                 const MRR = meetingsSet > 0 ? (meetingRescheduled / meetingsSet) * 100 : 0;
                 const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
-                const MceR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
+                const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
                 const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
                 // Complete performance formula:
                 // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR + MCeR) / 6
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-                const penalty = (MRR + MPR + MceR) / 6;
-                const performance = positiveAverage - penalty;
+                const penalty = (MRR + MPR) / 2;
+                const penaltyForCancel = MCeR * 0.1;
+                const performance = positiveAverage - penalty - penaltyForCancel;
 
                 return {
                     creId,
