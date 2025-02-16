@@ -123,8 +123,9 @@ const getAllCREsPerformanceData = async (req, res) => {
                 // New complete performance formula:
                 // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR + MCeR) / 6
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-                const penalty = (MRR + MPR + MCeR) / 6;
-                const completePerformance = positiveAverage - penalty;
+                const penalty = (MRR + MPR) / 2;
+                const penaltyForCancel = MCeR * 0.1;
+                const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
                 // Prepare bar chart data with new metrics
                 const barChartData = [
@@ -279,8 +280,9 @@ const getCREPerformanceDataById = async (req, res) => {
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-        const penalty = (MRR + MPR + MCeR) / 6;
-        const completePerformance = positiveAverage - penalty;
+        const penalty = (MRR + MPR) / 2;
+        const penaltyForCancel = MCeR * 0.1;
+        const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
         const barChartData = [
             { label: 'Lead Assign Rate', value: LAR },
