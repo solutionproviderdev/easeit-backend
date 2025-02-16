@@ -124,7 +124,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                 // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR) / 4
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
                 const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
-                const penaltyForCancel = MCeR * 0.75; // 75% for canceled meetings
+                const penaltyForCancel = MCeR * 0.5; // 50% for canceled meetings
                 const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
                 // Prepare bar chart data with new metrics
@@ -281,7 +281,7 @@ const getCREPerformanceDataById = async (req, res) => {
 
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
         const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
-        const penaltyForCancel = MCeR * 0.75; // 75% for canceled meetings
+        const penaltyForCancel = MCeR * 0.5; // 50% for canceled meetings
         const completePerformance = positiveAverage - penalty - penaltyForCancel;
 
         const barChartData = [
