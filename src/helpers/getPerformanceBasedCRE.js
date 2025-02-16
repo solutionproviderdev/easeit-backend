@@ -83,7 +83,7 @@ const getPerformanceBasedCRE = async () => {
 
                 const meetingCancelled = await Meeting.countDocuments({
                     lead: { $in: leadIds },
-                    status: 'Cancelled',
+                    status: 'Canceled',
                     date: { $gte: sevenDaysAgo },
                 });
 
@@ -94,7 +94,7 @@ const getPerformanceBasedCRE = async () => {
                     date: { $gte: sevenDaysAgo },
                 });
 
-                const target = 200; // Target for meetings completed
+                const target = 200;
 
                 // Calculate performance metrics:
                 const LAR = assigned > 0 ? assigned : 0;
