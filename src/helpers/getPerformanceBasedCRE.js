@@ -11,7 +11,7 @@ const getCREPerformance = require('./getCREPerformance');
  * @returns {Object} selectedCRE - The chosen CRE object.
  */
 
-const selectCREBasedOnPerformance = (creMetrics) => {
+const selectCREBasedOnOverFlow = (creMetrics, position = 0) => {
     // Calculate total performance and total assigned leads.
     const totalPerformance = creMetrics.reduce((sum, metric) => sum + metric.performance, 0);
     const totalAssigned = creMetrics.reduce((sum, metric) => sum + metric.assigned, 0);
@@ -41,7 +41,7 @@ const selectCREBasedOnPerformance = (creMetrics) => {
     } else {
         // All CREs are at or above quota; choose the one with the lowest ratio.
         metricsWithGap.sort((a, b) => a.ratio - b.ratio);
-        selectedCRE = metricsWithGap[0];
+        selectedCRE = metricsWithGap[position];
     }
 
     underQuota.forEach((cre) => {
@@ -53,7 +53,7 @@ const selectCREBasedOnPerformance = (creMetrics) => {
     return selectedCRE;
 };
 
-const getPerformanceBasedCRE = async () => {
+const getPerformanceBasedCRE = async (position) => {
     try {
         // 1. Get the CRE department and roles from the Department schema.
         const creDepartment = await Department.findOne({
@@ -115,7 +115,7 @@ const getPerformanceBasedCRE = async () => {
         }
 
         // Use the overflow management helper to select the appropriate CRE.
-        const selectedCRE = selectCREBasedOnPerformance(creMetrics);
+        const selectedCRE = selectCREBasedOnOverFlow(creMetrics, position);
         console.log('Selected CRE:', selectedCRE.name);
         return selectedCRE.creId;
     } catch (error) {
