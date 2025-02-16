@@ -325,7 +325,7 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
                 await processConversation(conversation, nameToCreId, io, pageInfo);
             }
 
-            await checkProductAdForLeadMessages();
+            // await checkProductAdForLeadMessages();
         }
     } catch (error) {
         logError('Error fetching or processing data', error);

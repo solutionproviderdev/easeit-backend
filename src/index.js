@@ -166,7 +166,7 @@ cron.schedule('*/10 * * * *', async () => {
 // reschedule pending reminders
 reschedulePendingReminders();
 nameBasedLeadAssign();
-// checkProductAdForLeadMessages();
+checkProductAdForLeadMessages();
 
 // imageLinkChange();
 // imageLinkChangeLead();
@@ -174,7 +174,7 @@ nameBasedLeadAssign();
 // findDuplicateMeetings();
 findDuplicateLeads();
 
-// getPerformanceBasedCRE();
+getPerformanceBasedCRE();
 
 // 404 error handling
 app.use(notFoundHandler);
