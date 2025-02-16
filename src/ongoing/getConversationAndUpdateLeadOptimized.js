@@ -303,7 +303,6 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
 
 // Main function to fetch conversations and update leads
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
-    console.time('getConversationsAndUpdateLeads');
     try {
         const pages = await fetchFacebookSettings();
         const nameToCreId = await getCREMapping();
@@ -330,7 +329,6 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeads');
 };
 
 module.exports = {

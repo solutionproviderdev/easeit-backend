@@ -95,6 +95,12 @@ const getAllCREsPerformanceData = async (req, res) => {
                     date: { $gte: start, $lte: end },
                 });
 
+                const meetingCancelled = await Meeting.countDocuments({
+                    lead: { $in: leadIds },
+                    status: 'Cancelled',
+                    date: { $gte: start, $lte: end },
+                });
+
                 const totalSales = await Meeting.countDocuments({
                     lead: { $in: leadIds },
                     status: 'Sold',
@@ -111,12 +117,13 @@ const getAllCREsPerformanceData = async (req, res) => {
                 const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
                 const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
                 const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+                const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
                 const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
                 // New complete performance formula:
-                // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR) / 2
+                // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR + MCeR) / 6
                 const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-                const penalty = (MRR + MPR) / 4;
+                const penalty = (MRR + MPR + MCeR) / 6;
                 const completePerformance = positiveAverage - penalty;
 
                 // Prepare bar chart data with new metrics
@@ -126,6 +133,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     { label: 'Meeting Set Rate', value: MSR },
                     { label: 'Meeting Reschedule Rate', value: MRR },
                     { label: 'Meeting Postpone Rate', value: MPR },
+                    { label: 'Meeting Cancelled Rate', value: MCeR },
                     { label: 'Meeting Complete Rate', value: MCR },
                     { label: 'Target Achieved', value: TA },
                     { label: 'Sold Rate', value: SR },
@@ -147,6 +155,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                         meetingsCompleted,
                         meetingRscheduled,
                         meetingPostponed,
+                        meetingCancelled,
                         totalSales,
                         completePerformance,
                         target: target - meetingsCompleted, // remaining target
@@ -245,6 +254,12 @@ const getCREPerformanceDataById = async (req, res) => {
             date: { $gte: start, $lte: end },
         });
 
+        const meetingCancelled = await Meeting.countDocuments({
+            lead: { $in: leadIds },
+            status: 'Cancelled',
+            date: { $gte: start, $lte: end },
+        });
+
         const totalSales = await Meeting.countDocuments({
             lead: { $in: leadIds },
             status: 'Sold',
@@ -260,10 +275,11 @@ const getCREPerformanceDataById = async (req, res) => {
         const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
         const MRR = meetingsSet > 0 ? (meetingRscheduled / meetingsSet) * 100 : 0;
         const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
+        const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-        const penalty = (MRR + MPR) / 4;
+        const penalty = (MRR + MPR + MCeR) / 6;
         const completePerformance = positiveAverage - penalty;
 
         const barChartData = [
@@ -272,6 +288,7 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Meeting Set Rate', value: MSR },
             { label: 'Meeting Reschedule Rate', value: MRR },
             { label: 'Meeting Postpone Rate', value: MPR },
+            { label: 'Meeting Cancelled Rate', value: MCeR },
             { label: 'Meeting Complete Rate', value: MCR },
             { label: 'Target Achieved', value: TA },
             { label: 'Sold Rate', value: SR },
@@ -293,6 +310,7 @@ const getCREPerformanceDataById = async (req, res) => {
                 meetingsCompleted,
                 meetingRscheduled,
                 meetingPostponed,
+                meetingCancelled,
                 totalSales,
                 soldRate: SR,
                 completePerformance,
