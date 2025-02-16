@@ -24,19 +24,19 @@ const getPerformanceBasedCRE = async () => {
         const activeCREs = await User.find({
             roleId: creRole._id,
             status: 'Active',
-        }).select('_id');
+        }).select('_id nameAsPerNID');
         if (!activeCREs || activeCREs.length === 0) {
             console.warn('No active CREs found. Assigning a default CRE.');
             return null; // Or return a default CRE ID
         }
-        const creIds = activeCREs.map((cre) => cre._id);
+        const creIds = activeCREs.map((cre) => ({ creId: cre._id, name: cre.nameAsPerNID }));
 
         // Define the 7-day window start date
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
         // 3. Aggregate performance metrics for each active CRE over the last 7 days
         const creMetrics = await Promise.all(
-            creIds.map(async (creId) => {
+            creIds.map(async ({ creId, name }) => {
                 // Count leads assigned within the last 7 days
                 const assigned = await Lead.countDocuments({
                     creName: creId,
@@ -116,6 +116,7 @@ const getPerformanceBasedCRE = async () => {
 
                 return {
                     creId,
+                    name,
                     performance,
                     assigned,
                 };
@@ -157,7 +158,7 @@ const getPerformanceBasedCRE = async () => {
 
         underQuota.forEach((cre) => {
             console.log(
-                `CRE: ${cre.creId}, Assigned: ${cre.assigned}, Expected: ${cre.expected}, Gap: ${cre.gap}, Ratio: ${cre.ratio}`
+                `CRE: ${cre.name}, Assigned: ${cre.assigned}, Expected: ${cre.expected}, Gap: ${cre.gap}, Ratio: ${cre.ratio}`
             );
         });
 
