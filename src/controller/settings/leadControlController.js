@@ -11,9 +11,9 @@ exports.getLeadSettingsDoc = async () => {
             name: 'lead',
             settingsData: {
                 global: {
-                    performanceRangeDays: 7,
-                    messageSeenTimeMin: 5,
-                    messageReplyTimeMin: 10,
+                    performanceRangeDays: '2025-02-01',
+                    messageSeenTimeMin: 8,
+                    messageReplyTimeMin: 12,
                 },
                 creManualOverrides: [],
             },
@@ -60,10 +60,7 @@ exports.getLeadControl = async (req, res) => {
                 );
 
                 // performance range days convart into last those days,
-                const dateRange = new Date(
-                    // eslint-disable-next-line no-unsafe-optional-chaining
-                    Date.now() - globalSettings?.performanceRangeDays * 24 * 60 * 60 * 1000
-                );
+                const dateRange = new Date(globalSettings?.performanceRangeDays);
 
                 const performances = await getCREPerformance(user._id, dateRange);
                 const { assigned: assignCount, performance } = performances || {};

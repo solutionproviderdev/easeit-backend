@@ -742,6 +742,7 @@ exports.assignCreToLead = async (req, res) => {
 
         // Update the property and mark it as modified
         lead.creName = newCREId;
+        lead.lastAssigned = new Date();
         lead.markModified('creName'); // Ensure the change is detected
 
         // Emit socket event for lead update
