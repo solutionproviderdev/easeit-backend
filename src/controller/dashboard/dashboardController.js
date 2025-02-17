@@ -293,10 +293,6 @@ const getNotifications = async (req, res) => {
         const department = await Department.findById(user.departmentId);
         const role = department.roles.find((role) => role._id.equals(user.roleId));
 
-        // Log the department name and role name
-        console.log('Department Name:', department.departmentName);
-        console.log('Role Name:', role.roleName);
-
         // Check if the user is a CRE by verifying role and department
         if (!role || department.departmentName !== 'CRE') {
             return res.status(403).json({ message: 'User is not authorized as CRE' });

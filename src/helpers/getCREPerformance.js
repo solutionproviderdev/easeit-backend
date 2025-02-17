@@ -33,40 +33,40 @@ const getCREPerformance = async (
 
         // Count meetings set (from Meeting collection) with a lower bound (7-day window)
         const meetingsSet = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             date: { $gte: startDateinUTC },
         });
 
         // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
         const meetingsCompleted = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             status: { $in: ['Complete', 'Sold'] },
             date: { $gte: startDateinUTC, $lte: endDate },
         });
 
         // Count rescheduled meetings within the 7-day window
         const meetingsRescheduled = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             status: 'Rescheduled',
             date: { $gte: startDateinUTC, $lte: endDate },
         });
 
         // Count postponed meetings within the 7-day window
         const meetingPostponed = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             status: 'Postponed',
             date: { $gte: startDateinUTC, $lte: endDate },
         });
 
         const meetingCancelled = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             status: 'Canceled',
             date: { $gte: startDateinUTC, $lte: endDate },
         });
 
         // Count total sales (status: 'Sold') within the 7-day window
         const totalSales = await Meeting.countDocuments({
-            lead: { $in: leadIds },
+            // lead: { $in: leadIds },
             status: 'Sold',
             date: { $gte: startDateinUTC, $lte: endDate },
         });

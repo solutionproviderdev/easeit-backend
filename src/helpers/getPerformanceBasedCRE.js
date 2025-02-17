@@ -2,7 +2,6 @@
 const { getLeadSettingsDoc } = require('../controller/settings/leadControlController');
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
-const Lead = require('../schemas/LeadsSchema');
 const getCREPerformance = require('./getCREPerformance');
 
 /**
@@ -74,10 +73,12 @@ const getPerformanceBasedCRE = async (position) => {
             roleId: creRole._id,
             status: 'Active',
         }).select('_id nameAsPerNID');
+
         if (!activeCREs || activeCREs.length === 0) {
             console.warn('No active CREs found. Assigning a default CRE.');
             return null; // Or return a default CRE ID
         }
+
         const creIds = activeCREs.map((cre) => ({
             creId: cre._id,
             name: cre.nameAsPerNID,
@@ -126,4 +127,5 @@ const getPerformanceBasedCRE = async (position) => {
 
 module.exports = {
     getPerformanceBasedCRE,
+    selectCREBasedOnOverFlow,
 };

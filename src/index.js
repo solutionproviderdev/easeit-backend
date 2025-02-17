@@ -47,6 +47,7 @@ const { reschedulePendingReminders } = require('./ongoing/reschedulePendingRemin
 const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
+const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
 
 // Initialize app
 const app = express();
@@ -161,17 +162,29 @@ cron.schedule('*/10 * * * *', async () => {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
 
+// Schedule the task to run every 1 minutes
+cron.schedule(
+	'* * * * *',
+	async () => {
+		try {
+			await reAssignOnNotReplied();
+			console.log('reAssignOnNotReplied executed successfully.');
+		} catch (error) {
+			console.error('Error in reAssignOnNotReplied cron job:', error);
+		}
+	},
+	{
+		timezone: 'Asia/Dhaka', // Adjust timezone as needed
+	}
+);
+
 // assignUnassignedLeads(io);
 
-// reschedule pending reminders
+// some corn jobs eatch time server starts
 reschedulePendingReminders();
 nameBasedLeadAssign();
 checkProductAdForLeadMessages();
-
-// imageLinkChange();
-// imageLinkChangeLead();
-// getPerformanceBasedCRE();
-// findDuplicateMeetings();
+reAssignOnNotReplied();
 findDuplicateLeads();
 
 getPerformanceBasedCRE();
