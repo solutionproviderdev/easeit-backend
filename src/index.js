@@ -48,6 +48,7 @@ const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
+const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
 
 // Initialize app
 const app = express();
@@ -168,7 +169,8 @@ cron.schedule(
 	async () => {
 		try {
 			await reAssignOnNotReplied();
-			console.log('reAssignOnNotReplied executed successfully.');
+			await reAssignOnNotSeen();
+			console.log('Re-Assign executed successfully.');
 		} catch (error) {
 			console.error('Error in reAssignOnNotReplied cron job:', error);
 		}
@@ -185,6 +187,7 @@ reschedulePendingReminders();
 nameBasedLeadAssign();
 checkProductAdForLeadMessages();
 reAssignOnNotReplied();
+reAssignOnNotSeen();
 findDuplicateLeads();
 
 getPerformanceBasedCRE();

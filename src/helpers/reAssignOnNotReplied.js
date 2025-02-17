@@ -59,13 +59,25 @@ const reAssignOnNotReplied = async () => {
         });
         console.log(`Found ${leads.length} leads for reassignment.`);
 
+        let reAssignedCount = 0;
+
         // 4. Process each lead.
         for (const lead of leads) {
             try {
                 // Check if lead is overdue for reply (in minutes)
                 const now = new Date();
-                const leadCreated = new Date(lead.createdAt);
-                const diffMinutes = (now.getTime() - leadCreated.getTime()) / (1000 * 60);
+
+                // filter out the message sent from user
+                const messages = lead.messages.filter((message) => message.sentByMe === false);
+                if (messages.length === 0) {
+                    // No messages from user; skip.
+                    continue;
+                }
+
+                // get the last message timestamp
+                const lastMessagetime = new Date(messages[messages.length - 1].date);
+
+                const diffMinutes = (now.getTime() - lastMessagetime.getTime()) / (1000 * 60);
                 if (diffMinutes < messageReplyTimeMin) {
                     // Lead is not overdue; skip.
                     continue;
@@ -104,7 +116,8 @@ const reAssignOnNotReplied = async () => {
                 if (selectedCRE && selectedCRE.creId) {
                     // Update the lead with the new CRE.
                     await Lead.updateOne({ _id: lead._id }, { creName: selectedCRE.creId });
-                    console.log(`Lead ${lead._id} reassigned to CRE ${selectedCRE.name}`);
+                    reAssignedCount += 1;
+                    console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
                 }
             } catch (leadError) {
                 console.error(`Error processing lead ${lead._id}:`, leadError.message);
