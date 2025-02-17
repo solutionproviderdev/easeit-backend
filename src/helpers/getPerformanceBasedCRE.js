@@ -88,7 +88,7 @@ const getPerformanceBasedCRE = async (position) => {
         const performanceRangeDays = settings.settingsData?.global?.performanceRangeDays || 7;
 
         // Define the performance window start date.
-        const dateRange = new Date(Date.now() - performanceRangeDays * 24 * 60 * 60 * 1000);
+        const dateRange = new Date(performanceRangeDays);
 
         // 3. Aggregate performance metrics for each active CRE over the performance window.
         const creMetrics = await Promise.all(

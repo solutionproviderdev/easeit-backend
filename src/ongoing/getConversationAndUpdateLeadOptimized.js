@@ -251,6 +251,7 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
         creName: cre,
         createdAt: new Date(firstMessageTime),
         messagesSeen: false,
+        lastAssigned: new Date(),
     });
 
     const savedNewLead = await newLead.save();

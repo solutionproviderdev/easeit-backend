@@ -168,8 +168,8 @@ cron.schedule(
 	'* * * * *',
 	async () => {
 		try {
-			await reAssignOnNotReplied();
-			await reAssignOnNotSeen();
+			await reAssignOnNotReplied(io);
+			await reAssignOnNotSeen(io);
 			console.log('Re-Assign executed successfully.');
 		} catch (error) {
 			console.error('Error in reAssignOnNotReplied cron job:', error);
@@ -186,8 +186,8 @@ cron.schedule(
 reschedulePendingReminders();
 nameBasedLeadAssign();
 checkProductAdForLeadMessages();
-reAssignOnNotReplied();
-reAssignOnNotSeen();
+reAssignOnNotReplied(io);
+reAssignOnNotSeen(io);
 findDuplicateLeads();
 
 getPerformanceBasedCRE();

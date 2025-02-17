@@ -2,47 +2,49 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const { getLeadSettingsDoc } = require('../controller/settings/leadControlController');
+const {
+    emitSocketEventsForNewMessage,
+} = require('../ongoing/getConversationAndUpdateLeadOptimized');
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const Lead = require('../schemas/LeadsSchema');
 const getCREPerformance = require('./getCREPerformance');
 const { selectCREBasedOnOverFlow } = require('./getPerformanceBasedCRE');
 
-const reAssignOnNotReplied = async () => {
+const reAssignOnNotReplied = async (io) => {
     console.time('reAssignOnNotReplied');
     try {
-        // Get global lead settings
+        // 1. Get global lead settings
         const settings = await getLeadSettingsDoc();
         const {
             global: { reAssignOnReplied, messageReplyTimeMin, performanceRangeDays },
         } = settings.settingsData;
 
-        // If reassign on replied is disabled, do nothing.
+        // If reassign on not replied is disabled, do nothing.
         if (!reAssignOnReplied) {
             console.log('Reassign on not replied is disabled');
+            console.timeEnd('reAssignOnNotReplied');
             return;
         }
 
-        // 1. Get the CRE department and roles.
+        // 2. Get the CRE department and roles.
         const creDepartment = await Department.findOne({
             departmentName: 'CRE',
         }).select('roles');
         if (!creDepartment || !creDepartment.roles) {
             throw new Error('CRE department or roles not found');
         }
-
         // Filter for the CRE role.
         const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
         if (!creRole) {
             throw new Error('CRE role not found in department');
         }
 
-        // 2. Retrieve all active CREs with the CRE role.
+        // 3. Retrieve all active CREs with the CRE role.
         const activeCREs = await User.find({
             roleId: creRole._id,
             status: 'Active',
         }).select('_id nameAsPerNID');
-
         if (!activeCREs || activeCREs.length === 0) {
             console.warn('No active CREs found.');
             return;
@@ -52,50 +54,31 @@ const reAssignOnNotReplied = async () => {
             name: cre.nameAsPerNID,
         }));
 
-        // 3. Get all leads that haven't been replied (status 'New' and repliedFromSystem false)
+        // 4. Only fetch leads that have been assigned more than messageReplyTimeMin minutes ago.
+        const now = new Date();
+        const threshold = new Date(now.getTime() - messageReplyTimeMin * 60 * 1000);
         const leads = await Lead.find({
             repliedFromSystem: false,
-            status: 'New',
+            status: { $in: ['New', 'Number Collected'] },
+            lastAssigned: { $lte: threshold },
         });
         console.log(`Found ${leads.length} leads for reassignment.`);
 
         let reAssignedCount = 0;
 
-        // 4. Process each lead.
+        // 5. Process each lead.
         for (const lead of leads) {
             try {
-                // Check if lead is overdue for reply (in minutes)
-                const now = new Date();
-
-                // filter out the message sent from user
-                const messages = lead.messages.filter((message) => message.sentByMe === false);
-                if (messages.length === 0) {
-                    // No messages from user; skip.
-                    continue;
-                }
-
-                // get the last message timestamp
-                const lastMessagetime = new Date(messages[messages.length - 1].date);
-
-                const diffMinutes = (now.getTime() - lastMessagetime.getTime()) / (1000 * 60);
-                if (diffMinutes < messageReplyTimeMin) {
-                    // Lead is not overdue; skip.
-                    continue;
-                }
-
                 // Exclude the currently assigned CRE.
                 const remainingCREs = creIds.filter(
                     ({ creId }) => creId.toString() !== (lead.creName && lead.creName.toString())
                 );
                 if (remainingCREs.length === 0) {
-                    // No alternate CRE available.
                     continue;
                 }
 
                 // Define the performance window start date.
-                const windowStartDate = new Date(
-                    Date.now() - performanceRangeDays * 24 * 60 * 60 * 1000
-                );
+                const windowStartDate = new Date(performanceRangeDays);
 
                 // Compute performance metrics for each remaining CRE.
                 const creMetrics = await Promise.all(
@@ -114,16 +97,26 @@ const reAssignOnNotReplied = async () => {
                 // Use overflow management to select the best candidate.
                 const selectedCRE = selectCREBasedOnOverFlow(creMetrics, 0);
                 if (selectedCRE && selectedCRE.creId) {
-                    // Update the lead with the new CRE.
-                    await Lead.updateOne({ _id: lead._id }, { creName: selectedCRE.creId });
-                    reAssignedCount += 1;
+                    // Update the lead with the new CRE and update lastAssigned to now.
+                    const savedLead = await Lead.findByIdAndUpdate(
+                        lead._id,
+                        { creName: selectedCRE.creId, lastAssigned: now },
+                        { new: true }
+                    );
+                    // eslint-disable-next-line no-plusplus
+                    reAssignedCount++;
+
+                    // Emit socket events for the new assignment.
+                    emitSocketEventsForNewMessage(io, savedLead, savedLead.pageInfo);
+
                     console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
                 }
             } catch (leadError) {
                 console.error(`Error processing lead ${lead._id}:`, leadError.message);
-                continue; // Move to next lead on error.
+                continue;
             }
         }
+        console.log(`Total leads reassigned: ${reAssignedCount}`);
     } catch (error) {
         console.error('Error in reAssignOnNotReplied:', error.message);
         throw error;
