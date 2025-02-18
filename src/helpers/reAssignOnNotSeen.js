@@ -62,6 +62,7 @@ const reAssignOnNotSeen = async (io) => {
             repliedFromSystem: false,
             messagesSeen: false,
             status: { $in: ['New', 'Number Collected'] },
+            source: 'Facebook',
             lastAssigned: { $lte: threshold },
         });
         console.log(`Found ${leads.length} leads for reassignment (not seen).`);

@@ -60,6 +60,7 @@ const reAssignOnNotReplied = async (io) => {
         const leads = await Lead.find({
             repliedFromSystem: false,
             status: { $in: ['New', 'Number Collected'] },
+            source: 'Facebook',
             lastAssigned: { $lte: threshold },
         });
         console.log(`Found ${leads.length} leads for reassignment.`);
