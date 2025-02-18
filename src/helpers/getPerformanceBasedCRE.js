@@ -4,22 +4,61 @@ const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const getCREPerformance = require('./getCREPerformance');
 
-/**
- * Helper function to select a CRE based on performance overflow management.
- * @param {Array} creMetrics - Array of CRE metrics objects: { creId, name, performance, assigned }
- * @returns {Object} selectedCRE - The chosen CRE object.
- */
+const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []) => {
+    // Parse manual override values: build a map from creId to manual rate (numeric)
+    const manualMap = {};
+    manualOverrides.forEach((override) => {
+        // Assume manualLeadAssignRate is a string like "50%"
+        if (override.manualLeadAssignRate) {
+            const rate = parseFloat(override.manualLeadAssignRate.replace('%', ''));
+            if (!isNaN(rate)) {
+                manualMap[override.creId] = rate;
+            }
+        }
+    });
 
-const selectCREBasedOnOverFlow = (creMetrics, position = 0) => {
-    // Calculate total performance and total assigned leads.
-    const totalPerformance = creMetrics.reduce((sum, metric) => sum + metric.performance, 0);
-    const totalAssigned = creMetrics.reduce((sum, metric) => sum + metric.assigned, 0);
+    // Partition metrics into manual and non-manual groups.
+    const manualGroup = [];
+    const nonManualGroup = [];
+    creMetrics.forEach((metric) => {
+        if (manualMap[metric.creId]) {
+            manualGroup.push(metric);
+        } else {
+            nonManualGroup.push(metric);
+        }
+    });
 
-    // For each CRE, compute expected assigned leads based on performance ratio.
-    const metricsWithGap = creMetrics.map((metric) => {
+    // Total assigned leads among all CREs
+    const totalAssigned = creMetrics.reduce((sum, m) => sum + m.assigned, 0);
+
+    // Sum of manual override percentages.
+    const sumManual = manualGroup.reduce((sum, m) => sum + manualMap[m.creId], 0);
+
+    // For each CRE with manual override, expected = (manualRate/100)*totalAssigned.
+    const manualMetrics = manualGroup.map((metric) => {
+        const manualRate = manualMap[metric.creId];
+        const expected = (manualRate / 100) * totalAssigned;
+        const gap = expected - metric.assigned; // positive if under-assigned
+        const ratio = expected > 0 ? metric.assigned / expected : 1;
+        return {
+            ...metric,
+            expected,
+            gap,
+            ratio,
+            manualRate,
+        };
+    });
+
+    // For non-manual CREs, use their performance share.
+    const totalPerformanceNonManual = nonManualGroup.reduce((sum, m) => sum + m.performance, 0);
+    // The available percentage for non-manual CREs is 100 - sumManual.
+    const nonManualMetrics = nonManualGroup.map((metric) => {
         const expected =
-            totalPerformance > 0 ? (metric.performance / totalPerformance) * totalAssigned : 0;
-        const gap = expected - metric.assigned; // Positive if under-assigned.
+            totalPerformanceNonManual > 0
+                ? (metric.performance / totalPerformanceNonManual) *
+                  (totalAssigned * ((100 - sumManual) / 100))
+                : 0;
+        const gap = expected - metric.assigned;
         const ratio = expected > 0 ? metric.assigned / expected : 1;
         return {
             ...metric,
@@ -29,23 +68,28 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0) => {
         };
     });
 
-    // Filter CREs that are under their expected quota (gap > 0)
-    const underQuota = metricsWithGap.filter((m) => m.gap > 0);
+    // Merge the two arrays.
+    const mergedMetrics = [...manualMetrics, ...nonManualMetrics];
 
+    // Now select one candidate. We first try to find those under their expected quota (gap > 0).
+    const underQuota = mergedMetrics.filter((m) => m.gap > 0);
     let selectedCRE;
     if (underQuota.length > 0) {
-        // Choose the one with the high gap.
+        // Sort underQuota descending by gap (choose the one with highest gap)
         underQuota.sort((a, b) => b.gap - a.gap);
         selectedCRE = underQuota[position];
     } else {
-        // All CREs are at or above quota; choose the one with the highest ratio.
-        metricsWithGap.sort((a, b) => b.ratio - a.ratio);
-        selectedCRE = metricsWithGap[position];
+        // Otherwise, sort by lowest ratio (i.e. most under-assigned relatively)
+        mergedMetrics.sort((a, b) => a.ratio - b.ratio);
+        selectedCRE = mergedMetrics[position];
     }
 
+    // (Optional) Log debug info for underQuota candidates.
     underQuota.forEach((cre) => {
         console.log(
-            `CRE: ${cre.name}, Assigned: ${cre.assigned}, Expected: ${cre.expected}, Gap: ${cre.gap}, Ratio: ${cre.ratio}`
+            `CRE: ${cre.name}, Assigned: ${cre.assigned}, Expected: ${cre.expected.toFixed(
+                2
+            )}, Gap: ${cre.gap.toFixed(2)}, Ratio: ${cre.ratio.toFixed(2)}`
         );
     });
 
@@ -86,6 +130,7 @@ const getPerformanceBasedCRE = async (position) => {
 
         const settings = await getLeadSettingsDoc();
         const performanceRangeDays = settings.settingsData?.global?.performanceRangeDays || 7;
+        const manualOverrides = settings?.settingsData?.creManualOverrides || [];
 
         // Define the performance window start date.
         const dateRange = new Date(performanceRangeDays);
@@ -116,7 +161,7 @@ const getPerformanceBasedCRE = async (position) => {
         }
 
         // Use the overflow management helper to select the appropriate CRE.
-        const selectedCRE = selectCREBasedOnOverFlow(creMetrics, position);
+        const selectedCRE = selectCREBasedOnOverFlow(creMetrics, position, manualOverrides);
         console.log('Selected CRE:', selectedCRE.name);
         return selectedCRE.creId;
     } catch (error) {
