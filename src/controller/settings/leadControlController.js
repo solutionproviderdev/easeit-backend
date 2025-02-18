@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 const User = require('../../schemas/auth/UserSchema');
 const Settings = require('../../schemas/SettingsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
@@ -30,7 +31,6 @@ exports.getLeadControl = async (req, res) => {
         if (!settings) {
             return res.status(404).json({ error: 'Lead control settings not found' });
         }
-
         const globalSettings = settings.settingsData.global;
 
         // Fetch the CRE department using its name.
@@ -45,26 +45,23 @@ exports.getLeadControl = async (req, res) => {
             return res.status(404).json({ error: 'CRE role not found' });
         }
 
-        // Fetch all active CRE users in the CRE department.
-        // We also populate the department details (e.g. departmentName).
+        // Fetch all active CRE users in the CRE department (with populated department details).
         const creUsers = await User.find({
             departmentId: creDepartment._id,
             roleId: creRole._id,
         }).populate('departmentId', 'departmentName');
 
-        // Build the CRE distribution array, merging manual override data if available.
+        // Build the initial CRE distribution array.
         const creDistribution = await Promise.all(
             creUsers.map(async (user) => {
                 const override = (settings.settingsData.creManualOverrides || []).find(
                     (o) => o.creId === user._id.toString()
                 );
-
-                // performance range days convart into last those days,
-                const dateRange = new Date(globalSettings?.performanceRangeDays);
-
+                // For performance, we now expect global.performanceRangeDays is
+                // used as a date string or converted appropriately.
+                const dateRange = new Date(globalSettings.performanceRangeDays);
                 const performances = await getCREPerformance(user._id, dateRange);
                 const { assigned: assignCount, performance } = performances || {};
-
                 return {
                     creId: user._id,
                     name: user.nickname || user.nameAsPerNID || 'Unknown',
@@ -80,6 +77,43 @@ exports.getLeadControl = async (req, res) => {
             })
         );
 
+        // Adjust the lead assign rate to ensure the total equals 100%.
+        // 1. For CREs with manual overrides, sum up their manual rates.
+        const manualOverrides = creDistribution.filter(
+            (cre) => cre.manual && cre.manualLeadAssignRate
+        );
+        const totalManualRate = manualOverrides.reduce(
+            (sum, cre) =>
+                // Remove any "%" symbol and convert to number.
+                sum + parseFloat(cre.manualLeadAssignRate.replace('%', '')),
+            0
+        );
+
+        // 2. For non-manual CREs, sum their performance values.
+        const nonManualCREs = creDistribution.filter((cre) => !cre.manual);
+        const totalPerformanceNonManual = nonManualCREs.reduce(
+            (sum, cre) => sum + cre.performance,
+            0
+        );
+
+        // 3. For each CRE, calculate and assign the final leadAssignRate.
+        for (const cre of creDistribution) {
+            if (cre.manual && cre.manualLeadAssignRate) {
+                // Use the manual value as is.
+                cre.leadAssignRate = `${parseFloat(
+                    cre.manualLeadAssignRate.replace('%', '')
+                ).toFixed(2)}%`;
+            } else {
+                // For non-manual, distribute the remaining percentage proportionally.
+                const adjustedRate =
+                    totalPerformanceNonManual > 0
+                        ? (cre.performance / totalPerformanceNonManual) * (100 - totalManualRate)
+                        : 0;
+                cre.leadAssignRate = `${adjustedRate.toFixed(2)}%`;
+            }
+        }
+
+        // Return the global settings and the adjusted CRE distribution.
         res.status(200).json({
             global: globalSettings,
             creDistribution,
@@ -151,21 +185,29 @@ exports.createManualOverride = async (req, res) => {
         if (!creId) {
             return res.status(400).json({ error: 'creId is required' });
         }
-        const settings = await exports.getLeadSettingsDoc();
-        const existing = (settings.settingsData.creManualOverrides || []).find(
-            (o) => o.creId === creId
-        );
-        if (existing) {
-            return res.status(400).json({ error: 'Manual override already exists for this CRE' });
-        }
         const newOverride = {
             creId,
             manual: true,
             manualLeadAssignRate,
             manualLeadAssignEndTime,
         };
-        settings.settingsData.creManualOverrides.push(newOverride);
-        await settings.save();
+
+        // Use findOneAndUpdate to push the new override only if there is no override for this creId
+        const settings = await Settings.findOneAndUpdate(
+            {
+                name: 'lead',
+                'settingsData.creManualOverrides.creId': { $ne: creId },
+            },
+            {
+                $push: { 'settingsData.creManualOverrides': newOverride },
+            },
+            { new: true }
+        );
+
+        if (!settings) {
+            return res.status(400).json({ error: 'Manual override already exists for this CRE' });
+        }
+
         res.status(201).json(newOverride);
     } catch (error) {
         console.error('Error creating manual override:', error);
@@ -180,26 +222,35 @@ exports.updateManualOverride = async (req, res) => {
         if (!creId) {
             return res.status(400).json({ error: 'creId is required' });
         }
-        const settings = await getLeadSettingsDoc();
-        const overrides = settings.settingsData.creManualOverrides || [];
-        const index = overrides.findIndex((o) => o.creId === creId);
-        if (index === -1) {
+
+        // Build the update object dynamically so that we update only if the values are provided.
+        const updateData = {};
+        if (manualLeadAssignRate !== undefined) {
+            updateData['settingsData.creManualOverrides.$.manualLeadAssignRate'] =
+                manualLeadAssignRate;
+        }
+        if (manualLeadAssignEndTime !== undefined) {
+            updateData['settingsData.creManualOverrides.$.manualLeadAssignEndTime'] =
+                manualLeadAssignEndTime;
+        }
+
+        // Use findOneAndUpdate with an array filter to update the matching manual override element.
+        const settings = await Settings.findOneAndUpdate(
+            { name: 'lead', 'settingsData.creManualOverrides.creId': creId },
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!settings) {
             return res.status(404).json({ error: 'Manual override not found' });
         }
-        overrides[index] = {
-            ...overrides[index],
-            manualLeadAssignRate:
-                manualLeadAssignRate !== undefined
-                    ? manualLeadAssignRate
-                    : overrides[index].manualLeadAssignRate,
-            manualLeadAssignEndTime:
-                manualLeadAssignEndTime !== undefined
-                    ? manualLeadAssignEndTime
-                    : overrides[index].manualLeadAssignEndTime,
-        };
-        settings.settingsData.creManualOverrides = overrides;
-        await settings.save();
-        res.status(200).json(overrides[index]);
+
+        // Find the updated override in the array
+        const updatedOverride = settings.settingsData.creManualOverrides.find(
+            (o) => o.creId === creId
+        );
+
+        res.status(200).json(updatedOverride);
     } catch (error) {
         console.error('Error updating manual override:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -212,11 +263,14 @@ exports.deleteManualOverride = async (req, res) => {
         if (!creId) {
             return res.status(400).json({ error: 'creId is required' });
         }
-        const settings = await getLeadSettingsDoc();
-        settings.settingsData.creManualOverrides = (
-            settings.settingsData.creManualOverrides || []
-        ).filter((o) => o.creId !== creId);
-        await settings.save();
+        // Use updateOne with $pull to remove the manual override for the given creId
+        const result = await Settings.updateOne(
+            { name: 'lead', 'settingsData.creManualOverrides.creId': creId },
+            { $pull: { 'settingsData.creManualOverrides': { creId } } }
+        );
+        if (result.modifiedCount === 0) {
+            return res.status(404).json({ error: 'Manual override not found' });
+        }
         res.status(200).json({ message: 'Manual override deleted successfully' });
     } catch (error) {
         console.error('Error deleting manual override:', error);
