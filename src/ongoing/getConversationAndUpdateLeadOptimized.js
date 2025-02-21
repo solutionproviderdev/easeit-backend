@@ -132,7 +132,7 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
             `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
-            { timeout: 20000 }
+            // { timeout: 20000 }
         );
         return response.data.data;
     } catch (error) {
@@ -304,6 +304,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
 
 // Main function to fetch conversations and update leads
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
+    console.time('getConversationsAndUpdateLeadsUpdated');
     try {
         const pages = await fetchFacebookSettings();
         const nameToCreId = await getCREMapping();
@@ -330,6 +331,7 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
+    console.timeEnd('getConversationsAndUpdateLeadsUpdated');
 };
 
 module.exports = {

@@ -149,6 +149,7 @@ cron.schedule('*/1 * * * * *', async () => { // Runs every second
     if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
         getConversationsAndUpdateLeadsUpdated(io);
 		nameBasedLeadAssign();
+		findDuplicateLeads();
     }
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
@@ -162,6 +163,8 @@ cron.schedule('*/10 * * * *', async () => {
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
+
+checkAndUpdateMissedReminders(io);
 
 // Schedule the task to run every 1 minutes
 cron.schedule(

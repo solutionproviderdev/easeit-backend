@@ -58,6 +58,21 @@ const reminderSchema = new mongoose.Schema(
     { _id: true }
 );
 
+const followUpSchema = new mongoose.Schema({
+    time: { type: Date, required: true },
+    status: {
+        type: String,
+        enum: ['Pending', 'Complete', 'Missed', 'Late Complete'],
+        default: 'Pending',
+    },
+    commentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false, // Optional field
+    },
+    meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' },
+    type: { type: String, enam: ['Call', 'Meeting'] },
+});
+
 // Call Log Schema
 const callLogSchema = new mongoose.Schema(
     {
@@ -79,6 +94,36 @@ const callLogSchema = new mongoose.Schema(
     { _id: true }
 );
 
+// finance Schema
+const payment = new mongoose.Schema(
+    {
+        amount: { type: Number, required: true },
+        paymentMethod: {
+            type: String,
+            enum: ['Cash', 'Cheque', 'Bank Transfer', 'Online Payment'],
+            required: true,
+        },
+        paymentDate: { type: Date, required: true },
+        paymentStatus: {
+            type: String,
+            enum: ['Paid', 'Unpaid'],
+            required: true,
+            default: 'Unpaid',
+        },
+        paymentNote: String,
+    },
+    { _id: true }
+);
+
+// finance Schema
+const financeSchema = new mongoose.Schema({
+    clientsBudget: Number,
+    projectValue: Number,
+    soldAmmount: Number,
+    payments: [payment],
+    paymentNote: String,
+});
+
 // Lead Schema
 const leadSchema = mongoose.Schema(
     {
@@ -99,6 +144,7 @@ const leadSchema = mongoose.Schema(
                 'Meeting Fixed',
                 'Meeting Postponed',
                 'Cancel Meeting',
+                'Sold',
             ],
             required: true,
             default: 'unread',
@@ -167,6 +213,12 @@ const leadSchema = mongoose.Schema(
 
         // field for product ad relations:
         productAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ProductAd' }],
+
+        // new field for sales Follow Up.
+        salesFollowUp: [followUpSchema],
+
+        // new field for Finance
+        finance: financeSchema,
     },
     {
         timestamps: true,

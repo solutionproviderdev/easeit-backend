@@ -35,11 +35,12 @@ const {
     validatePhoneNumber,
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
-const Lead = require('../../../schemas/LeadsSchema');
+const leadSalesRouter = require('../sales/sales');
 
 const leadRouter = express.Router();
 
 leadRouter.use('/conversation', leadConversationRouter);
+leadRouter.use('/sales', leadSalesRouter);
 
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
@@ -68,7 +69,7 @@ leadRouter.put('/:id/add-phone-number', validatePhoneNumber, addPhoneNumberToLea
 // New route for updating a lead
 leadRouter.put('/:id', checkAuth, validateLeadUpdate, updateLead);
 
-// Updated route for adding a reminder to a lead
+// route for adding a reminder to a lead
 leadRouter.post('/:id/reminders', validateReminder, addReminder);
 
 // New route for updating a reminder status

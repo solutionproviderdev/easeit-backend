@@ -41,6 +41,7 @@ exports.fixMeeting = async (req, res) => {
         const leadUpdate = {
             $push: { meetings: newMeeting._id },
             status: 'Meeting Fixed',
+            salesExqName: salesExecutive,
         };
 
         // Conditionally update lead's name

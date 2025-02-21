@@ -7,7 +7,6 @@ const meetingSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Lead', // Reference to the Lead collection
             required: true,
-            // unique: true,
         },
         date: {
             type: Date,
@@ -50,7 +49,16 @@ const meetingSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['Fixed', 'Postponed', 'Rescheduled', 'Canceled', 'Complete', 'Sold'],
+            enum: [
+                'Fixed',
+                'Postponed',
+                'Rescheduled',
+                'Canceled',
+                'Complete',
+                'Sold',
+                'Follow-Up',
+            ],
+
             required: true,
             default: 'Meeting Fixed',
         },
