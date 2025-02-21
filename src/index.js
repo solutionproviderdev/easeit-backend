@@ -146,7 +146,7 @@ app.use('/settings', settingsRouter);
 // Replace setInterval with node-cron
 cron.schedule('*/1 * * * * *', async () => { // Runs every second
     const now = new Date();
-    if (now.getSeconds() % 8 === 0) { // Check if the current second is a multiple of 8
+    if (now.getSeconds() % 20 === 0) { // Check if the current second is a multiple of 20
         getConversationsAndUpdateLeadsUpdated(io);
 		nameBasedLeadAssign();
 		findDuplicateLeads();
