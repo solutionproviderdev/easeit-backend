@@ -1,23 +1,28 @@
+/* eslint-disable no-lonely-if */
+/* eslint-disable no-continue */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable max-len */
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-use-before-define */
+
 const mongoose = require('mongoose');
-const faker = require('@faker-js/faker');
-const User = require('./src/schemas/UserSchema');
-const Department = require('./src/schemas/DepartmentSchema');
+const fs = require('fs');
+const { Parser } = require('json2csv');
+const dayjs = require('dayjs');
+const { faker } = require('@faker-js/faker');
+const bcrypt = require('bcrypt');
+const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const { all } = require('axios');
+const Lead = require('./src/schemas/LeadsSchema');
+const Department = require('./src/schemas/auth/DepartmentSchema');
+const User = require('./src/schemas/auth/UserSchema');
+const findCREWithLowestLeads = require('./src/helpers/findCREWithLowestLeads');
+const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE');
+const Meeting = require('./src/schemas/MeetingSchema');
+const MapData = require('./src/schemas/MapData'); // Adjust the path as needed
+const ProductAd = require('./src/schemas/ProductAdSchema');
 
-mongoose.connect('mongodb://localhost:27017/easeit', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
-
-mongoose.connection.on('connected', () => {
-    console.log('Connected to MongoDB');
-    populateDatabase(); // Call the populate function once connected
-});
-
-mongoose.connection.on('error', (err) => {
-    console.error(`MongoDB connection error: ${err}`);
-});
-
+// Function to generate random departments
 const generateDepartments = (num) => {
     const departments = [];
     for (let i = 0; i < num; i++) {
@@ -31,6 +36,7 @@ const generateDepartments = (num) => {
     return departments;
 };
 
+// Function to generate random roles
 const generateRoles = (num) => {
     const roles = [];
     for (let i = 0; i < num; i++) {
@@ -43,6 +49,7 @@ const generateRoles = (num) => {
     return roles;
 };
 
+// Function to generate random permissions
 const generatePermissions = (num) => {
     const permissions = [];
     const actions = ['create', 'read', 'update', 'delete'];
@@ -55,6 +62,7 @@ const generatePermissions = (num) => {
     return permissions;
 };
 
+// Function to generate random users
 const generateUsers = async (num, departments) => {
     const users = [];
     for (let i = 0; i < num; i++) {
@@ -104,6 +112,8 @@ const generateUsers = async (num, departments) => {
     }
     return users;
 };
+
+// Function to populate the database
 const populateDatabase = async () => {
     try {
         const numDepartments = 5;
@@ -128,4 +138,1228 @@ const populateDatabase = async () => {
         console.error(`Error populating database: ${error.message}`);
         mongoose.connection.close();
     }
+};
+
+// Function to generate random reminders for leads
+const generateRandomReminder = async () => {
+    try {
+        const leads = await Lead.find();
+
+        if (!leads.length) {
+            console.log('No leads found in the collection');
+            return;
+        }
+
+        for (const lead of leads) {
+            const randomReminder = {
+                time: generateRandomDate(),
+                status: getRandomStatus(),
+                commentId: new mongoose.Types.ObjectId(),
+            };
+
+            lead.reminder.push(randomReminder);
+            await lead.save();
+            console.log(`Reminder added to lead ${lead.name}`);
+        }
+        console.log('All reminders added successfully!');
+    } catch (error) {
+        console.error('Error generating random reminders:', error.message);
+    }
+};
+
+// Function to generate a random status
+const getRandomStatus = () => {
+    const statuses = ['Pending', 'Complete', 'Missed'];
+    const randomIndex = Math.floor(Math.random() * statuses.length);
+    return statuses[randomIndex];
+};
+
+// Function to generate a random date within the last 30 days
+const generateRandomDate = () => {
+    const daysAgo = Math.floor(Math.random() * 30);
+    return dayjs().subtract(daysAgo, 'day').toDate();
+};
+
+// Function to update unread leads to 'New'
+const updateUnreadLeadsToNew = async () => {
+    try {
+        const result = await Lead.updateMany({ status: 'unread' }, { $set: { status: 'New' } });
+
+        console.log(`Updated ${result.modifiedCount} leads.`);
+    } catch (error) {
+        console.error('Error updating leads:', error.message);
+    }
+};
+
+// Function to generate CSV for all leads
+const generateAllLeadsMessagesCsv = async () => {
+    try {
+        const leads = await Lead.find();
+
+        if (!leads || leads.length === 0) {
+            console.log('No leads found');
+            return;
+        }
+
+        const csvData = [];
+
+        leads.forEach((lead) => {
+            const messagesByUs = lead.messages.filter((msg) => msg.sentByMe);
+            const messagesByCustomer = lead.messages.filter((msg) => !msg.sentByMe);
+
+            const maxLength = Math.max(messagesByUs.length, messagesByCustomer.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                csvData.push({
+                    leadId: lead._id,
+                    leadName: lead.name,
+                    messageByUs: messagesByUs[i] ? messagesByUs[i].content : '',
+                    messageByCustomer: messagesByCustomer[i] ? messagesByCustomer[i].content : '',
+                });
+            }
+        });
+
+        const fields = ['leadId', 'leadName', 'messageByUs', 'messageByCustomer'];
+        const json2csvParser = new Parser({ fields });
+        const csv = json2csvParser.parse(csvData);
+
+        fs.writeFileSync('all_leads_messages.csv', csv);
+        console.log('CSV file for all leads created successfully!');
+    } catch (error) {
+        console.error('Error generating CSV for all leads:', error);
+    }
+};
+
+// Function to determine if a message is automated
+const isAutomatedMessage = (message) => {
+    const lowerCaseMessage = message.toLowerCase();
+
+    // Add a pattern to detect the message "You can call [name] back within the next 7 days."
+    // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
+    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+
+    return automatedPattern.test(lowerCaseMessage);
+};
+
+// Function to log automated messages
+const logAutomatedMessages = async () => {
+    try {
+        const leads = await Lead.find({});
+        leads.forEach((lead) => {
+            lead.messages.forEach((message) => {
+                if (isAutomatedMessage(message.content)) {
+                    console.log(`Lead ID: ${lead._id}, Message: ${message.content}`);
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error reading messages:', error);
+    }
+};
+
+// Function to update the 'isAutomatedMessage' field in the database
+const updateAutomatedMessages = async () => {
+    try {
+        const leads = await Lead.find({});
+        for (const lead of leads) {
+            let isUpdated = false;
+
+            lead.messages.forEach((message) => {
+                const isAutomated = isAutomatedMessage(message.content);
+                if (message.isAutomatedMessage !== isAutomated) {
+                    message.isAutomatedMessage = isAutomated;
+                    isUpdated = true;
+                }
+            });
+
+            if (isUpdated) {
+                await lead.save();
+                console.log(`Lead ID: ${lead._id} has been updated.`);
+            }
+        }
+        console.log('Automated message update process completed.');
+    } catch (error) {
+        console.error('Error updating automated messages:', error);
+    }
+};
+
+// Function to determine if a message contains a high-quality lead tag
+const isHighQualityLeadMessage = (message) => {
+    const lowerCaseMessage = message.toLowerCase();
+    const highQualityPattern = /auto-detected outcome.*added an intake label/;
+    return highQualityPattern.test(lowerCaseMessage);
+};
+
+// Function to find and log leads with high-quality mentions
+const findHighQualityLeads = async () => {
+    try {
+        // Fetch all leads from the database
+        const leads = await Lead.find();
+
+        let totalHighQualityLeads = 0;
+        const highQualityLeads = [];
+
+        // Iterate over each lead
+        leads.forEach((lead) => {
+            // Check if any message contains the high-quality tag
+            const hasHighQualityMessage = lead.messages.some((message) =>
+                isHighQualityLeadMessage(message.content)
+            );
+
+            // If a high-quality message is found, log the lead's name and phone numbers
+            if (hasHighQualityMessage) {
+                highQualityLeads.push({
+                    name: lead.name,
+                    phone:
+                        lead.phone && lead.phone.length > 0
+                            ? lead.phone.join(', ')
+                            : 'No phone number available',
+                });
+                totalHighQualityLeads++;
+            }
+        });
+
+        // Log high-quality leads using console.table
+        if (highQualityLeads.length > 0) {
+            console.table(highQualityLeads);
+        } else {
+            console.log('No high-quality leads found.');
+        }
+
+        console.log(`Total High-Quality Leads: ${totalHighQualityLeads}`);
+    } catch (error) {
+        console.error('Error fetching leads:', error);
+    }
+};
+
+// Function to create dummy departments, roles, and users
+const createDummyUsers = async () => {
+    try {
+        // Create dummy departments with updated schema structure
+        const departments = [
+            {
+                departmentName: 'Sales',
+                description: 'Sales Department',
+                roles: [
+                    {
+                        roleName: 'Sales Manager',
+                        description: 'Handles sales operations',
+                        permissions: [
+                            {
+                                resource: 'leads',
+                                actions: [
+                                    { name: 'create', allowed: true },
+                                    { name: 'update', allowed: true },
+                                    { name: 'delete', allowed: true },
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        roleName: 'Sales Associate',
+                        description: 'Assists in sales',
+                        permissions: [
+                            {
+                                resource: 'leads',
+                                actions: [
+                                    { name: 'create', allowed: true },
+                                    { name: 'update', allowed: false },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                departmentName: 'Marketing',
+                description: 'Marketing Department',
+                roles: [
+                    {
+                        roleName: 'Marketing Head',
+                        description: 'Leads the marketing team',
+                        permissions: [
+                            {
+                                resource: 'campaigns',
+                                actions: [
+                                    { name: 'create', allowed: true },
+                                    { name: 'update', allowed: true },
+                                    { name: 'delete', allowed: true },
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        roleName: 'Marketing Associate',
+                        description: 'Assists with marketing campaigns',
+                        permissions: [
+                            {
+                                resource: 'campaigns',
+                                actions: [
+                                    { name: 'create', allowed: true },
+                                    { name: 'update', allowed: false },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ];
+
+        // Insert departments into the database
+        const createdDepartments = await Department.insertMany(departments);
+
+        // Create dummy users based on the created departments and roles
+        for (let i = 0; i < 10; i++) {
+            const department = faker.helpers.arrayElement(createdDepartments);
+            const role = faker.helpers.arrayElement(department.roles);
+            const password = await bcrypt.hash('password', 10);
+
+            const user = new User({
+                nameAsPerNID: `${faker.name.firstName()} ${faker.name.lastName()}`,
+                nickname: faker.internet.userName(),
+                email: faker.internet.email(),
+                personalPhone: faker.phone.phoneNumber(),
+                officePhone: faker.phone.phoneNumber(),
+                gender: faker.helpers.arrayElement(['Male', 'Female', 'Other']),
+                address: faker.address.streetAddress(),
+                profilePicture: faker.image.avatar(),
+                coverPhoto: faker.image.imageUrl(),
+                password,
+                status: faker.helpers.arrayElement(['Active', 'Inactive']),
+                roleId: role._id, // Reference the role ID from the department
+                departmentId: department._id, // Reference the department ID
+                type: faker.helpers.arrayElement(['Admin', 'Operator']),
+                accessLevel: faker.helpers.arrayElements(['read', 'write', 'delete'], 2),
+                joiningDate: faker.date.past(),
+                currentSalary: faker.finance.amount(),
+                workingProcedure: faker.lorem.sentence(),
+                documents: {
+                    resume: faker.internet.url(),
+                    nidCopy: faker.internet.url(),
+                    academicDocument: faker.internet.url(),
+                    bankAccountNumber: faker.finance.account(),
+                    agreement: faker.internet.url(),
+                },
+                activityLog: [
+                    {
+                        activity: faker.lorem.sentence(),
+                    },
+                ],
+                socialLinks: [
+                    {
+                        platform: 'Facebook',
+                        link: faker.internet.url(),
+                    },
+                ],
+                guardian: {
+                    name: `${faker.name.firstName()} ${faker.name.lastName()}`,
+                    phone: faker.phone.phoneNumber(),
+                    relation: faker.helpers.arrayElement(['Father', 'Mother', 'Guardian']),
+                },
+            });
+
+            await user.save(); // Save each user individually
+        }
+
+        console.log('Dummy data created successfully!');
+    } catch (error) {
+        console.error('Error creating dummy data:', error);
+    }
+};
+
+const assignLeadsToCRE = async () => {
+    try {
+        // Find all leads that do not have an assigned CRE
+        const unassignedLeads = await Lead.find();
+
+        if (unassignedLeads.length === 0) {
+            console.log('No unassigned leads found.');
+            return;
+        }
+
+        // Loop through each unassigned lead
+        for (const lead of unassignedLeads) {
+            // Find a CRE with the lowest number of leads
+            const creId = await getPerformanceBasedCRE();
+
+            if (!creId) {
+                console.error('No CRE available for assignment.');
+                continue;
+            }
+
+            // Assign the lead to the selected CRE
+            lead.creName = creId;
+
+            // Save the updated lead
+            await lead.save();
+
+            console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
+        }
+
+        console.log('Lead assignment to CRE completed.');
+    } catch (error) {
+        console.error('Error assigning leads to CRE:', error);
+        throw error;
+    }
+};
+
+// Convert Bengali numerals to English numerals
+const convertBengaliToEnglishNumbers = (input) => {
+    const bengaliToEnglishMap = {
+        '০': '0',
+        '১': '1',
+        '২': '2',
+        '৩': '3',
+        '৪': '4',
+        '৫': '5',
+        '৬': '6',
+        '৭': '7',
+        '৮': '8',
+        '৯': '9',
+    };
+    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+};
+
+// Function to check and update phone numbers for all leads
+const updateLeadsWithPhoneNumbers = async () => {
+    try {
+        const leads = await Lead.find({});
+
+        for (const lead of leads) {
+            let newPhoneAdded = false;
+
+            for (const message of lead.messages) {
+                if (message.sentByMe !== true) {
+                    const content = convertBengaliToEnglishNumbers(message.content);
+                    const potentialNumber = content.replace(/[^0-9]+/g, '');
+
+                    if (potentialNumber) {
+                        const parsedNumber = parsePhoneNumberFromString(potentialNumber, 'BD');
+
+                        // Check if the parsed number is valid and not already in the phone array
+                        if (parsedNumber && parsedNumber.isValid()) {
+                            const formattedNumber = parsedNumber.formatInternational();
+
+                            if (!lead.phone.includes(formattedNumber)) {
+                                lead.phone.push(formattedNumber);
+                                newPhoneAdded = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update lead status if a new phone number was added
+            if (newPhoneAdded) {
+                lead.status = 'Number Collected';
+                await lead.save();
+                console.log(`Updated lead ID ${lead._id}: Number collected.`);
+            }
+        }
+
+        console.log('All leads processed for phone number updates.');
+    } catch (error) {
+        console.error('Error updating leads with phone numbers:', error);
+    }
+};
+
+const updateLeadStatusBasedOnPhoneNumber = async () => {
+    try {
+        // Retrieve all leads
+        const leads = await Lead.find();
+
+        for (const lead of leads) {
+            if (lead.phone && lead.phone.length > 0) {
+                // Lead has phone numbers, check if status needs updating to 'Number Collected'
+                if (lead.status !== 'Number Collected') {
+                    lead.status = 'Number Collected';
+                    await lead.save();
+                    console.log(`Lead ID ${lead._id} status updated to 'Number Collected'.`);
+                }
+            } else {
+                // Lead has no phone numbers, check if status is incorrectly set to 'Number Collected'
+                if (lead.status === 'Number Collected') {
+                    lead.status = 'New';
+                    await lead.save();
+                    console.log(`Lead ID ${lead._id} status corrected to 'New'.`);
+                }
+            }
+        }
+
+        console.log('Lead statuses updated based on phone number presence.');
+    } catch (error) {
+        console.error('Error updating lead statuses based on phone number:', error);
+    }
+};
+
+const updateLeadsStatusToMeetingFixed = async () => {
+    try {
+        // Retrieve all meetings
+        const meetings = await Meeting.find().populate('lead'); // Populate to access lead details
+
+        for (const meeting of meetings) {
+            // Check if the lead's status is not already 'Meeting Fixed'
+            if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
+                meeting.lead.status = 'Meeting Fixed'; // Update status
+                await meeting.lead.save(); // Save the updated lead
+                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
+            }
+        }
+
+        console.log('All relevant lead statuses updated to "Meeting Fixed".');
+    } catch (error) {
+        console.error('Error updating lead statuses:', error);
+    }
+};
+
+const updateMeetingStatuses = async () => {
+    try {
+        // Define a mapping of old status values to new status values
+        const statusMapping = {
+            'Meeting Fixed': 'Fixed',
+            'Meeting Postponed': 'Postponed',
+            'Meeting Rescheduled': 'Rescheduled',
+            'Meeting Canceled': 'Canceled',
+        };
+
+        // Fetch all meetings from the database
+        const meetings = await Meeting.find();
+
+        for (const meeting of meetings) {
+            // Check if the current status needs to be updated
+            if (statusMapping[meeting.status]) {
+                // Update the status to the new value
+                meeting.status = statusMapping[meeting.status];
+                await meeting.save();
+                console.log(`Updated meeting ID ${meeting._id} status to '${meeting.status}'.`);
+            }
+        }
+
+        console.log('All meeting statuses updated successfully.');
+    } catch (error) {
+        console.error('Error updating meeting statuses:', error);
+    }
+};
+
+// Helper function to extract valid phone numbers from a message
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // Convert Bengali numerals to English and remove non-numeric characters
+    const sanitizedContent = convertBengaliToEnglishNumbers(
+        content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
+    );
+
+    // Validate the number using libphonenumber-js
+    if (sanitizedContent) {
+        const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
+        if (parsedNumber && parsedNumber.isValid()) {
+            return parsedNumber.formatInternational(); // Return formatted number
+        }
+    }
+    return null;
+};
+
+// Unified function to process leads
+const updateLeadsWithPhoneNumbersAndStatus = async () => {
+    try {
+        let totalNewLeadsUpdated = 0; // Count of leads updated to "New"
+        let totalNumberCollectedLeadsUpdated = 0; // Count of leads updated to "Number Collected"
+
+        let totalNewLeads = 0; // Total leads with "New" status
+        let totalNumberCollectedLeads = 0; // Total leads with "Number Collected" status
+        let totalLeads = 0; // Total number of leads
+
+        // Fetch all leads
+        const leads = await Lead.find({});
+        totalLeads = leads.length;
+
+        for (const lead of leads) {
+            let newPhoneAdded = false;
+
+            // Process each message in the lead
+            for (const message of lead.messages) {
+                if (!message.sentByMe && message.content) {
+                    const validPhoneNumber = extractValidPhoneNumber(message.content);
+                    if (validPhoneNumber) {
+                        // Add the phone number if not already in the lead's phone array
+                        if (!lead.phone.includes(validPhoneNumber)) {
+                            lead.phone.push(validPhoneNumber);
+                            newPhoneAdded = true;
+                        }
+                    }
+                }
+            }
+
+            // Update the lead's status based on whether a new phone number was added
+            if (newPhoneAdded) {
+                if (lead.status !== 'Number Collected') {
+                    lead.status = 'Number Collected';
+                    totalNumberCollectedLeadsUpdated++;
+                }
+            } else if (!lead.phone.length && lead.status === 'Number Collected') {
+                lead.status = 'New'; // Reset status if no phone numbers are found
+                totalNewLeadsUpdated++;
+            }
+
+            // Save the updated lead
+            await lead.save();
+            console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
+        }
+
+        // Fetch total counts of leads by status
+        totalNumberCollectedLeads = await Lead.countDocuments({ status: 'Number Collected' });
+        totalNewLeads = await Lead.countDocuments({ status: 'New' });
+
+        // Calculate percentages
+        const percentNumberCollected = ((totalNumberCollectedLeads / totalLeads) * 100).toFixed(2);
+        const percentNew = ((totalNewLeads / totalLeads) * 100).toFixed(2);
+
+        // Log the summary
+        console.log(
+            `Total leads updated to 'Number Collected': ${totalNumberCollectedLeadsUpdated}`
+        );
+        console.log(`Total leads updated to 'New': ${totalNewLeadsUpdated}`);
+        console.log(
+            `Total leads with 'Number Collected' status: ${totalNumberCollectedLeads} (${percentNumberCollected}%)`
+        );
+        console.log(`Total leads with 'New' status: ${totalNewLeads} (${percentNew}%)`);
+        console.log(`Total leads processed: ${totalLeads}`);
+        console.log('All leads processed and updated.');
+    } catch (error) {
+        console.error('Error processing leads for phone number updates:', error);
+    }
+};
+
+const assignLeadsToCREInOrder = async () => {
+    try {
+        // Fetch all active CREs
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
+
+        if (!creDepartment || !creDepartment.roles) {
+            throw new Error('CRE department or roles not found');
+        }
+
+        // Filter the CRE role from the department roles (excluding CRE Head)
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+        if (!creRole) {
+            throw new Error('CRE role not found in department');
+        }
+
+        // Retrieve all active CREs with the role 'CRE'
+        const activeCREs = await User.find({
+            roleId: creRole._id, // Filter by roleId for CRE
+            status: 'Active', // Only active users
+        }).select('_id');
+
+        if (!activeCREs || activeCREs.length === 0) {
+            console.error('No active CREs available for assignment.');
+            return;
+        }
+
+        const creIds = activeCREs.map((cre) => cre._id);
+
+        // Fetch unassigned leads (leads without a CRE assigned)
+        const unassignedLeads = await Lead.find();
+
+        if (unassignedLeads.length === 0) {
+            console.log('No unassigned leads found.');
+            return;
+        }
+
+        // Assign leads to CREs in round-robin order
+        let creIndex = 0;
+
+        for (const lead of unassignedLeads) {
+            // Assign the lead to the current CRE
+            lead.creName = creIds[creIndex];
+
+            // Save the updated lead
+            await lead.save();
+
+            console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
+
+            // Move to the next CRE in the list, wrapping around if necessary
+            creIndex = (creIndex + 1) % creIds.length;
+        }
+
+        console.log('Leads have been assigned to CREs in round-robin order.');
+    } catch (error) {
+        console.error('Error assigning leads to CREs in order:', error);
+        throw error;
+    }
+};
+
+const deleteLeadsWithInvalidMessageIds = async () => {
+    try {
+        // Find leads with invalid `_id` values in the `messages` array
+        const invalidLeads = await Lead.find({
+            'messages._id': { $type: 'number' },
+        });
+
+        if (invalidLeads.length === 0) {
+            console.log('No leads with invalid message IDs found.');
+            return;
+        }
+
+        console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
+
+        // Delete all invalid leads
+        const invalidLeadIds = invalidLeads.map((lead) => lead._id);
+
+        await Lead.deleteMany({ _id: { $in: invalidLeadIds } });
+
+        console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
+    } catch (error) {
+        console.error('Error deleting leads with invalid message IDs:', error.message);
+    }
+};
+
+// Function to randomly fix meetings for leads
+const randomlyFixMeetings = async () => {
+    try {
+        // Fetch all leads
+        const leads = await Lead.find({ status: { $ne: 'Meeting Fixed' } }); // Exclude leads already in "Meeting Fixed" status
+
+        if (leads.length === 0) {
+            console.log('No leads available to fix meetings.');
+            return;
+        }
+
+        // Fetch map data for visit charges
+        const mapData = await MapData.findOne({});
+        if (!mapData) {
+            console.log('Map data not found. Cannot determine visit charges.');
+            return;
+        }
+
+        // Log the mapData to debug its structure
+        console.log('Map Data:', JSON.stringify(mapData, null, 2));
+
+        // Fetch a sales executive from the User collection
+        const salesExecutive = await User.findOne({
+            departmentId: '67729dfc8110182641cd44d1',
+        });
+
+        if (!salesExecutive) {
+            console.log('No sales executive found in the Sales department.');
+            return;
+        }
+
+        // Randomly select a subset of leads (e.g., 30% of leads)
+        const numberOfLeadsToFix = Math.ceil(leads.length * 0.3); // Adjust the percentage as needed
+        const leadsToFix = leads.sort(() => 0.5 - Math.random()).slice(0, numberOfLeadsToFix);
+
+        // Function to get a random address from mapData
+        const getRandomAddress = () => {
+            const randomDistrict =                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+
+            return {
+                division: mapData.division,
+                district: randomDistrict.name,
+                area: randomArea.name,
+            };
+        };
+
+        // Iterate through selected leads and fix meetings
+        for (const lead of leadsToFix) {
+            const { _id: leadId, address: leadAddress, projectLocation } = lead;
+
+            // If the lead has no address, assign a random address from mapData
+            const address = leadAddress || getRandomAddress();
+
+            // Determine visit charge based on lead's address and project location
+            const district = mapData.districts.find((dist) => dist.name === address.district);
+            if (!district) {
+                console.log(`District not found for lead: ${leadId}`);
+                continue;
+            }
+
+            const area = district.areas.find((a) => a.name === address.area);
+            const visitCharge = area?.visitCharge || 0; // Default to 0 if no visit charge is found
+
+            // Generate a random date and time slot for the meeting
+            const date = new Date(Date.now() + Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000); // Random date within the next 7 days
+            const slots = [
+                '10:00 AM',
+                '11:00 AM',
+                '12:00 PM',
+                '01:00 PM',
+                '02:00 PM',
+                '03:00 PM',
+                '04:00 PM',
+                '05:00 PM',
+                '06:00 PM',
+                '07:00 PM',
+                '08:00 PM',
+                '09:00 PM',
+                '10:00 PM',
+                '11:00 PM',
+                '12:00 AM',
+                '01:00 AM',
+                '02:00 AM',
+                '03:00 AM',
+                '04:00 AM',
+                '05:00 AM',
+                '06:00 AM',
+                '07:00 AM',
+                '08:00 AM',
+                '09:00 AM',
+            ];
+            const slot = slots[Math.floor(Math.random() * slots.length)];
+
+            // Fix the meeting using the existing controller function
+            await fixMeeting({
+                body: {
+                    leadId,
+                    date,
+                    slot,
+                    salesExecutive: salesExecutive._id, // Use the fetched sales executive's ID
+                    visitCharge,
+                    address, // Use the assigned address (either existing or random)
+                    projectLocation: lead.projectLocation,
+                },
+                user: { _id: salesExecutive._id }, // Simulate the user object for audit fields
+            });
+
+            console.log(`Meeting fixed for lead: ${leadId}`);
+        }
+
+        console.log(`Successfully fixed meetings for ${leadsToFix.length} leads.`);
+    } catch (error) {
+        console.error('Error fixing meetings:', error);
+    }
+};
+
+// Helper function to simulate the fixMeeting controller
+const fixMeeting = async (req) => {
+    try {
+        const { leadId, date, slot, salesExecutive, visitCharge, address, projectLocation } =
+            req.body;
+
+        const allMeetingStatus = ['Fixed', 'Postponed', 'Rescheduled', 'Canceled', 'Complete'];
+
+        // get a random meeting status
+        const randomStatusIndex = Math.floor(Math.random() * allMeetingStatus.length);
+        const randomStatus = allMeetingStatus[randomStatusIndex];
+
+        // Create a new meeting
+        const newMeeting = new Meeting({
+            lead: leadId,
+            date,
+            slot,
+            salesExecutive,
+            status: randomStatus,
+            visitCharge,
+            auditFields: {
+                createdBy: req.user._id,
+                updatedBy: req.user._id,
+            },
+        });
+
+        // Save the new meeting
+        await newMeeting.save();
+
+        // Update the lead's reference to this meeting
+        await Lead.findByIdAndUpdate(leadId, {
+            $push: { meetings: newMeeting._id },
+            status: 'Meeting Fixed',
+            address,
+            projectLocation,
+        });
+
+        return newMeeting;
+    } catch (error) {
+        console.error('Error in fixMeeting:', error);
+        throw error;
+    }
+};
+
+// name based lead assign
+const nameBasedLeadAssign = async () => {
+    try {
+        const oneDayEgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const leads = await Lead.find({
+            source: 'Facebook',
+            // createdAt: { $gte: oneDayEgo },
+        }).select('messages creName');
+
+        if (leads.length === 0) return;
+
+        const creCRMNamesToFacebookNames = {
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
+            'Joynob Islam': 'Joynob Islam',
+        };
+
+        const normalizeName = (name) =>
+            name
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '')
+                .trim();
+
+        const creDepartment = await Department.findOne({ departmentName: 'CRE' });
+        if (!creDepartment) throw new Error('CRE department not found.');
+
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+        if (!creRole) throw new Error('CRE role not found in department.');
+
+        const creUsers = await User.find({ roleId: creRole._id }).select('_id nameAsPerNID');
+        if (creUsers.length === 0) throw new Error('No CRE users found.');
+
+        const creNameToIdMap = creUsers.reduce((map, user) => {
+            map[user.nameAsPerNID] = user._id.toString();
+            return map;
+        }, {});
+
+        const bulkOperations = [];
+
+        leads.forEach((lead) => {
+            const automatedMessage = lead.messages.filter((message) =>
+                /assigned this conversation to/.test(message?.content)
+            );
+
+            if (automatedMessage.length > 0) {
+                const assigneeNameMatch = automatedMessage[
+                    automatedMessage.length - 1
+                ].content.match(/assigned this conversation to (.+)$/);
+
+                const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
+                if (!facebookName) return;
+
+                const crmName = creCRMNamesToFacebookNames[facebookName];
+                const creId = creNameToIdMap[crmName];
+                if (!creId) return;
+
+                if (lead.creName?.toString() === creId) return;
+
+                bulkOperations.push({
+                    updateOne: {
+                        filter: { _id: lead._id },
+                        update: { $set: { creName: creId } },
+                    },
+                });
+            }
+        });
+
+        if (bulkOperations.length > 0) {
+            await Lead.bulkWrite(bulkOperations);
+        }
+    } catch (error) {
+        console.error('Error in nameBasedLeadAssign:', error.message);
+    }
+};
+
+const imageLinkChange = async () => {
+    try {
+        const users = await User.find({});
+        const bulkOperations = [];
+        const oldDomainPattern = /http:\/\/192\.168\.68\.130/;
+        const newDomain = 'https://crm.solutionprovider.com.bd';
+
+        users.forEach((user) => {
+            const updates = {};
+
+            // Update profile picture
+            if (user.profilePicture?.includes('192.168.68.130')) {
+                updates.profilePicture = user.profilePicture.replace(oldDomainPattern, newDomain);
+            }
+
+            // Update cover photo
+            if (user.coverPhoto?.includes('192.168.68.130')) {
+                updates.coverPhoto = user.coverPhoto.replace(oldDomainPattern, newDomain);
+            }
+
+            if (Object.keys(updates).length > 0) {
+                bulkOperations.push({
+                    updateOne: {
+                        filter: { _id: user._id },
+                        update: { $set: updates },
+                    },
+                });
+            }
+        });
+
+        if (bulkOperations.length > 0) {
+            const result = await User.bulkWrite(bulkOperations);
+            console.log(`Updated ${result.modifiedCount} user records`);
+        }
+    } catch (error) {
+        console.error('Image link update failed:', error.message);
+    }
+};
+
+const imageLinkChangeLead = async () => {
+    try {
+        const leads = await Lead.find({});
+        console.log(`Processing ${leads.length} leads`);
+
+        const bulkOperations = [];
+        const oldDomainPattern = /http:\/\/(192\.168\.68\.130|localhost:5000)/;
+        const newDomain = 'https://crm.solutionprovider.com.bd';
+
+        leads.forEach((lead, index) => {
+            console.log(`\nProcessing lead ${index + 1}/${leads.length}: ${lead._id}`);
+
+            // Check nested property existence
+            const profilePic = lead.pageInfo?.pageProfilePicture;
+            console.log('Current profile picture:', profilePic);
+
+            if (profilePic && oldDomainPattern.test(profilePic)) {
+                console.log('Found matching URL:', profilePic);
+
+                try {
+                    const updatedProfilePicture = profilePic.replace(oldDomainPattern, newDomain);
+                    console.log('Updated URL:', updatedProfilePicture);
+
+                    bulkOperations.push({
+                        updateOne: {
+                            filter: { _id: lead._id },
+                            update: {
+                                $set: {
+                                    'pageInfo.pageProfilePicture': updatedProfilePicture, // Fixed field name
+                                },
+                            },
+                        },
+                    });
+                } catch (replaceError) {
+                    console.error('Replace error:', replaceError.message);
+                }
+            } else {
+                console.log('No matching URL found - skipping');
+            }
+        });
+
+        console.log('\nBulk operations to execute:', bulkOperations.length);
+        console.log('Sample operation:', bulkOperations[0]);
+
+        if (bulkOperations.length > 0) {
+            const result = await Lead.bulkWrite(bulkOperations);
+            console.log(`Successfully updated ${result.modifiedCount} lead profile pictures`);
+            return result.modifiedCount;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Lead image link update failed:', error);
+        throw error;
+    }
+};
+
+const findDuplicateMeetings = async () => {
+    try {
+        // Retrieve all leads with their meetings array and name field
+        const leads = await Lead.find({}).select('meetings name');
+        // Loop over each lead
+        for (const lead of leads) {
+            if (lead.meetings && lead.meetings.length > 1) {
+                // Retrieve the meeting documents referenced in the lead.meetings array,
+                // sorted by date descending (most recent first)
+
+                console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
+                // make the metings array to string
+                const meetingsString = lead.meetings.map((m) => m.toString());
+                const meetings = await Meeting.find({
+                    _id: { $in: meetingsString },
+                }).sort({ date: -1 });
+
+                console.log(meetings.length);
+
+                if (meetings.length > 1) {
+                    // Keep the first meeting (most recent) and consider the rest as duplicates
+                    const meetingToKeep = meetings[0];
+                    const duplicateMeetingIds = meetings.slice(1).map((m) => m._id);
+
+                    // Delete duplicate meetings from the Meeting collection
+                    const deleteResult = await Meeting.deleteMany({
+                        _id: { $in: duplicateMeetingIds },
+                    });
+                    console.log(
+                        `Deleted ${deleteResult.deletedCount} duplicate meetings for lead "${lead.name}".`
+                    );
+
+                    // Update the lead's meetings array to only contain the kept meeting's ID
+                    lead.meetings = [meetingToKeep._id];
+                    await lead.save();
+                    console.log(
+                        `Updated lead "${lead.name}" to keep only meeting ${meetingToKeep._id}.`
+                    );
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Error in findDuplicateMeetings:', error.message);
+    }
+};
+
+// Function to check if a product ad is mentioned in a lead message
+async function checkProductAdForLeadMessages() {
+    try {
+        // Fetch all leads from the database
+        const leads = await Lead.find({});
+
+        // Regex pattern:
+        // ^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$
+        // Group 1: Lead's first name (or text between "Hi " and "!")
+        // Group 2: Product name (between "with " and " Solutions?")
+        const pattern =
+            /^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$/i;
+
+        let overallFoundCount = 0;
+        let overallNotFoundCount = 0;
+        // Map to keep stats per product name
+        const productStats = new Map();
+
+        for (const lead of leads) {
+            if (Array.isArray(lead.messages)) {
+                for (const msg of lead.messages) {
+                    const content = msg.content || '';
+                    const match = pattern.exec(content);
+                    if (match) {
+                        const extractedProductName = match[2].trim();
+
+                        // Initialize stats for this product if not present
+                        if (!productStats.has(extractedProductName)) {
+                            productStats.set(extractedProductName, { found: 0, notFound: 0 });
+                        }
+
+                        // Check if the extracted product name exists in the ProductAd collection (case-insensitive exact match)
+                        const productAd = await ProductAd.findOne({
+                            name: { $regex: `^${extractedProductName}$`, $options: 'i' },
+                        });
+
+                        // Get the lead's pageId
+                        const leadPageId =
+                            lead.pageInfo && lead.pageInfo.pageId ? lead.pageInfo.pageId : null;
+
+                        if (productAd) {
+                            // Check if any image in productAd has a matching pageId
+                            let pageIdMatch = false;
+                            if (leadPageId) {
+                                pageIdMatch = productAd.images.some(
+                                    (img) => img.pageId === leadPageId
+                                );
+                            }
+                            if (pageIdMatch) {
+                                // Check if the relation already exists
+                                const productAdIdStr = productAd._id.toString();
+                                const leadProductAds = (lead.productAds || []).map((id) =>
+                                    id.toString()
+                                );
+                                if (!leadProductAds.includes(productAdIdStr)) {
+                                    await Lead.updateOne(
+                                        { _id: lead._id },
+                                        { $addToSet: { productAds: productAd._id } }
+                                    );
+                                }
+                                console.log(
+                                    `Product ad found and added to lead ${lead._id}:`,
+                                    productAd.name
+                                );
+                                overallFoundCount++;
+                                productStats.get(extractedProductName).found++;
+                            } else {
+                                overallNotFoundCount++;
+                                productStats.get(extractedProductName).notFound++;
+                            }
+                        } else {
+                            overallNotFoundCount++;
+                            productStats.get(extractedProductName).notFound++;
+                        }
+                    }
+                }
+            }
+        }
+
+        console.log('\n--- Detailed Product Stats ---');
+        for (const [product, stats] of productStats.entries()) {
+            console.log(
+                `Product: "${product}"  |  Found: ${stats.found}  |  Not Found: ${stats.notFound}`
+            );
+        }
+        console.log('--------------------------------');
+        console.log(`Overall Found: ${overallFoundCount}`);
+        console.log(`Overall Not Found: ${overallNotFoundCount}`);
+    } catch (error) {
+        console.error('Error checking product ads:', error);
+    }
+}
+
+// Function to find and delete duplicate leads
+const findDuplicateLeads = async () => {
+    try {
+        // Group leads by pageInfo.pageId and pageInfo.fbSenderID where both exist
+        const duplicates = await Lead.aggregate([
+            {
+                $match: {
+                    'pageInfo.pageId': { $exists: true, $ne: null },
+                    'pageInfo.fbSenderID': { $exists: true, $ne: null },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        pageId: '$pageInfo.pageId',
+                        fbSenderID: '$pageInfo.fbSenderID',
+                    },
+                    count: { $sum: 1 },
+                    ids: { $push: '$_id' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let totalDeleted = 0;
+        for (const group of duplicates) {
+            // Keep the first id and delete the rest
+            const idsToDelete = group.ids.slice(1);
+            const result = await Lead.deleteMany({ _id: { $in: idsToDelete } });
+            totalDeleted += result.deletedCount || 0;
+        }
+
+        console.log(`Deleted ${totalDeleted} duplicate leads.`);
+    } catch (error) {
+        console.error('Error finding duplicate leads:', error);
+    }
+};
+
+// Export all the functions as a module
+module.exports = {
+    generateDepartments,
+    generateRoles,
+    generatePermissions,
+    generateUsers,
+    populateDatabase,
+    getRandomStatus,
+    assignLeadsToCRE,
+    createDummyUsers,
+    generateRandomDate,
+    isAutomatedMessage,
+    findHighQualityLeads,
+    logAutomatedMessages,
+    updateMeetingStatuses,
+    generateRandomReminder,
+    updateUnreadLeadsToNew,
+    updateAutomatedMessages,
+    isHighQualityLeadMessage,
+    updateLeadsWithPhoneNumbers,
+    generateAllLeadsMessagesCsv,
+    updateLeadsStatusToMeetingFixed,
+    updateLeadStatusBasedOnPhoneNumber,
+    updateLeadsWithPhoneNumbersAndStatus,
+    assignLeadsToCREInOrder,
+    deleteLeadsWithInvalidMessageIds,
+    randomlyFixMeetings,
+    nameBasedLeadAssign,
+    imageLinkChange,
+    imageLinkChangeLead,
+    findDuplicateMeetings,
+    checkProductAdForLeadMessages,
+    findDuplicateLeads,
 };

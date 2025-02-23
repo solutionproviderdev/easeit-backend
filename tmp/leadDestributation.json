@@ -1,0 +1,21 @@
+{
+	"name": "lead",
+	"settingsData": {
+		"creManualOverrides": [
+			{
+				"creId": "60c72b2f9e1d4c3a2f0e4b21",
+				"manual": true,
+				"manualLeadAssignRate": "40.00%",
+				"manualLeadAssignEndTime": "2025-02-15"
+			},
+			{
+				"creId": "60c72b3a9e1d4c3a2f0e4b22",
+				"manual": true,
+				"manualLeadAssignRate": "50.00%",
+				"manualLeadAssignEndTime": "2025-02-16"
+			}
+		]
+	},
+	"createdAt": "2025-02-10T12:00:00.000Z",
+	"updatedAt": "2025-02-10T12:00:00.000Z"
+}

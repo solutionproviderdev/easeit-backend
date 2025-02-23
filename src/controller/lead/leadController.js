@@ -1,7 +1,93 @@
 /* eslint-disable object-curly-newline */
 const { default: mongoose } = require('mongoose');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
+const schedule = require('node-schedule');
 const Lead = require('../../schemas/LeadsSchema');
+const User = require('../../schemas/auth/UserSchema');
+const Department = require('../../schemas/auth/DepartmentSchema');
+const {
+    emitSocketEventsForNewMessage,
+} = require('../../ongoing/getConversationAndUpdateLeadOptimized');
+
+// Utility function to add a comment to a lead and emit a Socket.io event
+const addCommentToLead = async (leadId, commentData, user, io) => {
+    const { comment, images } = commentData;
+
+    // Validate input
+    if (!comment) {
+        throw new Error('Comment is required');
+    }
+
+    // Find the lead by ID
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+        throw new Error('Lead not found');
+    }
+
+    // Create the new comment object
+    const newComment = {
+        comment,
+        images: images || [],
+        commentBy: user._id, // Use user ID from authentication middleware
+        date: new Date(),
+    };
+
+    // Add the comment to the lead's comments array
+    lead.comment.push(newComment);
+
+    // Save the lead
+    await lead.save();
+
+    // Get the newly saved comment
+    const savedComment = lead.comment[lead.comment.length - 1];
+
+    // Manually populate the `commentBy` field with user details
+    const populatedComment = {
+        ...savedComment.toObject(), // Convert Mongoose document to a plain JavaScript object
+        commentBy: {
+            _id: user._id,
+            nameAsPerNID: user.nameAsPerNID,
+            profilePicture: user.profilePicture,
+        },
+    };
+
+    // Emit Socket.io event for the new comment
+    if (io) {
+        io.emit(`newComment_${lead._id}`, {
+            leadId: lead._id,
+            comment: populatedComment,
+        });
+    }
+
+    return populatedComment;
+};
+
+// Generic function to get users by department and role
+const getUsersByRole = async (departmentName, roleName) => {
+    // Find the department and role
+    const department = await Department.findOne(
+        { departmentName, 'roles.roleName': roleName },
+        { 'roles.$': 1 }
+    );
+
+    if (!department) return [];
+
+    // Find users with the specified roleId
+    const users = await User.find({ roleId: department.roles[0]._id }).select(
+        'nameAsPerNID profilePicture'
+    );
+    return users.map((user) => ({
+        _id: user._id,
+        name: user.nameAsPerNID,
+        profilePicture: user.profilePicture,
+    }));
+};
+
+// Helper function to get all CRE users
+const getCREUsers = async () => getUsersByRole('CRE', 'CRE');
+
+// Helper function to get all Sales users
+const getSalesUsers = async () => getUsersByRole('Sales', 'Sales');
 
 // Get All Leads (with Filters)
 exports.getAllLeads = async (req, res) => {
@@ -35,8 +121,8 @@ exports.getAllLeads = async (req, res) => {
                 });
             }
 
-            const start = new Date(startDate);
-            const end = new Date(endDate);
+            const start = new Date(startDate).setHours(0, 0, 0, 0);
+            const end = new Date(endDate).setHours(23, 59, 59, 999);
 
             if (start > end) {
                 return res.status(400).json({
@@ -44,10 +130,11 @@ exports.getAllLeads = async (req, res) => {
                 });
             }
 
-            // If startDate and endDate are the same, set end to end of the day
-            if (startDate === endDate) {
-                end.setHours(23, 59, 59, 999);
-            }
+            // // If startDate and endDate are the same, set end to end of the day
+            // if (startDate === endDate) {
+            //     start.setHours(0, 0, 0, 0);
+            //     end.setHours(23, 59, 59, 999);
+            // }
 
             filter.createdAt = {
                 $gte: start,
@@ -65,18 +152,104 @@ exports.getAllLeads = async (req, res) => {
 
         // Fetch leads with pagination and filters
         const leads = await Lead.find(filter)
+            .select('-messages -callLogs')
             .skip((page - 1) * limit)
             .limit(Number(limit))
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
+            .populate('creName', 'nameAsPerNID nickname profilePicture')
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture');
 
         const totalLeads = await Lead.countDocuments(filter);
+
+        // List of all statuses
+        const allStatuses = [
+            'New',
+            'No Response',
+            'Need Support',
+            'Message Rescheduled',
+            'Number Collected',
+            'Call Reschedule',
+            'Ongoing',
+            'Close',
+            'Follow Up',
+            'Meeting Fixed',
+            'Meeting Postponed',
+            'Cancel Meeting',
+        ];
+
+        // Extract unique Sources
+        const allSources = ['Facebook', 'WhatsApp', 'Web', 'Phone'];
+
+        // Preparing data for Bar chart
+        const barchartData = (
+            await Promise.all(
+                allStatuses.map(async (status) => {
+                    const count = await Lead.countDocuments({ ...filter, status });
+                    return count > 0 ? { status, count } : null; // Return null if count is zero
+                })
+            )
+        ).filter((data) => data !== null); // Filter out null entries
+
+        // Extract unique CREs and Sales Executives
+        const uniqueCRENames = [];
+        const uniqueSalesExecs = [];
+        const creNamesSet = new Set();
+        const salesExecsSet = new Set();
+
+        // 1. Get the CRE department and roles from the Department schema
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        }).select('roles');
+
+        if (!creDepartment || !creDepartment.roles) {
+            throw new Error('CRE department or roles not found');
+        }
+
+        // Filter the CRE role from the department roles (excluding CRE Head)
+        const creRole = creDepartment.roles.find((role) => role.roleName === 'CRE');
+
+        if (!creRole) {
+            throw new Error('CRE role not found in department');
+        }
+
+        // 2. Retrieve all active CREs with the role 'CRE' (not 'CRE Head') from User schema
+        const activeCREs = await User.find({
+            departmentId: creDepartment._id,
+            roleId: creRole._id, // Filter by roleId for CRE
+            status: 'Active', // Only active users
+        }).select('_id nameAsPerNID nickname profilePicture');
+
+        leads.forEach((lead) => {
+            if (lead.creName && !creNamesSet.has(lead.creName._id.toString())) {
+                creNamesSet.add(lead.creName._id.toString());
+                uniqueCRENames.push({
+                    _id: lead.creName._id,
+                    name: lead.creName.nameAsPerNID,
+                    nickname: lead.creName.nickname,
+                    profilePicture: lead.creName.profilePicture,
+                });
+            }
+
+            if (lead.salesExqName && !salesExecsSet.has(lead.salesExqName._id.toString())) {
+                salesExecsSet.add(lead.salesExqName._id.toString());
+                uniqueSalesExecs.push({
+                    _id: lead.salesExqName._id,
+                    name: lead.salesExqName.name,
+                });
+            }
+        });
 
         res.status(200).json({
             total: totalLeads,
             page: Number(page),
             limit: Number(limit),
             totalPages: Math.ceil(totalLeads / limit),
+            barchartData,
+            filters: {
+                statuses: allStatuses,
+                sources: allSources,
+                creNames: activeCREs,
+                salesExecutives: uniqueSalesExecs,
+            },
             leads,
         });
     } catch (error) {
@@ -93,8 +266,9 @@ exports.getLeadById = async (req, res) => {
         }
 
         const lead = await Lead.findById(req.params.id)
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
+            .populate('creName', 'nameAsPerNID nickname profilePicture')
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture')
+            .populate('comment.commentBy', 'nameAsPerNID nickname profilePicture');
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
@@ -109,33 +283,59 @@ exports.getLeadById = async (req, res) => {
 
 // Create a new Lead with an optional comment
 exports.createLead = async (req, res) => {
-    const { name, phone, source, status, comment, images } = req.body;
+    const { name, phone, source, status, comment, images, cre } = req.body;
+
+    console.log(req.body);
 
     try {
-        // Create a new lead
-        const newLead = new Lead({
-            name,
-            phone,
-            source: source || 'Phone',
-            status: status || 'Number Collected',
-        });
+        // Normalize the input phone number
+        const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
 
-        // If a comment is provided, add it to the lead
-        if (comment) {
-            newLead.comment.push({
-                comment,
-                images: images || [], // Add images if provided
-                commentBy: req.user._id, // Use user ID from authentication middleware
-                date: new Date(),
-            });
+        if (!parsedNumber || !parsedNumber.isValid()) {
+            return res.status(400).json({ msg: 'Invalid phone number format.' });
         }
 
-        // Save the lead to the database
+        const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
+
+        // Step 1: Check if the phone number exists in any lead's phone array
+        const existingLead = await Lead.findOne({
+            phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
+        });
+
+        if (existingLead) {
+            return res.status(400).json({ msg: 'Phone number already exists in another lead.' });
+        }
+
+        // Step 2: Create the new lead
+        const newLead = new Lead({
+            name,
+            phone: formattedPhone, // Save in normalized format
+            source: source || 'Phone',
+            status: status || 'Number Collected',
+            creName: cre,
+        });
+
+        // Save the new lead
         await newLead.save();
 
-        res.status(201).json({ msg: 'Lead and comment created successfully', lead: newLead });
+        // Step 3: Add comment if provided
+        if (comment) {
+            const commentData = { comment, images };
+            const populatedComment = await addCommentToLead(
+                newLead._id,
+                commentData,
+                req.user,
+                req.io
+            );
+            newLead.comment.push(populatedComment);
+        }
+
+        console.log(newLead);
+
+        res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
-        console.error(`Error creating lead with comment: ${error.message}`);
+        console.log(error);
+        console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -143,28 +343,17 @@ exports.createLead = async (req, res) => {
 // Add a comment to a Lead
 exports.addComment = async (req, res) => {
     const { id } = req.params;
-    const { comment, images } = req.body; // Extract comment and images from the request
+    const { comment, images } = req.body;
 
     try {
-        // Find the lead by ID
-        const lead = await Lead.findById(id);
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
 
-        if (!lead) {
-            return res.status(404).json({ msg: 'Lead not found' });
-        }
-
-        // Add the comment to the lead's comments array
-        lead.comment.push({
-            comment,
-            images: images || [],
-            commentBy: req.user._id, // Use user ID from authentication middleware
-            date: new Date(),
+        // Respond to the client
+        res.status(200).json({
+            msg: 'Comment added successfully',
+            savedComment: populatedComment,
         });
-
-        // Save the lead
-        await lead.save();
-
-        res.status(200).json({ msg: 'Comment added successfully', lead });
     } catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
@@ -177,7 +366,9 @@ exports.getComments = async (req, res) => {
 
     try {
         // Find the lead by ID and select only the comments field
-        const lead = await Lead.findById(id).select('comment');
+        const lead = await Lead.findById(id)
+            .select('comment')
+            .populate('comment.commentBy', 'nameAsPerNID profilePicture');
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
@@ -220,8 +411,7 @@ exports.updateRequirements = async (req, res) => {
 // Add a new phone number to the lead
 exports.addPhoneNumberToLead = async (req, res) => {
     const { id } = req.params;
-    const { phoneNumber } = req.body;
-    console.log('id and phoneNumber----------', id, phoneNumber);
+    const { phoneNumber, comment } = req.body;
 
     try {
         // Find the lead by ID
@@ -250,7 +440,13 @@ exports.addPhoneNumberToLead = async (req, res) => {
         // Save the lead
         await lead.save();
 
-        // Emit Socket.io event for updated lead (if needed)
+        // If a comment is provided, add it to the lead
+        if (comment) {
+            const commentData = { comment: comment.comment, images: comment.images };
+            await addCommentToLead(id, commentData, req.user, req.io);
+        }
+
+        // Emit Socket.io event for updated phone number
         req.io.emit(`phoneUpdate${lead._id}`, {
             leadId: lead._id,
             phoneNumber: formattedPhoneNumber,
@@ -270,7 +466,6 @@ exports.addPhoneNumberToLead = async (req, res) => {
 exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updateFields = {};
-    console.log('--------------id', id, 'phone array', req.body);
 
     // Extract only the fields that are allowed to be updated
     if (req.body.name) updateFields.name = req.body.name;
@@ -282,6 +477,11 @@ exports.updateLead = async (req, res) => {
     if (req.body.projectLocation) updateFields.projectLocation = req.body.projectLocation;
     if (req.body.messagesSeen !== undefined) updateFields.messagesSeen = req.body.messagesSeen;
     if (req.body.requirements) updateFields.requirements = req.body.requirements;
+
+    if (req.body.comment) {
+        const commentData = { comment: req.body.comment.comment, images: req.body.comment.images };
+        await addCommentToLead(id, commentData, req.user, req.io);
+    }
 
     try {
         // Find the lead by ID and update with new data
@@ -298,11 +498,11 @@ exports.updateLead = async (req, res) => {
     }
 };
 
-// Handler function to add a reminder to a Lead
+// add a reminder to the lead
 exports.addReminder = async (req, res) => {
     const { id } = req.params;
-    const { time, status = 'Pending', commentId } = req.body; // Default status is 'Pending'
-    console.log('backend to reminder reminder ', id, 'time hare', time);
+    const { time, commentId, completeLastReminder } = req.body;
+
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);
@@ -311,33 +511,155 @@ exports.addReminder = async (req, res) => {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Check if there is any incomplete reminder (status not equal to 'Complete')
+        // Check if there is any incomplete reminder
         const hasIncompleteReminder = lead.reminder.some(
-            (reminder) => reminder.status !== 'Complete'
+            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
 
-        if (hasIncompleteReminder) {
+        if (completeLastReminder && hasIncompleteReminder) {
+            // Find the last incomplete reminder and mark it as Complete
+            const lastIncompleteReminder = lead.reminder
+                .filter((reminder) => reminder.status === 'Pending' || reminder.status === 'Missed')
+                .slice(-1)[0];
+
+            if (lastIncompleteReminder) {
+                lastIncompleteReminder.status = 'Complete';
+                // Save the lead after marking the last reminder as Complete
+                await lead.save();
+            }
+        } else if (!completeLastReminder && hasIncompleteReminder) {
+            // If completeLastReminder is false and there are incomplete reminders, return an error
             return res.status(400).json({
-                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
+                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
             });
         }
 
-        // Determine the initial status for the reminder
-        const reminderStatus = status === 'Complete' ? 'Complete' : 'Pending'; // Set to 'Pending' by default
-
-        // Add the reminder to the lead's reminders array
-        lead.reminder.push({
+        // Add the new reminder to the lead's reminders array
+        const newReminder = {
             time,
-            status: reminderStatus,
-            commentId,
-        });
+            status: 'Pending',
+            ...(commentId && { commentId }),
+        };
 
-        // Save the updated lead
+        lead.reminder.push(newReminder);
+
+        // Save the updated lead after adding the new reminder
         await lead.save();
 
-        res.status(200).json({ msg: 'Reminder added successfully', lead });
+        // Fetch the updated lead with populated fields (if needed)
+        const updatedLead = await Lead.findById(lead._id)
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean();
+
+        // Map reminders to include comments (if needed)
+        updatedLead.reminder = updatedLead.reminder.map((reminder) => ({
+            ...reminder,
+            comment:
+                updatedLead.comment.find(
+                    (c) => c._id.toString() === reminder.commentId?.toString()
+                ) || null,
+        }));
+        updatedLead.comment = [];
+
+        // Emit a socket event for the new reminder
+        if (req.io) {
+            req.io.emit('newReminder', {
+                lead: updatedLead, // Emit the entire lead object
+            });
+        }
+
+        // Return only the updated reminders array
+        res.status(200).json({ msg: 'Reminder added successfully', reminders: lead.reminder });
     } catch (error) {
         console.error(`Error adding reminder to lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Handler function to add a reminder with a comment to a Lead
+exports.addReminderWithComment = async (req, res) => {
+    const { id } = req.params;
+    const { time, comment, completeLastReminder } = req.body;
+
+    const commentData = { comment: comment.comment, images: comment.images };
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Check if there is any incomplete reminder
+        const hasIncompleteReminder = lead.reminder.some(
+            (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
+        );
+
+        // If completeLastReminder is true, mark the last incomplete reminder as Complete
+        if (completeLastReminder && hasIncompleteReminder) {
+            const lastIncompleteReminder = lead.reminder.find(
+                (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
+            );
+
+            if (lastIncompleteReminder) {
+                lastIncompleteReminder.status = 'Complete';
+            }
+        } else if (hasIncompleteReminder) {
+            // If completeLastReminder is false or not provided, return an error
+            return res.status(400).json({
+                msg: 'Cannot create a new reminder. Complete or resolve the previous reminder first.',
+            });
+        }
+
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, commentData, req.user, req.io);
+
+        // Add the reminder with the commentId
+        const newReminder = {
+            time,
+            status: 'Pending', // Default status is 'Pending'
+            commentId: populatedComment._id,
+        };
+
+        lead.reminder.push(newReminder);
+
+        // Save the lead
+        await lead.save();
+
+        // Fetch the updated lead with populated fields (if needed)
+        const updatedLead = await Lead.findById(lead._id)
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'name')
+            .populate('salesExqName', 'name')
+            .lean();
+
+        // Map reminders to include comments (if needed)
+        updatedLead.reminder = updatedLead.reminder.map((reminder) => ({
+            ...reminder,
+            comment:
+                updatedLead.comment.find(
+                    (c) => c._id.toString() === reminder.commentId?.toString()
+                ) || null,
+        }));
+        updatedLead.comment = [];
+
+        // Emit a socket event for the new reminder
+        if (req.io) {
+            req.io.emit('newReminder', {
+                lead: updatedLead, // Emit the entire lead object
+            });
+        }
+
+        // Return only the updated reminders array
+        res.status(200).json({
+            msg: 'Reminder and comment added successfully',
+            reminders: lead.reminder,
+        });
+    } catch (error) {
+        console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -375,75 +697,10 @@ exports.updateReminderStatus = async (req, res) => {
     }
 };
 
-// Handler function to add a reminder with a comment to a Lead
-exports.addReminderWithComment = async (req, res) => {
-    const { id } = req.params;
-    const { time, status = 'Pending', comment, images } = req.body;
-
-    try {
-        // Find the lead by ID
-        const lead = await Lead.findById(id);
-
-        if (!lead) {
-            return res.status(404).json({ msg: 'Lead not found' });
-        }
-
-        // Check if there is any incomplete reminder (status not equal to 'Complete')
-        const hasIncompleteReminder = lead.reminder.some(
-            (reminder) => reminder.status !== 'Complete'
-        );
-
-        if (hasIncompleteReminder) {
-            return res.status(400).json({
-                msg: 'Cannot create a new reminder. Complete the previous reminder first.',
-            });
-        }
-
-        // Add the comment to the lead's comments array
-        const newComment = {
-            comment,
-            commentBy: req.user._id, // Assuming user ID is available from authentication middleware
-            images: images || [],
-            date: new Date(),
-        };
-
-        lead.comment.push(newComment);
-
-        // Save the lead to get the commentId
-        const savedLead = await lead.save();
-        const savedCommentId = savedLead.comment[savedLead.comment.length - 1]._id;
-
-        // Add the reminder with the commentId
-        const newReminder = {
-            time,
-            status,
-            commentId: savedCommentId,
-        };
-
-        lead.reminder.push(newReminder);
-
-        // Save the lead again with the new reminder
-        await lead.save();
-
-        res.status(200).json({ msg: 'Reminder and comment added successfully', lead });
-    } catch (error) {
-        console.log(error);
-        console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
-        res.status(500).json({ msg: 'Server error' });
-    }
-};
-
 // Handler function to add a call log to a Lead
 exports.addCallLog = async (req, res) => {
     const { id } = req.params;
     const { recipientNumber, callType, status, callDuration, timestamp } = req.body;
-    console.log('callDuration----->', {
-        recipientNumber,
-        callType,
-        status,
-        callDuration,
-        timestamp,
-    });
 
     try {
         // Find the lead by ID
@@ -472,17 +729,26 @@ exports.addCallLog = async (req, res) => {
     }
 };
 
-// assigned cre need update
 exports.assignCreToLead = async (req, res) => {
     const { id } = req.params;
-    const { creName } = req.body;
+    const { newCREId } = req.body;
 
     try {
-        // Find the lead by ID and update the CRE assignment
-        const lead = await Lead.findByIdAndUpdate(id, { creName }, { new: true });
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
         }
+
+        // Update the property and mark it as modified
+        lead.creName = newCREId;
+        lead.lastAssigned = new Date();
+        lead.markModified('creName'); // Ensure the change is detected
+
+        // Emit socket event for lead update
+        emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
+
+        await lead.save();
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
     } catch (error) {
@@ -491,124 +757,110 @@ exports.assignCreToLead = async (req, res) => {
     }
 };
 
-// Get All Leads with Reminders
 exports.getAllLeadsWithReminders = async (req, res) => {
     try {
-        const {
-            page = 1,
-            limit = 20,
-            status,
-            source,
-            startDate,
-            endDate,
-            assignedCre,
-            salesExecutive,
-        } = req.query;
+        const { status, source, startDate, endDate, assignedCre, salesExecutive } = req.query;
+        const userId = req.user._id;
 
-        // Create a filter object
-        const filter = {
-            reminder: { $exists: true, $not: { $size: 0 } }, // Only leads with reminders
-        };
+        // Step 1: Fetch the user's details
+        const user = await User.findById(userId)
+            .populate({
+                path: 'departmentId',
+                populate: {
+                    path: 'roles',
+                    match: { roleName: 'CRE' },
+                },
+            })
+            .lean();
 
-        if (status) {
-            filter.status = status;
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found.' });
         }
 
-        if (source) {
-            filter.source = source;
+        // Step 2: Determine if the user is a CRE or Admin
+        const isCRE = user.departmentId?.roles?.some((role) => role.roleName === 'CRE');
+        const isAdmin = user.type === 'Admin';
+
+        // Step 3: Build the filter based on user role
+        const filter = { reminder: { $exists: true, $not: { $size: 0 } } };
+
+        if (status) filter.status = status;
+        if (source) filter.source = source;
+        if (salesExecutive) filter.salesExqName = salesExecutive;
+
+        // If the user is a CRE, only show leads assigned to them
+        if (isCRE) {
+            filter.creName = userId;
+        } else if (isAdmin) {
+            // If the user is an Admin, allow filtering by CRE
+            if (assignedCre) filter.creName = assignedCre;
+        } else {
+            // If the user is neither CRE nor Admin, deny access
+            return res.status(403).json({ msg: 'Not authorized.' });
         }
 
-        if (startDate || endDate) {
-            if (!startDate || !endDate) {
-                return res.status(400).json({
-                    msg: 'Both startDate and endDate are required.',
-                });
-            }
+        // Step 4: Apply date range filter
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
 
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-
+        if (startDate && endDate) {
             if (start > end) {
-                return res.status(400).json({
-                    msg: 'startDate cannot be after endDate.',
-                });
+                return res.status(400).json({ msg: 'startDate cannot be after endDate.' });
             }
-
-            // If startDate and endDate are the same, set end to end of the day
             if (startDate === endDate) {
+                // If startDate and endDate are the same, set end time to 23:59:59.999
                 end.setHours(23, 59, 59, 999);
             }
-
-            filter.createdAt = {
-                $gte: start,
-                $lte: end,
-            };
+            filter['reminder.time'] = { $gte: start, $lte: end };
         }
 
-        if (assignedCre) {
-            filter.creName = assignedCre;
-        }
-
-        if (salesExecutive) {
-            filter.salesExqName = salesExecutive;
-        }
-
-        // Fetch leads with pagination and filters, excluding the 'messages' array
+        // Step 5: Fetch leads based on the filter
         const leads = await Lead.find(filter)
-            .select('-messages -meetingDetails -messagesSeen -callLogs') // Exclude unnecessary fields
-            .skip((page - 1) * limit)
-            .limit(Number(limit))
-            .populate('creName', 'name')
-            .populate('salesExqName', 'name');
+            .select('-messages -meetingDetails -messagesSeen -callLogs')
+            .populate('creName', 'nameAsPerNID profilePicture')
+            .populate('salesExqName', 'nameAsPerNID profilePicture')
+            .populate('comment.commentBy', 'nameAsPerNID profilePicture')
+            .lean();
 
-        const totalLeads = await Lead.countDocuments(filter);
-
-        // Manually populate reminders with the corresponding comment
+        // Step 6: Filter reminders within the specified date range
         const populatedLeads = leads.map((lead) => {
-            const populatedReminders = lead.reminder.map((reminder) => {
-                const comment = lead.comment.id(reminder.commentId); // Find the matching comment
+            const filteredReminders = lead.reminder.filter((reminder) => {
+                const reminderTime = new Date(reminder.time);
 
-                return {
-                    ...reminder.toObject(),
-                    comment: comment
-                        ? {
-                              comment: comment.comment,
-                              commentBy: comment.commentBy,
-                              images: comment.images,
-                              date: comment.date,
-                          }
-                        : null, // If no comment is found, return null for comment
-                };
+                // If startDate and endDate are the same, compare only the date part
+                if (startDate === endDate) {
+                    const reminderDate = new Date(reminderTime).setHours(0, 0, 0, 0);
+                    const startDateOnly = new Date(start).setHours(0, 0, 0, 0);
+                    return reminderDate === startDateOnly;
+                }
+
+                // Otherwise, check if the reminder is within the date range
+                return (!start || reminderTime >= start) && (!end || reminderTime <= end);
             });
 
             return {
-                ...lead.toObject(),
-                comment: [], // Remove the comment array
-                reminder: populatedReminders, // Update reminder with populated comments
+                ...lead,
+                reminder: filteredReminders.map((reminder) => ({
+                    ...reminder,
+                    comment:
+                        lead.comment.find(
+                            (c) => c._id.toString() === reminder.commentId?.toString()
+                        ) || null,
+                })),
             };
         });
 
-        // Fetch unique filter options for CRE, Sales, Status, and Source
-        const creNames = await Lead.distinct('creName');
-        const salesNames = await Lead.distinct('salesExqName');
-        const statuses = await Lead.distinct('status');
-        const sources = await Lead.distinct('source');
+        // Step 7: Filter out leads with no reminders after date filtering
+        const filteredLeads = populatedLeads.filter((lead) => lead.reminder.length > 0);
 
-        // Prepare filter options data
-        const filterOptions = {
-            creNames: creNames.map((cre) => cre.toString()), // Convert CRE IDs to string or populate the name if needed
-            salesNames: salesNames.map((sales) => sales.toString()), // Same for sales
-            statuses,
-            sources,
-        };
-
+        // Step 8: Send the response
         res.status(200).json({
-            total: totalLeads,
-            page: Number(page),
-            limit: Number(limit),
-            totalPages: Math.ceil(totalLeads / limit),
-            leads: populatedLeads,
-            filterOptions, // Include filter options in the response
+            total: filteredLeads.length,
+            leads: filteredLeads,
+            filterOptions: {
+                creNames: isAdmin ? await getCREUsers() : null, // Only include CRE filter for Admin
+                salesNames: await getSalesUsers(),
+            },
         });
     } catch (error) {
         console.error(error.message);

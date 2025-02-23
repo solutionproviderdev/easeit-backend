@@ -49,6 +49,22 @@ const validateUser = [
     body('guardian.relation').notEmpty().withMessage('Guardian relation is required'),
     body('type').isIn(['Admin', 'Operator']).withMessage('Type must be Admin or Operator'),
 
+    // Validate profilePicture and coverPhoto as valid URLs (allow localhost)
+    body('profilePicture')
+        .optional()
+        .isURL({
+            require_protocol: true,
+            require_tld: false, // Disable TLD requirement to allow localhost
+        })
+        .withMessage('Profile picture must be a valid URL'),
+    body('coverPhoto')
+        .optional()
+        .isURL({
+            require_protocol: true,
+            require_tld: false, // Disable TLD requirement to allow localhost
+        })
+        .withMessage('Cover photo must be a valid URL'),
+
     // Middleware to handle validation result
     (req, res, next) => {
         const errors = validationResult(req);

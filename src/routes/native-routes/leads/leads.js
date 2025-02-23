@@ -1,5 +1,10 @@
+/* eslint-disable no-restricted-syntax */
 const express = require('express');
 
+const { default: mongoose } = require('mongoose');
+const dayjs = require('dayjs');
+const { Parser } = require('json2csv');
+const fs = require('fs');
 const leadConversationRouter = require('../lead-center/leadConversation');
 const {
     getAllLeads,
@@ -30,17 +35,18 @@ const {
     validatePhoneNumber,
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
-const { checkLogin } = require('../../../middlewares/auth/checkLogin');
+const leadSalesRouter = require('../sales/sales');
 
 const leadRouter = express.Router();
 
 leadRouter.use('/conversation', leadConversationRouter);
+leadRouter.use('/sales', leadSalesRouter);
 
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
 
 // get all the leads with reminders
-leadRouter.get('/reminders', getAllLeadsWithReminders);
+leadRouter.get('/reminders', checkAuth, getAllLeadsWithReminders);
 
 // Get single Lead Details
 leadRouter.get('/:id', getLeadById);
@@ -61,9 +67,9 @@ leadRouter.put('/:id/requirements', validateRequirements, updateRequirements);
 leadRouter.put('/:id/add-phone-number', validatePhoneNumber, addPhoneNumberToLead);
 
 // New route for updating a lead
-leadRouter.put('/:id', validateLeadUpdate, updateLead);
+leadRouter.put('/:id', checkAuth, validateLeadUpdate, updateLead);
 
-// Updated route for adding a reminder to a lead
+// route for adding a reminder to a lead
 leadRouter.post('/:id/reminders', validateReminder, addReminder);
 
 // New route for updating a reminder status

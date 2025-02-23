@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable no-tabs */
 
 const express = require('express');
 const dotenv = require('dotenv');
@@ -8,129 +9,191 @@ const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const swaggerUi = require('swagger-ui-express');
+const cron = require('node-cron');
+const swaggerFile = require('../swagger_output.json');
 
-// internal Imports
-const { notFoundHandler, errorHandler } = require('./middlewares/common/errorHandler');
-const settingsRouter = require('./routes/settings/settingsRouter');
-const peopleRouter = require('./routes/people');
-const webhookRouter = require('./routes/webhook');
-const meterialsRouter = require('./routes/meterials');
-const productRouter = require('./routes/products');
-const meetingsRouter = require('./routes/meeting');
+// internal imports
+const {
+	notFoundHandler,
+	errorHandler,
+} = require('./middlewares/common/errorHandler');
 const userRouter = require('./routes/auth/user');
-const getConversationsAndUpdateLeads = require('./ongoing/getConversationsAndUpdateLeads');
-const fbMessageRouter = require('./routes/FbMessege');
-const messageRouter = require('./routes/Message');
-const conversationRouter = require('./routes/conversation');
-const mapDataRouter = require('./routes/mapDataRouters');
-const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
-const teamRouter = require('./routes/team');
-const wpMessageRouter = require('./routes/whatsAppMessage');
 const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
-const getConversationsAndUpdateLeadsUpdated = require('./ongoing/getConversationAndUpdateLeadOptimized');
+const mapDataRouter = require('./routes/mapDataRouters');
+const meetingsRouter = require('./routes/meetings/meeting');
+const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
+const dashBoardRouter = require('./routes/dashboard/dashboard');
+const settingsRouter = require('./routes/settings/settingsRouter');
+const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const {
+	updateLeadsWithPhoneNumbersAndStatus,
+	updateLeadsStatusToMeetingFixed,
+	assignLeadsToCRE,
+	deleteLeadsWithInvalidMessageIds,
+	assignLeadsToCREInOrder,
+	randomlyFixMeetings,
+	nameBasedLeadAssign,
+	imageLinkChange,
+	imageLinkChangeLead,
+	findDuplicateMeetings,
+	findAdMessagePatterns,
+	findDuplicateLeads,
+} = require('../populateDatabase');
+const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
+const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
+const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
+const webhookRouter = require('./routes/webhook');
+const productAdRouter = require('./routes/ad/productAd');
+const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
+const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
+const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
 
 // Initialize app
 const app = express();
 const server = createServer(app);
 dotenv.config();
 const io = new Server(server, {
-    cors: {
-        origin: '*',
-      }
+	cors: {
+		origin: '*',
+	},
 });
 
 // Database connection
 mongoose
-    .connect(process.env.MONGO_CONNECTION_STRING, {})
-    .then(() => console.log('🍀 Database connection successfull'))
-    .catch((err) => console.log(err, 'Database connection Error'));
+	.connect(process.env.MONGO_CONNECTION_STRING, {})
+	.then(() => console.log('🍀 Database connection successful'))
+	.catch((err) => console.log(err, 'Database connection Error'));
 
 // request process
 app.use(express.json());
 app.use(express.static('public'));
-app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(cors({
-    origin: (origin, callback) => {
-        const allowedOrigins = [
-                'http://localhost:3000',
-                'http://localhost:5173',
-                'http://192.168.0.155:3000',
-                'http://192.168.0.155:5000',
-                'http://103.122.143.63:3000',
-                'https://easeit.vercel.app',
-                'https://crm.solutionprovider.com.bd',
-            ];
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-}));
+app.use(
+	cors({
+		origin: (origin, callback) => {
+			const allowedOrigins = [
+				'http://localhost:3000',
+				'http://localhost:5000',
+				'http://localhost:5173',
+				'http://192.168.0.155:3000',
+				'http://192.168.0.155:5000',
+				'http://103.122.143.63:3000',
+				'https://easeit.vercel.app',
+				'https://crm.solutionprovider.com.bd',
+				'http://192.168.218.103:5173',
+				'http://192.168.68.123:5173',
+				'http://localhost:3000',
+				'http://localhost:5000',
+				'http://192.168.68.130:3000',
+				'http://192.168.68.130:5000',
+				'http://192.168.68.130',
+			];
+			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+				callback(null, true);
+			} else {
+				callback(new Error('Not allowed by CORS'));
+			}
+		},
+		methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+		credentials: true,
+	})
+);
 
 // set up EJS
 app.set('view engine', 'ejs');
+
+// swagger setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
 // home Route
 app.get('/', (req, res) => {
-    res.send('Hello Solution Provider...!');
+	res.send('Hello Solution Provider...!');
 });
 
 // io connection start
 io.on('connection', (socket) => {
-    console.log(`User connected ID: ${socket.id}`);
-
-    socket.on('disconnect', () => {
-        console.log('User Disconnected', socket.id);
+    console.log(`User connected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+        console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
     });
 });
 
-  // Attach io instance to the req object to access it in routes
+// Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {
-    req.io = io;
-    next();
-  });
+	req.io = io;
+	next();
+});
 
 // routing setup
-
-// Auth Routers
 app.use('/users', userRouter);
-
-// File upload Routers
 app.use('/upload', uploadRouter);
-
-// leads--main
 app.use('/lead', leadRouter);
-
-// app.use('/people', peopleRouter);
-// app.use('/settings', settingsRouter);
-// app.use('/materials', meterialsRouter);
-// app.use('/product', productRouter);
-// app.use('/meetings', meetingsRouter);
-// app.use('/fbmessage', fbMessageRouter);
-// app.use('/messages', messageRouter);
-// app.use('/conversations', conversationRouter);
+app.use('/meeting', meetingsRouter);
 app.use('/map', mapDataRouter);
-// app.use('/teams', teamRouter);
-// app.use('/wamessage', wpMessageRouter);
+app.use('/dashboard', dashBoardRouter);
+app.use('/webhook', webhookRouter);
+app.use('/meta-ads', productAdRouter);
 
-// Get Lead Repetedly
-setInterval(() => {
-    // getConversationsAndUpdateLeads(io);
-    getConversationsAndUpdateLeadsUpdated(io);
-}, 8000);
+// seetings router
+app.use('/settings', settingsRouter);
 
-// const fetchAllMapData = async () => {
-//     console.log('Hii...!');
-//     await fetchAndStoreDarazData();
-// };
+// Replace setInterval with node-cron
+cron.schedule('*/1 * * * * *', async () => { // Runs every second
+    const now = new Date();
+    if (now.getSeconds() % 20 === 0) { // Check if the current second is a multiple of 20
+        getConversationsAndUpdateLeadsUpdated(io);
+		nameBasedLeadAssign();
+		findDuplicateLeads();
+    }
+}, {
+	timezone: 'Asia/Dhaka' // Set your timezone here
+});
+
+// Schedule the task to run every 10 minutes
+cron.schedule('*/10 * * * *', async () => {
+	await assignUnassignedLeads(io);
+	await checkAndUpdateMissedReminders(io);
+	await checkProductAdForLeadMessages();
+}, {
+	timezone: 'Asia/Dhaka' // Set your timezone here
+});
+
+checkAndUpdateMissedReminders(io);
+
+// Schedule the task to run every 1 minutes
+cron.schedule(
+	'* * * * *',
+	async () => {
+		try {
+			await reAssignOnNotReplied(io);
+			await reAssignOnNotSeen(io);
+			console.log('Re-Assign executed successfully.');
+		} catch (error) {
+			console.error('Error in reAssignOnNotReplied cron job:', error);
+		}
+	},
+	{
+		timezone: 'Asia/Dhaka', // Adjust timezone as needed
+	}
+);
+
+// assignUnassignedLeads(io);
+
+// some corn jobs eatch time server starts
+reschedulePendingReminders();
+nameBasedLeadAssign();
+checkProductAdForLeadMessages();
+reAssignOnNotReplied(io);
+reAssignOnNotSeen(io);
+findDuplicateLeads();
+
+getPerformanceBasedCRE();
 
 // 404 error handling
 app.use(notFoundHandler);
@@ -139,15 +202,17 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start the server
-server.listen(process.env.PORT, () => {
-    const environment = process.env.NODE_ENV || 'development';
-    const nodeVersion = process.version;
-    const currentTime = new Date().toLocaleString();
+if (require.main === module) {
+	server.listen(process.env.PORT, '0.0.0.0', () => {
+		const environment = process.env.NODE_ENV || 'development';
+		const nodeVersion = process.version;
+		const currentTime = new Date().toLocaleString();
 
-    console.log(`🚀 Server started in ${environment} mode 🌟`);
-    console.log(`💻 Node version: ${nodeVersion}`);
-    console.log(`🕒 Current Time: ${currentTime}`);
-    console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
+		console.log(`🚀 Server started in ${environment} mode 🌟`);
+		console.log(`💻 Node version: ${nodeVersion}`);
+		console.log(`🕒 Current Time: ${currentTime}`);
+		console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
+	});
+}
 
-    // fetchAllMapData();
-});
+module.exports = app;

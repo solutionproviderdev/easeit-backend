@@ -1,9 +1,18 @@
 const createHttpError = require('http-errors');
 
-// 404 not found Handler
+// 404 Not Found Handler
 function notFoundHandler(req, res, next) {
-    next(createHttpError(404, 'Your request connect was not found'));
+    const errorMessage = `The requested resource '${req.originalUrl}' was not found on this server.`;
+    const errorDetails = {
+        status: 404,
+        error: "Not Found",
+        message: errorMessage,
+        hint: "Please check the URL and try again.",
+        timestamp: new Date().toISOString(),
+    };
+    next(createHttpError(404, errorDetails));
 }
+
 
 // default error handler
 const errorHandler = (err, req, res, next) => {

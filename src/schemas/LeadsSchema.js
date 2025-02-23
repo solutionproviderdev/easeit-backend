@@ -17,41 +17,29 @@ const messageSchema = new mongoose.Schema(
         messageId: String,
         content: String,
         senderId: String,
+        isAutomatedMessage: { type: Boolean, default: false },
         sentByMe: { type: Boolean, default: false },
         fileUrl: [String],
         isSticker: { type: Boolean, default: false },
+        isAiMessage: { type: Boolean, default: false },
         date: { type: Date, require: true },
     },
     { _id: true }
 );
 
-// Meeting Details Schema
-const meetingDetailsSchema = new mongoose.Schema(
-    {
-        date: Date,
-        slot: {
-            type: String,
-            enum: ['slot_1', 'slot_2', 'slot_3', 'slot_4'],
-            required: true,
-        },
-        team: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Team',
-        },
-    },
-    { _id: false }
-);
-
 // Comment Schema
-const commentSchema = new mongoose.Schema({
-    comment: String,
-    commentBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+const commentSchema = new mongoose.Schema(
+    {
+        comment: String,
+        commentBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        images: [String],
+        date: { type: Date, require: true },
     },
-    images: [String],
-    date: { type: Date, require: true },
-});
+    { _id: true, timestamps: true }
+);
 
 // Reminder Schema
 const reminderSchema = new mongoose.Schema(
@@ -59,7 +47,7 @@ const reminderSchema = new mongoose.Schema(
         time: { type: Date, required: true }, // Date object to store time
         status: {
             type: String,
-            enum: ['Pending', 'Complete', 'Missed'],
+            enum: ['Pending', 'Complete', 'Missed', 'Late Complete'],
             default: 'Pending', // Default status is 'Pending'
         },
         commentId: {
@@ -69,6 +57,21 @@ const reminderSchema = new mongoose.Schema(
     },
     { _id: true }
 );
+
+const followUpSchema = new mongoose.Schema({
+    time: { type: Date, required: true },
+    status: {
+        type: String,
+        enum: ['Pending', 'Complete', 'Missed', 'Late Complete'],
+        default: 'Pending',
+    },
+    commentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false, // Optional field
+    },
+    meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' },
+    type: { type: String, enam: ['Call', 'Meeting'] },
+});
 
 // Call Log Schema
 const callLogSchema = new mongoose.Schema(
@@ -91,6 +94,36 @@ const callLogSchema = new mongoose.Schema(
     { _id: true }
 );
 
+// finance Schema
+const payment = new mongoose.Schema(
+    {
+        amount: { type: Number, required: true },
+        paymentMethod: {
+            type: String,
+            enum: ['Cash', 'Cheque', 'Bank Transfer', 'Online Payment'],
+            required: true,
+        },
+        paymentDate: { type: Date, required: true },
+        paymentStatus: {
+            type: String,
+            enum: ['Paid', 'Unpaid'],
+            required: true,
+            default: 'Unpaid',
+        },
+        paymentNote: String,
+    },
+    { _id: true }
+);
+
+// finance Schema
+const financeSchema = new mongoose.Schema({
+    clientsBudget: Number,
+    projectValue: Number,
+    soldAmmount: Number,
+    payments: [payment],
+    paymentNote: String,
+});
+
 // Lead Schema
 const leadSchema = mongoose.Schema(
     {
@@ -99,23 +132,26 @@ const leadSchema = mongoose.Schema(
         status: {
             type: String,
             enum: [
-                'unread',
+                'New',
                 'No Response',
-                'Message Rescheduled',
                 'Need Support',
+                'Message Rescheduled',
                 'Number Collected',
                 'Call Reschedule',
+                'Ongoing',
+                'Close',
                 'Follow Up',
                 'Meeting Fixed',
-                'Meeting Reschedule',
+                'Meeting Postponed',
                 'Cancel Meeting',
+                'Sold',
             ],
             required: true,
             default: 'unread',
         },
         address: addressSchema,
-        meetingDetails: [meetingDetailsSchema],
         lastMsg: String,
+        meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
         pageInfo: {
             pageId: String,
             pageName: String,
@@ -146,11 +182,15 @@ const leadSchema = mongoose.Schema(
                 type: String,
                 enum: [
                     'Roof Casting',
-                    'Tiles and Painting Done',
-                    'Plumbing Done',
-                    'Electrical Wiring Done',
-                    'Finishing Touches',
-                    // Add more sub-statuses as needed
+                    'Brick Wall',
+                    'Plaster',
+                    'Pudding',
+                    'Two Coat Paint',
+                    'Tiles Complete',
+                    'Final Paint Done',
+                    'Handed Over',
+                    'Staying in the Apartment',
+                    'Interior Work Complete',
                 ],
             },
         },
@@ -163,6 +203,22 @@ const leadSchema = mongoose.Schema(
         messages: [messageSchema],
         messagesSeen: { type: Boolean, default: false },
         requirements: [String], // New simple array for requirements
+        botResponded: { type: Boolean, default: false },
+
+        // firld to traack if the message is replied from system
+        repliedFromSystem: { type: Boolean, default: false },
+
+        // field to track when the lead was last assigned
+        lastAssigned: { type: Date, default: Date.now },
+
+        // field for product ad relations:
+        productAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ProductAd' }],
+
+        // new field for sales Follow Up.
+        salesFollowUp: [followUpSchema],
+
+        // new field for Finance
+        finance: financeSchema,
     },
     {
         timestamps: true,

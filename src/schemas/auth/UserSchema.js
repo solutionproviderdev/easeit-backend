@@ -15,7 +15,7 @@ const userSchema = new Schema({
     coverPhoto: { type: String },
     password: { type: String, required: true },
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
-    roleId: { type: Schema.Types.ObjectId, ref: 'Role' },
+    roleId: { type: Schema.Types.ObjectId },
     departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
     type: { type: String, enum: ['Admin', 'Operator'], required: true },
     accessLevel: { type: [String] },

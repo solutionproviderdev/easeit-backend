@@ -1,9 +1,12 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
+const permissionsData = require('../../routes/auth/permissionsData');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
+const User = require('../../schemas/auth/UserSchema');
+const defaultDepartments = require('../../../defaultDocuments/easeit.departments.json');
 
 // Create a new department function
-
 exports.createDepartment = async (req, res) => {
     try {
         const { departmentName, description, roles } = req.body;
@@ -14,11 +17,11 @@ exports.createDepartment = async (req, res) => {
             return res.status(400).json({ msg: 'Department already exists' });
         }
 
-        // Create a new department
+        // Create a new department, roles are optional
         department = new Department({
             departmentName,
             description,
-            roles,
+            roles: roles || [], // Set roles to an empty array if not provided
         });
 
         // Save the department
@@ -26,7 +29,7 @@ exports.createDepartment = async (req, res) => {
 
         // Create an activity log entry
         await ActivityLog.create({
-            userId: req.user.id,
+            userId: req.user._id,
             action: 'Created Department',
             details: { departmentName },
         });
@@ -38,11 +41,26 @@ exports.createDepartment = async (req, res) => {
     }
 };
 
-// Get all departments function
+// Get all departments function with staff count
 exports.getAllDepartments = async (req, res) => {
     try {
+        // Fetch all departments
         const departments = await Department.find();
-        res.status(200).json(departments);
+
+        // Create an array of promises to fetch the staff count for each department
+        const departmentsWithStaffCount = await Promise.all(
+            departments.map(async (department) => {
+                // Count the number of users in each department
+                const staffCount = await User.countDocuments({ departmentId: department._id });
+
+                return {
+                    ...department.toObject(),
+                    staffCount, // Add the staff count to each department object
+                };
+            })
+        );
+
+        res.status(200).json(departmentsWithStaffCount);
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
@@ -129,6 +147,7 @@ exports.deleteDepartment = async (req, res) => {
 exports.addRoleToDepartment = async (req, res) => {
     try {
         const department = await Department.findById(req.params.id);
+
         if (!department) {
             return res.status(404).json({ msg: 'Department not found' });
         }
@@ -139,18 +158,11 @@ exports.addRoleToDepartment = async (req, res) => {
         const newRole = {
             roleName,
             description,
-            permissions,
+            permissions, // Permissions now include array of resources and actions
         };
 
         department.roles.push(newRole);
         await department.save();
-
-        // Create an activity log entry
-        await ActivityLog.create({
-            userId: req.user.id,
-            action: 'Added Role to Department',
-            details: { departmentId: department._id, roleName },
-        });
 
         res.status(200).json(department);
     } catch (error) {
@@ -179,16 +191,9 @@ exports.updateRoleInDepartment = async (req, res) => {
         // Update the role fields
         if (roleName) role.roleName = roleName;
         if (description) role.description = description;
-        if (permissions) role.permissions = permissions;
+        if (permissions) role.permissions = permissions; // Update permissions too
 
         await department.save();
-
-        // Create an activity log entry
-        await ActivityLog.create({
-            userId: req.user.id,
-            action: 'Updated Role in Department',
-            details: { departmentId: department._id, roleId },
-        });
 
         res.status(200).json(department);
     } catch (error) {
@@ -226,5 +231,84 @@ exports.deleteRoleFromDepartment = async (req, res) => {
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Controller function to get all permissions data
+exports.getAllPermissions = (req, res) => {
+    try {
+        res.status(200).json(permissionsData);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// // Update permissions for a specific role in a department function
+// exports.updateRolePermissions = async (req, res) => {
+//     try {
+//         const department = await Department.findById(req.params.id);
+//         if (!department) {
+//             return res.status(404).json({ msg: 'Department not found' });
+//         }
+
+//         const { permissions } = req.body;
+//         const { roleId } = req.params;
+
+//         // Find the role in the department
+//         const role = department.roles.id(roleId);
+//         if (!role) {
+//             return res.status(404).json({ msg: 'Role not found' });
+//         }
+
+//         // Update permissions for the role
+//         if (permissions) role.permissions = permissions; // Handle the updated permissions array
+
+//         await department.save();
+
+//         // Log activity
+//         await ActivityLog.create({
+//             userId: req.user.id,
+//             action: 'Updated Role Permissions',
+//             details: { departmentId: department._id, roleId },
+//         });
+
+//         res.status(200).json(department);
+//     } catch (error) {
+//         console.error(error.message);
+//         res.status(500).json({ msg: 'Server error' });
+//     }
+// };
+
+exports.initializeDefaultDepartments = async () => {
+    try {
+        // Loop through each default department
+        for (const defaultDepartment of defaultDepartments) {
+            // Check if the department already exists in the database
+            const existingDepartment = await Department.findOne({
+                departmentName: defaultDepartment.departmentName,
+            });
+
+            if (existingDepartment) {
+                console.log(
+                    `Default department "${defaultDepartment.departmentName}" already exists.`
+                );
+            } else {
+                // Create the department if it doesn't exist
+                const newDepartment = new Department({
+                    departmentName: defaultDepartment.departmentName,
+                    description: defaultDepartment.description,
+                    roles: defaultDepartment.roles,
+                });
+
+                await newDepartment.save();
+                console.log(
+                    `Default department "${defaultDepartment.departmentName}" has been created.`
+                );
+            }
+        }
+
+        console.log('Default departments initialization complete.');
+    } catch (error) {
+        console.error('Error initializing default departments:', error);
     }
 };

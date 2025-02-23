@@ -77,19 +77,20 @@ const validatePhoneNumber = [
     },
 ];
 
-// Updated validation rules for updating a lead
+// Validation rules for updating a lead
 const validateLeadUpdate = [
     body('name').optional().notEmpty().withMessage('Name is required'),
     body('status')
         .optional()
         .isIn([
-            'unread',
+            'New',
             'No Response',
             'Message Rescheduled',
             'Need Support',
             'Number Collected',
             'Call Reschedule',
             'Follow Up',
+            'Ongoing',
             'Meeting Fixed',
             'Meeting Reschedule',
             'Cancel Meeting',
@@ -112,11 +113,19 @@ const validateLeadUpdate = [
     body('projectStatus.subStatus')
         .optional()
         .isIn([
+            // Sub-status for 'Ongoing'
             'Roof Casting',
-            'Tiles and Painting Done',
-            'Plumbing Done',
-            'Electrical Wiring Done',
-            'Finishing Touches',
+            'Brick Wall',
+            'Plaster',
+            'Pudding',
+            'Two Coat Paint',
+            // Sub-status for 'Ready'
+            'Tiles Complete',
+            'Final Paint Done',
+            'Handed Over',
+            'Staying in the Apartment',
+            // Sub-status for 'Renovation'
+            'Interior Work Complete',
         ])
         .withMessage('Invalid project sub-status'),
     body('projectLocation')
@@ -145,10 +154,6 @@ const validateReminder = [
         .withMessage('Time is required')
         .isISO8601()
         .withMessage('Invalid date format'),
-    body('status')
-        .optional()
-        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
-        .withMessage('Invalid status'),
     body('commentId').optional().isMongoId().withMessage('Invalid comment ID'),
     (req, res, next) => {
         const errors = validationResult(req);
@@ -182,10 +187,6 @@ const validateReminderWithComment = [
         .withMessage('Time is required')
         .isISO8601()
         .withMessage('Invalid date format'),
-    body('status')
-        .optional()
-        .isIn(['Pending', 'Complete', 'Missed', 'Late Complete'])
-        .withMessage('Invalid status'),
     body('comment').notEmpty().withMessage('Comment is required'),
     body('images').optional().isArray().withMessage('Images must be an array'),
     body('images.*').optional().isURL().withMessage('Invalid image URL'),
@@ -231,9 +232,9 @@ const validateCallLog = [
 ];
 
 const validateCreAssignment = [
-    body('creName')
+    body('newCREId')
         .notEmpty()
-        .withMessage('CRE name is required')
+        .withMessage('CRE ID is required')
         .custom(async (value) => {
             if (!mongoose.Types.ObjectId.isValid(value)) {
                 return Promise.reject('Invalid CRE ID format');
@@ -243,22 +244,13 @@ const validateCreAssignment = [
             if (!user) {
                 return Promise.reject('CRE not found');
             }
-            if (user.type !== 'Operator') {
-                return Promise.reject('User is not a valid CRE');
-            }
 
             const department = await Department.findOne({
-                _id: user.departmentId,
                 departmentName: 'CRE',
             });
-            if (!department) {
-                return Promise.reject('User is not in the CRE department');
-            }
 
-            // eslint-disable-next-line no-shadow
-            const role = department.roles.find((role) => role._id.equals(user.roleId));
-            if (!role || role.roleName !== 'CRE Head') {
-                return Promise.reject('User does not have the role of CRE Head');
+            if (!department._id.equals(user.departmentId._id)) {
+                return Promise.reject('User is not in the CRE department');
             }
         }),
     (req, res, next) => {

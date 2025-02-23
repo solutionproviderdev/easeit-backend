@@ -30,7 +30,7 @@ const checkAuth = async (req, res, next) => {
         // Call the next middleware
         next();
     } catch (error) {
-        console.error('Authorization error:', error);
+        // console.error('Authorization error:', error);
         res.status(401).json({ msg: 'Invalid token or user authentication failed' });
     }
 };

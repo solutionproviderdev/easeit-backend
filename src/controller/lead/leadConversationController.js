@@ -1,8 +1,10 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const { default: axios } = require('axios');
+const { default: mongoose } = require('mongoose');
 const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
+const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 
 // reused Functions for only this files.
 exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
@@ -22,14 +24,28 @@ exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUr
 };
 
 // Emit Socket.io events for new messages or leads
-const emitSocketEventsForNewMessage = (io, savedLead, pageInfo) => {
+const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
+    // get cre information
+    const cre = await getCreInfo(savedLead.creName);
+
+    // make crename as object if it is not null
+    let creName = null;
+    if (cre) {
+        creName = {
+            _id: cre._id,
+            name: cre.name,
+            profilePicture: cre.profilePicture,
+            nickName: cre.nickName,
+        };
+    }
+
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
-        creName: savedLead.creName,
+        creName,
         pageInfo: {
             pageName: pageInfo.pageName,
             pageId: pageInfo.pageId,
@@ -37,6 +53,7 @@ const emitSocketEventsForNewMessage = (io, savedLead, pageInfo) => {
         },
         status: savedLead.status,
         _id: savedLead._id,
+        messagesSeen: savedLead.messagesSeen,
     };
 
     io.emit('conversation', socketPayload);
@@ -108,7 +125,7 @@ exports.getAllLeadConversations = async (req, res) => {
         const creNamesSet = new Set();
 
         leadsWithLastMessage.forEach((lead) => {
-            const creNameStr = lead.creName.toString(); // Convert ObjectId to string
+            const creNameStr = lead?.creName?.toString(); // Convert ObjectId to string
             if (!creNamesSet.has(creNameStr)) {
                 creNamesSet.add(creNameStr);
                 uniqueCRENames.push(lead.creName); // Push original ObjectId to the result
@@ -132,6 +149,128 @@ exports.getAllLeadConversations = async (req, res) => {
                 sentByMe: lead.sentByMe,
                 createdAt: lead.createdAt,
                 creName: lead.creName,
+                status: lead.status,
+                _id: lead._id,
+                messagesSeen: lead.messagesSeen,
+                pageInfo: {
+                    pageId: lead.pageInfo.pageId,
+                    pageName: lead.pageInfo.pageName,
+                    pageProfilePicture: lead.pageInfo.pageProfilePicture,
+                },
+            })),
+        });
+    } catch (error) {
+        console.error('Error getting leads with last message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.getAllLeadConversationUpdated = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+
+        const leadsWithLastMessage = await Lead.aggregate([
+            {
+                $match: { source: 'Facebook' },
+            },
+            {
+                $addFields: {
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1, // Include full pageInfo object
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                },
+            },
+        ])
+            .sort({ lastMessageTime: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Populate creName with details from the User model
+        const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
+            path: 'creName',
+            select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
+        });
+
+        const totalLeads = await Lead.countDocuments({ source: 'Facebook' }); // Count only Facebook leads
+
+        // Extract unique statuses
+        const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
+
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsPopulated.forEach((lead) => {
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
+
+        // Extract unique CRE names with details
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+
+        leadsPopulated.forEach((lead) => {
+            const creDetails = lead.creName;
+            if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
+                creNamesSet.add(creDetails._id.toString());
+                uniqueCRENames.push({
+                    _id: creDetails._id,
+                    name: creDetails.nameAsPerNID,
+                    nickname: creDetails.nickname,
+                    profilePicture: creDetails.profilePicture,
+                });
+            }
+        });
+
+        // Respond with paginated leads and the conversation objects formatted as required
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames, // Unique CRE names with details
+            },
+            leads: leadsPopulated.map((lead) => ({
+                name: lead.name,
+                lastMessage: lead.lastMessage,
+                lastMessageTime: lead.lastMessageTime,
+                sentByMe: lead.sentByMe,
+                createdAt: lead.createdAt,
+                creName: lead.creName
+                    ? {
+                          _id: lead.creName._id,
+                          name: lead.creName.nameAsPerNID,
+                          nickname: lead.creName.nickname,
+                          profilePicture: lead.creName.profilePicture,
+                      }
+                    : null,
                 status: lead.status,
                 _id: lead._id,
                 messagesSeen: lead.messagesSeen,
@@ -258,6 +397,9 @@ exports.sendMetaMessage = async (req, res) => {
                     true
                 );
                 lead.messages.push(newMessage);
+                lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
+                lead.repliedFromSystem = true;
                 await lead.save();
 
                 // Emit Conversation Updated event
@@ -277,7 +419,7 @@ exports.sendMetaMessage = async (req, res) => {
 
                 // Send the message through Meta API
                 const fbResponse = await axios.post(
-                    `https://graph.facebook.com/v17.0/${pageId}/messages`,
+                    `https://graph.facebook.com/v18.0/${pageId}/messages`,
                     messagePayload
                 );
 
@@ -290,6 +432,8 @@ exports.sendMetaMessage = async (req, res) => {
                         url
                     );
                     lead.messages.push(newMessage);
+                    lead.messagesSeen = true;
+                    lead.repliedFromSystem = true;
                     await lead.save();
 
                     this.emitNewMessage(req, leadId, newMessage);
@@ -318,6 +462,8 @@ exports.sendMetaMessage = async (req, res) => {
                     content.sticker_id
                 );
                 lead.messages.push(newMessage);
+                lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
                 await lead.save();
 
                 this.emitNewMessage(req, leadId, newMessage);
@@ -335,5 +481,172 @@ exports.sendMetaMessage = async (req, res) => {
     } catch (error) {
         console.error('Error sending message:', error);
         return res.status(500).json({ error: error.toString() });
+    }
+};
+
+exports.searchLeads = async (req, res) => {
+    const searchParam = req.params.pharams;
+    // Read creName from query parameters instead of req.body
+    const { creName } = req.query;
+    try {
+        // --- Search by lead name ---
+        const pipelineForNameMatches = [
+            {
+                $match: { name: { $regex: searchParam, $options: 'i' } },
+            },
+            // If creName is provided, filter leads that belong to that CRE.
+            ...(creName
+                ? [
+                      {
+                          $match: { creName: new mongoose.Types.ObjectId(creName) },
+                      },
+                  ]
+                : []),
+            {
+                $addFields: {
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            // Populate creName details from the User collection
+            {
+                $lookup: {
+                    from: 'users', // collection name for User
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$creName',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    creName: {
+                        _id: '$creName._id',
+                        name: '$creName.nameAsPerNID',
+                        profilePicture: '$creName.profilePicture',
+                    },
+                },
+            },
+            { $sort: { lastMessageTime: -1 } },
+        ];
+
+        const nameMatches = await Lead.aggregate(pipelineForNameMatches);
+
+        // --- Search by phone number ---
+        const pipelineForPhoneMatches = [
+            {
+                // Find leads where at least one phone number matches the search parameter
+                $match: {
+                    phone: { $elemMatch: { $regex: searchParam, $options: 'i' } },
+                },
+            },
+            // If creName is provided, filter leads that belong to that CRE.
+            ...(creName
+                ? [
+                      {
+                          $match: { creName: new mongoose.Types.ObjectId(creName) },
+                      },
+                  ]
+                : []),
+            {
+                $addFields: {
+                    matchingPhone: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: '$phone',
+                                    as: 'p',
+                                    cond: {
+                                        $regexMatch: {
+                                            input: '$$p',
+                                            regex: searchParam,
+                                            options: 'i',
+                                        },
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                    // Include additional fields for sorting and display
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                    status: '$status',
+                    pageInfo: {
+                        pageId: '$pageInfo.pageId',
+                        pageName: '$pageInfo.pageName',
+                        pageProfilePicture: '$pageInfo.pageProfilePicture',
+                    },
+                    messagesSeen: '$messagesSeen',
+                },
+            },
+            // Populate creName details from the User collection
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$creName',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                // Instead of "lastMessage", we return the matching phone number in a field called "phone"
+                $project: {
+                    name: 1,
+                    phone: '$matchingPhone',
+                    lastMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    creName: {
+                        _id: '$creName._id',
+                        name: '$creName.nameAsPerNID',
+                        profilePicture: '$creName.profilePicture',
+                    },
+                },
+            },
+            { $sort: { lastMessageTime: -1 } },
+        ];
+
+        const phoneMatches = await Lead.aggregate(pipelineForPhoneMatches);
+
+        return res.status(200).json({
+            matchedNames: nameMatches,
+            matchPhoneNumber: phoneMatches,
+        });
+    } catch (error) {
+        console.error('Error searching leads:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
