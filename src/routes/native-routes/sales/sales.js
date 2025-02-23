@@ -21,4 +21,7 @@ leadSalesRouter.put(
     updateFollowUp
 );
 
+// complete a follow up
+leadSalesRouter.put('/follow-up/:leadID/:followUpID/complete', checkAuth);
+
 module.exports = leadSalesRouter;

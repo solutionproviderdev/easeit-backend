@@ -11,6 +11,17 @@ const Lead = require('../schemas/LeadsSchema');
  * @returns {Promise<Object>} - The newly created meeting document.
  */
 const createNewMeeting = async (leadId, meetingDetails, user, meetingStatus, leadStatus) => {
+    // check if salesExecutive, date, Slot are already Booked or not
+    const existingMeeting = await Meeting.findOne({
+        date: meetingDetails.date,
+        slot: meetingDetails.slot,
+        salesExecutive: meetingDetails.salesExecutive,
+    });
+
+    if (existingMeeting) {
+        throw new Error('This slot is already booked');
+    }
+
     // Create a new meeting document
     const newMeeting = new Meeting({
         lead: leadId,
@@ -31,7 +42,6 @@ const createNewMeeting = async (leadId, meetingDetails, user, meetingStatus, lea
     //  and update its status if needed.
     await Lead.findByIdAndUpdate(leadId, {
         $push: { meetings: newMeeting._id },
-        status: leadStatus || 'Meeting Fixed',
     });
 
     return newMeeting;

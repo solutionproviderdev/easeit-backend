@@ -100,7 +100,7 @@ const payment = new mongoose.Schema(
         amount: { type: Number, required: true },
         paymentMethod: {
             type: String,
-            enum: ['Cash', 'Cheque', 'Bank Transfer', 'Online Payment'],
+            enum: ['Cash', 'Cheque', 'Bank Transfer', 'Bkash', 'Nagad', 'Rocket', 'SSL E-Commerce'],
             required: true,
         },
         paymentDate: { type: Date, required: true },

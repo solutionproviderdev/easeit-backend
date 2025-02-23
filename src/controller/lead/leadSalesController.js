@@ -70,7 +70,7 @@ exports.addFollowUp = async (req, res) => {
             return res.status(404).json({ error: 'Lead not found' });
         }
 
-        // If a comment is provided, add it to the lead's comment array.
+        // If a comment is provided, add it to the lead's comment array using the utility function.
         let commentId;
         if (comment) {
             const savedComment = await addCommentToLead(
@@ -85,9 +85,21 @@ exports.addFollowUp = async (req, res) => {
         let newMeetingId;
         // If the follow-up type is "Meeting", create a new meeting using the utility function.
         if (type === 'Meeting') {
-            // meetingDetails should include at least: date, slot, salesExecutive, visitCharge.
-            const newMeeting = await createNewMeeting(leadID, meetingDetails, req.user);
-            newMeetingId = newMeeting._id;
+            try {
+                const newMeeting = await createNewMeeting(
+                    leadID,
+                    meetingDetails,
+                    req.user,
+                    meetingDetails?.meetingStatus || 'Follow-Up',
+                    ''
+                );
+                newMeetingId = newMeeting._id;
+            } catch (meetingError) {
+                if (meetingError.message === 'This slot is already booked') {
+                    return res.status(400).json({ error: 'This slot is already booked' });
+                }
+                throw meetingError;
+            }
         }
 
         // Create the follow-up object.
@@ -113,34 +125,67 @@ exports.addFollowUp = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
 /**
  * Controller to update an existing follow-up.
  * Expects leadID and followUpID in the URL parameters and update fields in the request body.
  */
 exports.updateFollowUp = async (req, res) => {
+    console.log('Received request to update follow-up');
     try {
         const { leadID, followUpID } = req.params;
-        const { time, status, type, commentId, meetingId } = req.body;
+        const { time, status, type, meetingDetails, comment } = req.body;
 
         // Find the lead by ID.
         const lead = await Lead.findById(leadID);
+        console.log('Lead found:', lead);
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
 
-        // Locate the follow-up in the salesFollowUp array.
-        const followUp = lead.salesFollowUp.id(followUpID);
+        // Locate the follow-up in the salesFollowUp array using find() instead of .id()
+        const followUp = lead.salesFollowUp.find((fu) => fu._id.toString() === followUpID);
         if (!followUp) {
             return res.status(404).json({ error: 'Follow-up not found' });
         }
 
-        // Update provided fields.
+        // If a comment is provided (as text), add it to the lead's comment array.
+        if (comment) {
+            const savedComment = await addCommentToLead(
+                leadID,
+                { comment, images: [] },
+                req.user,
+                req.io
+            );
+            // Update follow-up with the new comment's ID.
+            followUp.commentId = savedComment._id;
+        }
+
+        // If follow-up type is "Meeting" and meetingDetails are provided, create a new meeting.
+        if (type === 'Meeting' && meetingDetails) {
+            try {
+                const newMeeting = await createNewMeeting(
+                    leadID,
+                    meetingDetails,
+                    req.user,
+                    'Follow-Up',
+                    ''
+                );
+                followUp.meetingId = newMeeting._id;
+            } catch (meetingError) {
+                if (meetingError.message === 'This slot is already booked') {
+                    return res.status(400).json({ error: 'This slot is already booked' });
+                }
+                throw meetingError;
+            }
+        }
+
+        // Update any other provided fields.
         if (time) followUp.time = time;
         if (status) followUp.status = status;
         if (type) followUp.type = type;
-        if (commentId) followUp.commentId = commentId;
-        if (meetingId) followUp.meetingId = meetingId;
 
+        // Save the lead document.
         await lead.save();
 
         res.status(200).json({
