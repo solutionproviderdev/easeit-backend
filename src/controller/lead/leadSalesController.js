@@ -133,10 +133,10 @@ exports.updateFollowUp = async (req, res) => {
         if (!followUp) {
             return res.status(404).json({ error: 'Follow-up not found' });
         }
-
+        
         // Update provided fields.
-        if (time) followUp.time = time;
         if (status) followUp.status = status;
+        if (time) followUp.time = time;
         if (type) followUp.type = type;
         if (commentId) followUp.commentId = commentId;
         if (meetingId) followUp.meetingId = meetingId;
