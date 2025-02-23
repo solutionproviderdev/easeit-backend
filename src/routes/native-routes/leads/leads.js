@@ -1,10 +1,5 @@
 /* eslint-disable no-restricted-syntax */
 const express = require('express');
-
-const { default: mongoose } = require('mongoose');
-const dayjs = require('dayjs');
-const { Parser } = require('json2csv');
-const fs = require('fs');
 const leadConversationRouter = require('../lead-center/leadConversation');
 const {
     getAllLeads,
@@ -36,11 +31,13 @@ const {
 } = require('../../../validators/leadValidator');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const leadSalesRouter = require('../sales/sales');
+const leadFinanceRouter = require('../finance/finance');
 
 const leadRouter = express.Router();
 
 leadRouter.use('/conversation', leadConversationRouter);
 leadRouter.use('/sales', leadSalesRouter);
+leadRouter.use('/finance', leadFinanceRouter);
 
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
