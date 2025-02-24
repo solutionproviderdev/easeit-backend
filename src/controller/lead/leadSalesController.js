@@ -60,18 +60,20 @@ const addCommentToLead = async (leadId, commentData, user, io) => {
  * Expects the leadID in the URL parameters and follow-up details in the request body.
  */
 exports.addFollowUp = async (req, res) => {
+
+    
     try {
         const { leadID } = req.params;
         const { time, status, type, meetingDetails, comment } = req.body;
-
+        
         // Find the lead by ID.
         const lead = await Lead.findById(leadID);
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
-
         // If a comment is provided, add it to the lead's comment array.
-        let commentId;
+        
+         let commentId;
         if (comment) {
             const savedComment = await addCommentToLead(
                 leadID,
