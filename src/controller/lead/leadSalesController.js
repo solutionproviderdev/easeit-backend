@@ -60,18 +60,20 @@ const addCommentToLead = async (leadId, commentData, user, io) => {
  * Expects the leadID in the URL parameters and follow-up details in the request body.
  */
 exports.addFollowUp = async (req, res) => {
+
+    
     try {
         const { leadID } = req.params;
         const { time, status, type, meetingDetails, comment } = req.body;
-
+        
         // Find the lead by ID.
         const lead = await Lead.findById(leadID);
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
-
-        // If a comment is provided, add it to the lead's comment array using the utility function.
-        let commentId;
+        // If a comment is provided, add it to the lead's comment array.
+        
+         let commentId;
         if (comment) {
             const savedComment = await addCommentToLead(
                 leadID,
@@ -148,41 +150,10 @@ exports.updateFollowUp = async (req, res) => {
         if (!followUp) {
             return res.status(404).json({ error: 'Follow-up not found' });
         }
-
-        // If a comment is provided (as text), add it to the lead's comment array.
-        if (comment) {
-            const savedComment = await addCommentToLead(
-                leadID,
-                { comment, images: [] },
-                req.user,
-                req.io
-            );
-            // Update follow-up with the new comment's ID.
-            followUp.commentId = savedComment._id;
-        }
-
-        // If follow-up type is "Meeting" and meetingDetails are provided, create a new meeting.
-        if (type === 'Meeting' && meetingDetails) {
-            try {
-                const newMeeting = await createNewMeeting(
-                    leadID,
-                    meetingDetails,
-                    req.user,
-                    'Follow-Up',
-                    ''
-                );
-                followUp.meetingId = newMeeting._id;
-            } catch (meetingError) {
-                if (meetingError.message === 'This slot is already booked') {
-                    return res.status(400).json({ error: 'This slot is already booked' });
-                }
-                throw meetingError;
-            }
-        }
-
-        // Update any other provided fields.
-        if (time) followUp.time = time;
+        
+        // Update provided fields.
         if (status) followUp.status = status;
+        if (time) followUp.time = time;
         if (type) followUp.type = type;
 
         // Save the lead document.
