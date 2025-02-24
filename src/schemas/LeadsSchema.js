@@ -120,8 +120,9 @@ const financeSchema = new mongoose.Schema({
     clientsBudget: Number,
     projectValue: Number,
     soldAmmount: Number,
+    totalPayment: Number, // Total amount paid
+    totalDue: Number, // Total amount due
     payments: [payment],
-    paymentNote: String,
 });
 
 // Lead Schema
@@ -142,8 +143,7 @@ const leadSchema = mongoose.Schema(
                 'Close',
                 'Follow Up',
                 'Meeting Fixed',
-                'Meeting Postponed',
-                'Cancel Meeting',
+                'Meeting Complete',
                 'Sold',
             ],
             required: true,

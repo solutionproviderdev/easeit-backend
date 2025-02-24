@@ -6,6 +6,7 @@ const {
     addPayment,
     updatePayment,
     deletePayment,
+    updateFinanceDetails,
 } = require('../../../controller/lead/leadFinanceController');
 const {
     validateAddPayment,
@@ -16,6 +17,9 @@ const leadFinanceRouter = express.Router();
 
 // GET /finance/:leadID - Retrieve finance details for a lead
 leadFinanceRouter.get('/:leadID', checkAuth, getFinanceDetails);
+
+// Update finance details (clientsBudget, projectValue, soldAmount)
+leadFinanceRouter.put('/:leadID', checkAuth, updateFinanceDetails);
 
 // POST /finance/:leadID/payment - Add a new payment record for a lead
 leadFinanceRouter.post('/:leadID/payment', checkAuth, validateAddPayment, addPayment);
