@@ -105,7 +105,7 @@ app.use(
 app.set('view engine', 'ejs');
 
 // swagger setup
- 
+
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
 

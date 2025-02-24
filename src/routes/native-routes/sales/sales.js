@@ -6,9 +6,17 @@ const {
     validateAddFollowUp,
     validateUpdateFollowUp,
 } = require('../../../validators/leadSalesValidators');
-const { addFollowUp, updateFollowUp } = require('../../../controller/lead/leadSalesController');
+const {
+    addFollowUp,
+    updateFollowUp,
+    getAllFollowUps,
+    completeMeeting,
+} = require('../../../controller/lead/leadSalesController');
 
 const leadSalesRouter = express.Router();
+
+// route to get all leads with follow ups
+leadSalesRouter.get('/follow-up', checkAuth, getAllFollowUps);
 
 // route for adding a new follow up to a lead
 leadSalesRouter.post('/follow-up/:leadID', checkAuth, validateAddFollowUp, addFollowUp);
@@ -20,5 +28,8 @@ leadSalesRouter.put(
     validateUpdateFollowUp,
     updateFollowUp
 );
+
+// complete a meeting of a lead
+leadSalesRouter.put('/meeting-complete/:leadID/:meetingId', checkAuth, completeMeeting);
 
 module.exports = leadSalesRouter;

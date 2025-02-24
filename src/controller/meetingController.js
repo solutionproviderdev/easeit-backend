@@ -440,7 +440,7 @@ exports.getMeetingById = async (req, res) => {
         const { id } = req.params;
         const meeting = await Meeting.findById(id)
             .populate('lead', 'name address phone')
-            .populate('salesExecutive', 'nickname email');
+            .populate('salesExecutive', 'nickname profilePicture nameAsPerNID');
 
         if (!meeting) {
             return res.status(404).json({ msg: 'Meeting not found' });
