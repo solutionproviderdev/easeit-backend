@@ -284,7 +284,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
 
     const socketPayload = {
         name: savedLead.name,
-        lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+        lastMessage: savedLead.messages[savedLead.messages.length - 1].content || '',
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,

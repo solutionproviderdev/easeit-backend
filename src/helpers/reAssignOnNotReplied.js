@@ -61,6 +61,7 @@ const reAssignOnNotReplied = async (io) => {
             repliedFromSystem: false,
             status: { $in: ['New', 'Number Collected'] },
             source: 'Facebook',
+            messagesSeen: false,
             lastAssigned: { $lte: threshold },
         });
         console.log(`Found ${leads.length} leads for reassignment.`);
