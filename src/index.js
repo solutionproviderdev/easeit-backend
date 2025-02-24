@@ -9,8 +9,7 @@ const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const swaggerUi = require('swagger-ui-express');
-const cron = require('node-cron');
+ const cron = require('node-cron');
 const swaggerFile = require('../swagger_output.json');
 
 // internal imports
@@ -106,7 +105,6 @@ app.use(
 app.set('view engine', 'ejs');
 
 // swagger setup
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));

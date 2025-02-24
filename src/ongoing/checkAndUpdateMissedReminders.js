@@ -45,9 +45,10 @@ const checkAndUpdateMissedReminders = async (io) => {
                     reminder,
                 });
 
-                console.log(
-                    `Emitted missedReminder event for reminder ${reminder._id} in lead ${lead._id}.`
-                );
+                // console.log(
+                //     `Emitted missedReminder event for reminder ${reminder._id} in lead ${lead._id}.`
+                // );
+                
             }
         }
 

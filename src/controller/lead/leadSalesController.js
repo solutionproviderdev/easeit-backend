@@ -1,3 +1,4 @@
+const { el } = require('@faker-js/faker');
 const { createNewMeeting } = require('../../helpers/createNewMeeting');
 const Lead = require('../../schemas/LeadsSchema');
 const Meeting = require('../../schemas/MeetingSchema');
@@ -69,8 +70,8 @@ exports.addFollowUp = async (req, res) => {
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
+        // If a comment is provided, add it to the lead's comment array.
 
-        // If a comment is provided, add it to the lead's comment array using the utility function.
         let commentId;
         if (comment) {
             const savedComment = await addCommentToLead(
@@ -149,40 +150,9 @@ exports.updateFollowUp = async (req, res) => {
             return res.status(404).json({ error: 'Follow-up not found' });
         }
 
-        // If a comment is provided (as text), add it to the lead's comment array.
-        if (comment) {
-            const savedComment = await addCommentToLead(
-                leadID,
-                { comment, images: [] },
-                req.user,
-                req.io
-            );
-            // Update follow-up with the new comment's ID.
-            followUp.commentId = savedComment._id;
-        }
-
-        // If follow-up type is "Meeting" and meetingDetails are provided, create a new meeting.
-        if (type === 'Meeting' && meetingDetails) {
-            try {
-                const newMeeting = await createNewMeeting(
-                    leadID,
-                    meetingDetails,
-                    req.user,
-                    'Follow-Up',
-                    ''
-                );
-                followUp.meetingId = newMeeting._id;
-            } catch (meetingError) {
-                if (meetingError.message === 'This slot is already booked') {
-                    return res.status(400).json({ error: 'This slot is already booked' });
-                }
-                throw meetingError;
-            }
-        }
-
-        // Update any other provided fields.
-        if (time) followUp.time = time;
+        // Update provided fields.
         if (status) followUp.status = status;
+        if (time) followUp.time = time;
         if (type) followUp.type = type;
 
         // Save the lead document.
@@ -194,6 +164,172 @@ exports.updateFollowUp = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating follow-up:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+/**
+ * Get all leads with follow-ups, with filtering options.
+ * GET /lead/sales/follow-up
+ */
+exports.getAllFollowUps = async (req, res) => {
+    try {
+        const { salesExecutiveId, dateRange, status } = req.query;
+        const filter = { salesFollowUp: { $exists: true, $not: { $size: 0 } } };
+
+        // If salesExecutiveId is provided, filter leads assigned to that sales executive
+        if (salesExecutiveId) {
+            filter.salesExqName = salesExecutiveId;
+        }
+
+        // Filter by date range (applies to follow-ups inside salesFollowUp array)
+        if (dateRange) {
+            const [startDate, endDate] = dateRange.split('_');
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999); // Ensure full day inclusion
+                filter['salesFollowUp.time'] = { $gte: start, $lte: end };
+            }
+        }
+
+        // Filter by status (applies to follow-ups inside salesFollowUp array)
+        if (status) {
+            filter['salesFollowUp.status'] = status;
+        }
+
+        // Query leads with follow-ups, applying filters
+        const leadsWithFollowUps = await Lead.find(filter)
+            .populate('salesExqName', 'nickname profilePicture nameAsPerNID') // Populate sales executive details
+            .populate({
+                path: 'salesFollowUp.commentId',
+                select: 'comment commentBy',
+                populate: { path: 'commentBy', select: 'nickname email' },
+            })
+            .populate('salesFollowUp.meetingId', 'date slot status salesExecutive')
+            .select('name status phone salesFollowUp');
+
+        res.status(200).json(leadsWithFollowUps);
+    } catch (error) {
+        console.error('Error fetching follow-ups:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+/**
+ * Controller to complete a meeting for a lead.
+ * Route: PUT /lead/sales/meeting-complete/:leadID/:meetingId
+ * Expects in req.body:
+ *   - comment: Text comment to add as a lead comment.
+ *   - projectValue: Updated project value.
+ *   - clientsBudget: Updated clients budget.
+ *   - followUpTime: A UTC string (including date and time) for the follow-up.
+ *   - type: Follow-up type, either "Meeting" or "Call".
+ *   - (If type is "Meeting") meetingDetails: Object containing meeting details
+ *  (date, slot, salesExecutive, visitCharge).
+ */
+exports.completeMeeting = async (req, res) => {
+    try {
+        const { leadID, meetingId } = req.params;
+        const {
+            comment,
+
+            projectValue,
+            clientsBudget,
+            followUpTime,
+            type,
+            meetingDetails,
+        } = req.body;
+
+        // 1. Find the lead by ID.
+        const lead = await Lead.findById(leadID);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+
+        // 2. Find the meeting by ID.
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ error: 'Meeting not found' });
+        }
+
+        // 3. Update the meeting status to "Complete".
+        meeting.status = 'Complete';
+        await meeting.save();
+
+        // 4. Update the lead status to "Meeting Complete".
+        lead.status = 'Meeting Complete';
+
+        // 5. If a comment is provided, add it to the lead's comment array.
+        let commentId;
+        if (comment) {
+            const savedComment = await addCommentToLead(
+                leadID,
+                { comment, images: [] },
+                req.user,
+                req.io
+            );
+            commentId = savedComment._id;
+        }
+
+        let newMeetingId;
+        // 6. If the follow-up type is "Meeting", create a new meeting using the utility function.
+        if (type === 'Meeting' && meetingDetails) {
+            try {
+                const newMeeting = await createNewMeeting(
+                    leadID,
+                    meetingDetails,
+                    req.user,
+                    'Follow-Up',
+                    '' // lead status update can be handled separately if needed
+                );
+                newMeetingId = newMeeting._id;
+            } catch (meetingError) {
+                if (meetingError.message === 'This slot is already booked') {
+                    return res.status(400).json({ error: 'This slot is already booked' });
+                }
+                throw meetingError;
+            }
+        }
+
+        // For follow-up type "Call", we don't create a meeting.
+        // 7. Create a new follow-up for the lead.
+        // Use the provided followUpTime (as a UTC string)
+        const followUpData = {
+            time: new Date(followUpTime),
+            status: 'Complete',
+            type, // "Meeting" or "Call"
+            ...(commentId && { commentId }),
+            ...(newMeetingId && { meetingId: newMeetingId }),
+        };
+        lead.salesFollowUp.push(followUpData);
+
+        // 8. Update finance details if provided.
+        if (!lead.finance) {
+            lead.finance = { payments: [] };
+        }
+        if (projectValue !== undefined) {
+            lead.finance.projectValue = projectValue;
+        }
+        if (clientsBudget !== undefined) {
+            lead.finance.clientsBudget = clientsBudget;
+        }
+
+        // Update total due if soldAmmount and totalPayment exist.
+        if (lead.finance.soldAmmount !== undefined && lead.finance.totalPayment !== undefined) {
+            lead.finance.totalDue = lead.finance.soldAmmount - lead.finance.totalPayment;
+        }
+
+        // 9. Save the updated lead.
+        await lead.save();
+
+        return res.status(200).json({
+            message: 'Meeting completed successfully',
+            meeting,
+            lead,
+        });
+    } catch (error) {
+        console.error('Error completing meeting:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

@@ -102,7 +102,7 @@ const processMessages = (messages) => {
 };
 
 // Reusable error logging function
-const logError = (message, error) => {
+const logError = (message, error, data) => {
     console.error(`${message}: ${error}`);
     const currentTime = new Date().toLocaleString();
     console.error(`${currentTime} => ${message}`);
@@ -131,7 +131,7 @@ const getCREMapping = async () => {
 const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
-            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`,
+            `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`
             // { timeout: 20000 }
         );
         return response.data.data;
@@ -148,7 +148,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         );
         const fbSenderID = otherParticipant.id;
         const { processedMessages, phoneNumber } = processMessages(
-            [...conversation.messages.data].reverse()
+            [...(conversation?.messages?.data ?? [])].reverse()
         );
 
         let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
