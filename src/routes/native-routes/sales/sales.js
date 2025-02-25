@@ -11,6 +11,7 @@ const {
     updateFollowUp,
     getAllFollowUps,
     completeMeeting,
+    updateLeadStatusToSold,
 } = require('../../../controller/lead/leadSalesController');
 
 const leadSalesRouter = express.Router();
@@ -31,5 +32,8 @@ leadSalesRouter.put(
 
 // complete a meeting of a lead
 leadSalesRouter.put('/meeting-complete/:leadID/:meetingId', checkAuth, completeMeeting);
+
+// change the status tof a lead to Sold
+leadSalesRouter.put('/sold/:leadID/:meetingId', checkAuth, updateLeadStatusToSold);
 
 module.exports = leadSalesRouter;

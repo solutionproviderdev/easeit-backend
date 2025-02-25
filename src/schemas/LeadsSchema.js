@@ -120,6 +120,7 @@ const financeSchema = new mongoose.Schema({
     clientsBudget: Number,
     projectValue: Number,
     soldAmmount: Number,
+    soldDate: Date, // Date of sale
     totalPayment: Number, // Total amount paid
     totalDue: Number, // Total amount due
     payments: [payment],

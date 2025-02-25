@@ -1,4 +1,3 @@
-const { el } = require('@faker-js/faker');
 const { createNewMeeting } = require('../../helpers/createNewMeeting');
 const Lead = require('../../schemas/LeadsSchema');
 const Meeting = require('../../schemas/MeetingSchema');
@@ -330,6 +329,128 @@ exports.completeMeeting = async (req, res) => {
         });
     } catch (error) {
         console.error('Error completing meeting:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+/**
+ * Controller to update a lead's status to 'Sold'.
+ * Route: PUT /lead/sales/sold/:leadID/:meetingId
+ *
+ * Expects in req.body:
+ *
+ */
+exports.updateLeadStatusToSold = async (req, res) => {};
+
+/**
+ * Controller to update a lead's status to Sold.
+ * Route: PUT /lead/sales/sold/:leadID/:meetingId
+ * Expects in req.body:
+ *   - projectValue: Number
+ *   - soldAmount: Number
+ *   - clientsBudget: Number
+ *   - soldDate: Date (UTC string; will be used as paymentDate)
+ *   - paymentAmount: Number
+ *   - paymentMethod: String (one of the allowed values)
+ *   - paymentNote: String (optional)
+ *   - nextFollowUpTime: String (UTC date/time)
+ *   - comment: String (text comment to add)
+ */
+exports.updateLeadStatusToSold = async (req, res) => {
+    try {
+        const { leadID, meetingId } = req.params;
+        const {
+            projectValue,
+            soldAmount,
+            clientsBudget,
+            soldDate,
+            paymentAmount,
+            paymentMethod,
+            paymentNote,
+            nextFollowUpTime,
+            comment,
+        } = req.body;
+
+        // 1. Find the lead by ID.
+        const lead = await Lead.findById(leadID);
+        if (!lead) {
+            return res.status(404).json({ error: 'Lead not found' });
+        }
+
+        // 2. Find the meeting by ID.
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ error: 'Meeting not found' });
+        }
+
+        // 3. Update the meeting status to "Sold" and save.
+        meeting.status = 'Sold';
+        await meeting.save();
+
+        // 4. Update the lead status to "Sold".
+        lead.status = 'Sold';
+
+        // 5. Update finance details.
+        if (!lead.finance) {
+            lead.finance = { payments: [] };
+        }
+        // Set project value, sold amount, clients budget, and sold date.
+        lead.finance.projectValue = projectValue;
+        lead.finance.soldAmmount = soldAmount;
+        lead.finance.clientsBudget = clientsBudget;
+        lead.finance.soldDate = new Date(soldDate);
+
+        // 6. Add a new payment.
+        const newPayment = {
+            amount: paymentAmount,
+            paymentMethod,
+            paymentDate: new Date(soldDate),
+            paymentStatus: 'Paid',
+            paymentNote: paymentNote || '',
+        };
+
+        lead.finance.payments.push(newPayment);
+
+        // Recalculate totalPayment: sum of amounts for all "Paid" payments.
+        lead.finance.totalPayment = lead.finance.payments
+            .filter((p) => p.paymentStatus === 'Paid')
+            .reduce((sum, p) => sum + p.amount, 0);
+
+        // Calculate totalDue: soldAmount - totalPayment.
+        lead.finance.totalDue = soldAmount - lead.finance.totalPayment;
+
+        // 7. Add the comment if provided.
+        let commentId;
+        if (comment) {
+            const savedComment = await addCommentToLead(
+                leadID,
+                { comment, images: [] },
+                req.user,
+                req.io
+            );
+            commentId = savedComment._id;
+        }
+
+        // 8. Add a follow-up to the lead for next follow-up.
+        // The follow-up type is "Call" and its commentId is from the newly added comment.
+        const followUpData = {
+            time: new Date(nextFollowUpTime), // Next follow-up time as UTC
+            status: 'Pending',
+            type: 'Call',
+            ...(commentId && { commentId }),
+        };
+        lead.salesFollowUp.push(followUpData);
+
+        // 9. Save the updated lead.
+        await lead.save();
+
+        return res.status(200).json({
+            message: 'Lead updated to Sold successfully',
+            lead,
+            meeting,
+        });
+    } catch (error) {
+        console.error('Error updating lead status to Sold:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
