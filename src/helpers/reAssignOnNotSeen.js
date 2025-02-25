@@ -58,12 +58,16 @@ const reAssignOnNotSeen = async (io) => {
         // whose lastAssigned is older than the threshold.
         const now = new Date();
         const threshold = new Date(now.getTime() - messageSeenTimeMin * 60 * 1000);
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const leads = await Lead.find({
             repliedFromSystem: false,
             messagesSeen: false,
             status: { $in: ['New', 'Number Collected'] },
             source: 'Facebook',
             lastAssigned: { $lte: threshold },
+            createdAt: {
+                $gte: last24Hours,
+            },
         });
         console.log(`Found ${leads.length} leads for reassignment (not seen).`);
 

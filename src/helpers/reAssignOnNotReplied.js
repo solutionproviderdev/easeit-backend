@@ -57,13 +57,18 @@ const reAssignOnNotReplied = async (io) => {
         // 4. Only fetch leads that have been assigned more than messageReplyTimeMin minutes ago.
         const now = new Date();
         const threshold = new Date(now.getTime() - messageReplyTimeMin * 60 * 1000);
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const leads = await Lead.find({
             repliedFromSystem: false,
             status: { $in: ['New', 'Number Collected'] },
             source: 'Facebook',
             messagesSeen: false,
             lastAssigned: { $lte: threshold },
+            createdAt: {
+                $gte: last24Hours,
+            },
         });
+
         console.log(`Found ${leads.length} leads for reassignment.`);
 
         let reAssignedCount = 0;
