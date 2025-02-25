@@ -4,6 +4,7 @@
 /* eslint-disable no-loop-func */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-param-reassign */
+
 const axios = require('axios');
 const moment = require('moment');
 const { default: parsePhoneNumberFromString } = require('libphonenumber-js');
@@ -14,32 +15,41 @@ const { isAutomatedMessage } = require('../../populateDatabase');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
 const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
-const checkProductAdForLeadMessages = require('./checkProductAdForLeadMessages');
 
-const extractValidPhoneNumber = (content, countryCode = 'BD') => {
-    // Convert Bengali numerals to English numerals
-    const convertBengaliToEnglishNumbers = (input) => {
-        const bengaliToEnglishMap = {
-            '০': '0',
-            '১': '1',
-            '২': '2',
-            '৩': '3',
-            '৪': '4',
-            '৫': '5',
-            '৬': '6',
-            '৭': '7',
-            '৮': '8',
-            '৯': '9',
-        };
-        return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+/**
+ * Converts Bengali numerals in a string to English numerals.
+ * @param {string} input - The input string possibly containing Bengali numbers.
+ * @returns {string} - The input string with Bengali numerals replaced by English.
+ */
+const convertBengaliToEnglishNumbers = (input) => {
+    const bengaliToEnglishMap = {
+        '০': '0',
+        '১': '1',
+        '২': '2',
+        '৩': '3',
+        '৪': '4',
+        '৫': '5',
+        '৬': '6',
+        '৭': '7',
+        '৮': '8',
+        '৯': '9',
     };
+    return input.replace(/[০১২৩৪৫৬৭৮৯]/g, (match) => bengaliToEnglishMap[match]);
+};
 
-    // Sanitize and extract the number
+/**
+ * Extracts and validates a phone number from a given content string.
+ * @param {string} content - The message content to search within.
+ * @param {string} countryCode - The default country code for validation (default 'BD').
+ * @returns {Object|null} - Returns a parsed phone number object if valid; otherwise null.
+ */
+const extractValidPhoneNumber = (content, countryCode = 'BD') => {
+    // First, convert any Bengali numerals to English.
     const sanitizedContent = convertBengaliToEnglishNumbers(
         content.replace(/[^0-9০১২৩৪৫৬৭৮৯]+/g, '')
     );
 
-    // Validate the number using libphonenumber-js
+    // Validate and parse the phone number using libphonenumber-js.
     if (sanitizedContent) {
         const parsedNumber = parsePhoneNumberFromString(sanitizedContent, countryCode);
         if (parsedNumber && parsedNumber.isValid()) {
@@ -49,19 +59,28 @@ const extractValidPhoneNumber = (content, countryCode = 'BD') => {
     return null;
 };
 
+/**
+ * Processes an array of messages and returns both the
+ * processed messages and any valid phone number found.
+ * @param {Array} messages - Array of message objects.
+ * @returns {Object} - Contains the processed messages and the extracted phone number.
+ */
 const processMessages = (messages) => {
     let phoneNumber = '';
+    // Map each message to a standardized format.
     const processedMessages = messages.map((msg) => {
         let fileUrl = [];
 
+        // If the sender is not "Solution Provider", try to extract a phone number.
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
             const extractedNumber = extractValidPhoneNumber(content, 'BD');
             if (extractedNumber) {
-                phoneNumber = extractedNumber; // Update phoneNumber only if valid
+                phoneNumber = extractedNumber; // Update phoneNumber if a valid one is found.
             }
         }
 
+        // If the message has attachments, extract URLs from them.
         if (
             msg?.attachments &&
             msg?.attachments?.data?.length > 0 &&
@@ -71,21 +90,19 @@ const processMessages = (messages) => {
         ) {
             fileUrl = msg?.attachments?.data?.map((att) => {
                 if (att.image_data) {
-                    // console.log('image data found', att.image_data.url);
                     return att.image_data.url;
                 }
                 if (att.video_data) {
-                    // console.log('video data found', att.video_data.url);
                     return att.video_data.url;
                 }
                 if (att.file_url) {
-                    // console.log('file url found', att.file_url);
                     return att.file_url;
                 }
                 return [];
             });
         }
 
+        // Return a standardized message object.
         return {
             messageId: msg.id,
             content: msg.message,
@@ -101,14 +118,26 @@ const processMessages = (messages) => {
     return { processedMessages, phoneNumber };
 };
 
-// Reusable error logging function
+/**
+ * Logs an error with a custom message, the error object, and additional data if provided.
+ * @param {string} message - Custom message describing the error context.
+ * @param {Error} error - The error object.
+ * @param {any} data - Additional data to log.
+ */
 const logError = (message, error, data) => {
     console.error(`${message}: ${error}`);
     const currentTime = new Date().toLocaleString();
     console.error(`${currentTime} => ${message}`);
+    if (data) {
+        console.error('Additional data:', data);
+    }
 };
 
-// Fetch Facebook settings from the database
+/**
+ * Fetches Facebook settings (pages) from the database.
+ * @returns {Array} - An array of Facebook page settings.
+ * @throws Will throw an error if settings or page data are not found.
+ */
 const fetchFacebookSettings = async () => {
     const fbSettings = await Settings.findOne({ name: 'facebook' });
     if (!fbSettings || !fbSettings.settingsData.page) {
@@ -117,7 +146,10 @@ const fetchFacebookSettings = async () => {
     return fbSettings.settingsData.page;
 };
 
-// Create a mapping of CRE names to their IDs
+/**
+ * Creates a mapping of CRE names (using the last name) to their IDs.
+ * @returns {Object} - An object where keys are CRE last names and values are their corresponding IDs.
+ */
 const getCREMapping = async () => {
     const cres = await People.find({ role: 'CRE' });
     return cres.reduce((map, cre) => {
@@ -127,12 +159,16 @@ const getCREMapping = async () => {
     }, {});
 };
 
-// Fetch conversations from Facebook Graph API
+/**
+ * Fetches conversations from the Facebook Graph API for a given page.
+ * @param {string} pageId - Facebook Page ID.
+ * @param {string} pageAccessToken - Access token for the Facebook Page.
+ * @returns {Array} - Array of conversation objects.
+ */
 const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     try {
         const response = await axios.get(
             `https://graph.facebook.com/${pageId}/conversations?fields=participants,messages{id,message,created_time,attachments{image_data,video_data,generic_template,mime_type,size,name,file_url,id},from}&limit=${process.env.LIMIT}&access_token=${pageAccessToken}`
-            // { timeout: 20000 }
         );
         return response.data.data;
     } catch (error) {
@@ -141,18 +177,34 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
     }
 };
 
+/**
+ * Processes a single conversation from Facebook:
+ * - Extracts participant and message information.
+ * - Processes messages.
+ * - Finds or creates a lead based on Facebook sender ID.
+ * - Updates an existing lead with new messages or creates a new lead.
+ * - Emits socket events with updated lead information.
+ * @param {Object} conversation - Conversation object from Facebook.
+ * @param {Object} nameToCreId - Mapping of CRE names to their IDs.
+ * @param {Object} io - Socket.io instance.
+ * @param {Object} pageInfo - Facebook page information.
+ */
 const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
     try {
+        // Find the participant that is not the Facebook page itself.
         const otherParticipant = conversation.participants.data.find(
             (p) => p.name !== pageInfo.name
         );
         const fbSenderID = otherParticipant.id;
+        // Process the messages from the conversation.
         const { processedMessages, phoneNumber } = processMessages(
             [...(conversation?.messages?.data ?? [])].reverse()
         );
 
+        // Try to find an existing lead using the Facebook sender ID.
         let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
 
+        // If lead exists, update it with new messages.
         if (lead) {
             await updateExistingLead(
                 lead,
@@ -163,25 +215,31 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 pageInfo
             );
         } else {
+            // If no lead exists, create a new lead.
             lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io);
         }
 
-        // Call SholutionBot only for specific conditions
-        // if (
-        //     lead?._id.toString() === '66e277615ed719dde5ba5036' ||
-        //     lead?._id.toString() === '6763bf1c007e8833d2770e53'
-        // ) {
-        //     // console.log('Triggering SholutionBot for lead:', lead._id);
-        //     await SholutionBot(lead._id, io);
-        // }
+        // Optionally, trigger the SholutionBot for specific leads.
+        // await SholutionBot(lead._id, io);
 
-        await lead.save(); // Now `lead` is guaranteed to be defined
+        await lead.save(); // Ensure the lead document is saved.
     } catch (error) {
         logError('Error processing a single conversation', error);
     }
 };
 
-// Update an existing lead with new messages or information
+/**
+ * Updates an existing lead with new messages and updates its status if needed.
+ * - Adds new messages if not already present.
+ * - Updates the lead's last message and CRE assignment.
+ * - Emits socket events with the updated lead.
+ * @param {Object} lead - The lead document.
+ * @param {Array} processedMessages - Array of processed messages.
+ * @param {Object} phoneNumber - Extracted phone number data.
+ * @param {Object} nameToCreId - Mapping of CRE names to their IDs.
+ * @param {Object} io - Socket.io instance.
+ * @param {Object} pageInfo - Facebook page information.
+ */
 const updateExistingLead = async (
     lead,
     processedMessages,
@@ -192,27 +250,36 @@ const updateExistingLead = async (
 ) => {
     let isNewMessageAdded = false;
     let newCreId = lead.creName;
+    let isNewMessagesFromUs = false;
 
+    // Loop through each processed message.
     for (const message of processedMessages) {
+        // If the message is not already in the lead's messages array.
         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
             lead.messages.push(message);
-            lead.messagesSeen = false;
-
+            // Determine if the message is from a user (not from the Facebook page).
+            isNewMessagesFromUs = message?.senderId !== pageInfo.fbSenderID;
+            // Set messagesSeen based on whether the message is from us.
+            lead.messagesSeen = isNewMessagesFromUs;
+            // Check if the message content includes any known CRE names to update assignment.
             Object.entries(nameToCreId).forEach(([name, id]) => {
                 if (message.content.includes(name)) {
                     newCreId = id;
                 }
             });
-
+            // Emit a socket event for the new message.
             io.emit(`fbMessage${lead._id}`, message);
             isNewMessageAdded = true;
         }
     }
 
     if (isNewMessageAdded) {
+        // Update the lead's last message and assign the new CRE if applicable.
         lead.lastMsg = processedMessages[processedMessages.length - 1].content;
         lead.creName = newCreId;
+        lead.repliedFromSystem = false;
 
+        // If a valid phone number was extracted, update the lead's phone numbers.
         if (phoneNumber?.number?.length === 14) {
             const formattedPhoneNumber = phoneNumber.number;
             if (!lead.phone.includes(formattedPhoneNumber)) {
@@ -220,19 +287,30 @@ const updateExistingLead = async (
             }
         }
 
-        // check if leads statusis not 'New' then update status to 'Number Collected'
+        // If lead status is not "New", update status to
+        //  "Number Collected" if a phone was collected.
         if (phoneNumber?.number?.length === 14 && lead.status === 'New') {
             lead.status = 'Number Collected';
         }
 
         const savedLead = await lead.save();
+        // Emit socket events with updated lead information.
         emitSocketEventsForNewMessage(io, savedLead, pageInfo);
     }
 };
 
-// Create a new lead if no matching lead exists
+/**
+ * Creates a new lead document from conversation data.
+ * @param {Object} otherParticipant - The participant object (not the Facebook page).
+ * @param {Array} processedMessages - Array of processed messages.
+ * @param {Object} pageInfo - Facebook page information.
+ * @param {Object} io - Socket.io instance.
+ * @returns {Object} - The newly created lead document.
+ */
 const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) => {
+    // Get the best-performing CRE for assignment.
     const cre = await getPerformanceBasedCRE();
+    // Use the date of the first message as the createdAt time.
     const firstMessageTime = processedMessages[0].date;
 
     const newLead = new Lead({
@@ -257,21 +335,30 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
     const savedNewLead = await newLead.save();
     emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
 
-    return savedNewLead; // Return the newly created lead
+    return savedNewLead;
 };
 
-// get cre information
+/**
+ * Retrieves CRE (Customer Representative) details by ID.
+ * @param {string} id - The CRE's user ID.
+ * @returns {Object|null} - The CRE document or null if not found.
+ */
 const getCreInfo = async (id) => {
     const cre = await User.findOne({ _id: id });
     return cre || null;
 };
 
-// Emit Socket.io events for new messages or leads
+/**
+ * Emits Socket.io events to notify clients about new or updated lead messages.
+ * @param {Object} io - Socket.io instance.
+ * @param {Object} savedLead - The lead document that was saved/updated.
+ * @param {Object} pageInfo - Facebook page information.
+ */
 const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
-    // get cre information
+    // Get CRE information for the lead assignment.
     const cre = await getCreInfo(savedLead.creName);
 
-    // make crename as object if it is not null
+    // Build a CRE info object if available.
     let creName = null;
     if (cre) {
         creName = {
@@ -282,6 +369,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         };
     }
 
+    // Construct the payload for the socket event.
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content || '',
@@ -298,11 +386,17 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         _id: savedLead._id,
     };
 
+    // Emit socket events for conversation updates.
     io.emit('conversation', socketPayload);
     io.emit('newLead', { newLead: socketPayload });
 };
 
-// Main function to fetch conversations and update leads
+/**
+ * Main function to fetch Facebook conversations and update lead data.
+ * Iterates over all Facebook pages, retrieves conversations, processes them,
+ * and updates or creates leads accordingly.
+ * @param {Object} io - Socket.io instance.
+ */
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
     console.time('getConversationsAndUpdateLeadsUpdated');
     try {
@@ -325,8 +419,6 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
             for (const conversation of conversations) {
                 await processConversation(conversation, nameToCreId, io, pageInfo);
             }
-
-            // await checkProductAdForLeadMessages();
         }
     } catch (error) {
         logError('Error fetching or processing data', error);
