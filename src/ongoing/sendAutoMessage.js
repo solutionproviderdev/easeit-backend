@@ -79,7 +79,7 @@ const getEligibleLeadsForAutoMessage = async (twentyFourHoursAgo, delayThreshold
  * but less than 24 hours ago. For each such lead, you can trigger your auto message
  * sending logic (e.g. using a messaging API or socket).
  */
-const sendAutoMessage = async () => {
+const sendAutoMessage = async (io) => {
     try {
         // Retrieve the lead control settings document (creates one if not exists)
         const settings = await getLeadSettingsDoc();
@@ -121,7 +121,7 @@ const sendAutoMessage = async () => {
             // Personalize the message by replacing a placeholder with the lead's name.
             const personalizedMessage = autoMessage.message.replace('{{name}}', lead.name);
             // For example, you might call a messaging API or emit a socket event here:
-            sendMessageToLead(lead._id, personalizedMessage);
+            sendMessageToLead(lead._id, personalizedMessage, io);
 
             // save the lead
         }

@@ -1,6 +1,9 @@
 const axios = require('axios');
 const Settings = require('../schemas/SettingsSchema');
 const Lead = require('../schemas/LeadsSchema');
+const {
+    emitSocketEventsForNewMessage,
+} = require('../ongoing/getConversationAndUpdateLeadOptimized');
 
 /**
  * Helper function to create a new message object.
@@ -41,7 +44,7 @@ const createNewMessageObject = (messageId, content, pageId, sentByMe, url) => ({
  * @param {string} message - The message to send.
  * @returns {Promise<boolean>} - True if message sent and saved successfully, false otherwise.
  */
-const sendMessageToLead = async (leadId, message) => {
+const sendMessageToLead = async (leadId, message, io) => {
     try {
         // Retrieve the lead document by ID.
         const lead = await Lead.findById(leadId);
@@ -99,6 +102,9 @@ const sendMessageToLead = async (leadId, message) => {
 
             // Save the updated lead.
             await lead.save();
+
+            // send socket event to update the lead's messages in real-time
+            emitSocketEventsForNewMessage(io, lead, lead.pageInfo);
 
             return true;
         }

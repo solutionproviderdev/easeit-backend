@@ -39,10 +39,14 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         };
     }
 
+    const custommersMessages = savedLead.messages.filter((message) => message.sentByMe === false);
+    const lastCustomerMessageTime = custommersMessages[custommersMessages.length - 1]?.date;
+
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+        lastCustomerMessageTime,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
         creName,
@@ -184,18 +188,26 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
             {
                 $match: matchConditions,
             },
+            // Add a field "customerMessages" that contains only messages where sentByMe is false
             {
                 $addFields: {
+                    customerMessages: {
+                        $filter: {
+                            input: '$messages',
+                            as: 'msg',
+                            cond: { $eq: ['$$msg.sentByMe', false] },
+                        },
+                    },
+                },
+            },
+            // Add the lastCustomerMessageTime field based on the filtered messages
+            {
+                $addFields: {
+                    lastCustomerMessageTime: { $last: '$customerMessages.date' },
+                    // Optionally keep other fields from messages if needed:
                     lastMessage: { $last: '$messages.content' },
                     lastMessageTime: { $last: '$messages.date' },
                     sentByMe: { $last: '$messages.sentByMe' },
-                    status: '$status',
-                    pageInfo: {
-                        pageId: '$pageInfo.pageId',
-                        pageName: '$pageInfo.pageName',
-                        pageProfilePicture: '$pageInfo.pageProfilePicture',
-                    },
-                    messagesSeen: '$messagesSeen',
                 },
             },
             {
@@ -203,6 +215,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                     name: 1,
                     lastMessage: 1,
                     lastMessageTime: 1,
+                    lastCustomerMessageTime: 1,
                     sentByMe: 1,
                     createdAt: 1,
                     status: 1,
@@ -270,6 +283,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                 name: lead.name,
                 lastMessage: lead.lastMessage,
                 lastMessageTime: lead.lastMessageTime,
+                lastCustomerMessageTime: lead.lastCustomerMessageTime, // new field
                 sentByMe: lead.sentByMe,
                 createdAt: lead.createdAt,
                 creName: lead.creName

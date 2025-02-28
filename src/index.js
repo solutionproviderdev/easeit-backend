@@ -172,6 +172,7 @@ cron.schedule(
 		try {
 			await reAssignOnNotReplied(io);
 			await reAssignOnNotSeen(io);
+			sendAutoMessage(io);
 			console.log('Re-Assign executed successfully.');
 		} catch (error) {
 			console.error('Error in reAssignOnNotReplied cron job:', error);
@@ -193,8 +194,6 @@ reAssignOnNotSeen(io);
 findDuplicateLeads();
 
 getPerformanceBasedCRE();
-
-sendAutoMessage();
 
 // 404 error handling
 app.use(notFoundHandler);

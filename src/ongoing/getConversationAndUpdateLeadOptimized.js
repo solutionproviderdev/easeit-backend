@@ -369,11 +369,15 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         };
     }
 
+    const custommersMessages = savedLead.messages.filter((message) => message.sentByMe === false);
+    const lastCustomerMessageTime = custommersMessages[custommersMessages.length - 1]?.date;
+
     // Construct the payload for the socket event.
     const socketPayload = {
         name: savedLead.name,
         lastMessage: savedLead.messages[savedLead.messages.length - 1].content || '',
         lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+        lastCustomerMessageTime,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
         creName: { ...creName },
