@@ -6,7 +6,6 @@ const settingsSchema = mongoose.Schema(
         name: {
             type: String,
             required: true,
-            // enum: ['account', 'facebook', 'lead'],
             unique: true,
         },
         settingsData: {

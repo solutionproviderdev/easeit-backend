@@ -48,6 +48,7 @@ const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
 const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
+const { sendAutoMessage, getEligibleLeadsForAutoMessage } = require('./ongoing/sendAutoMessage');
 
 // Initialize app
 const app = express();
@@ -192,6 +193,8 @@ reAssignOnNotSeen(io);
 findDuplicateLeads();
 
 getPerformanceBasedCRE();
+
+sendAutoMessage();
 
 // 404 error handling
 app.use(notFoundHandler);

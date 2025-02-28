@@ -7,6 +7,7 @@ const {
     updateManualOverride,
     deleteManualOverride,
     updateGlobalSettings,
+    updateAutoMessage,
 } = require('../../../controller/settings/leadControlController');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 
@@ -33,4 +34,8 @@ leadControlRouter.put('/manual/:creId', checkAuth, updateManualOverride);
 // Delete a manual override for a specific CRE
 leadControlRouter.delete('/manual/:creId', checkAuth, deleteManualOverride);
 
+// Set auto Message
+leadControlRouter.put('/autoMessage', checkAuth, updateAutoMessage);
+
+// Export the leadControlRouter
 module.exports = leadControlRouter;

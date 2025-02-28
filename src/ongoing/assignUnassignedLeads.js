@@ -98,8 +98,8 @@ const assignUnassignedLeads = async (io) => {
                             name: updatedLead.name,
                             status: updatedLead.status,
                             lastMessage:
-                                updatedLead.messages[updatedLead.messages.length - 1]?.content
-                                || 'sent an attachment',
+                                updatedLead.messages[updatedLead.messages.length - 1]?.content ||
+                                'sent an attachment',
                             lastMessageTime:
                                 updatedLead.messages[updatedLead.messages.length - 1]?.date || '',
                             pageInfo: updatedLead.pageInfo,

@@ -170,10 +170,19 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;
+        const { creId } = req.query;
+
+        // Build match conditions for aggregation
+        const matchConditions = { source: 'Facebook' };
+        // If a CRE id is provided, add it to the match filter
+        // (assuming creName is stored as ObjectId)
+        if (creId) {
+            matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        }
 
         const leadsWithLastMessage = await Lead.aggregate([
             {
-                $match: { source: 'Facebook' },
+                $match: matchConditions,
             },
             {
                 $addFields: {
@@ -197,7 +206,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                     sentByMe: 1,
                     createdAt: 1,
                     status: 1,
-                    pageInfo: 1, // Include full pageInfo object
+                    pageInfo: 1,
                     creName: 1,
                     messagesSeen: 1,
                     _id: 1,
@@ -215,9 +224,10 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
             model: 'User',
         });
 
-        const totalLeads = await Lead.countDocuments({ source: 'Facebook' }); // Count only Facebook leads
+        // Count total leads using the same match conditions
+        const totalLeads = await Lead.countDocuments(matchConditions);
 
-        // Extract unique statuses
+        // Extract unique statuses from the leads
         const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
 
         // Extract unique pageInfo objects
@@ -233,7 +243,6 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         // Extract unique CRE names with details
         const uniqueCRENames = [];
         const creNamesSet = new Set();
-
         leadsPopulated.forEach((lead) => {
             const creDetails = lead.creName;
             if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
@@ -247,7 +256,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
             }
         });
 
-        // Respond with paginated leads and the conversation objects formatted as required
+        // Respond with paginated leads and formatted conversation objects
         res.status(200).json({
             totalLeads,
             totalPages: Math.ceil(totalLeads / limit),
@@ -255,7 +264,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
             filters: {
                 statuses: uniqueStatuses,
                 pages: uniquePages,
-                creNames: uniqueCRENames, // Unique CRE names with details
+                creNames: uniqueCRENames,
             },
             leads: leadsPopulated.map((lead) => ({
                 name: lead.name,

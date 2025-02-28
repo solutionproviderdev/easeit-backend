@@ -220,6 +220,9 @@ const leadSchema = mongoose.Schema(
 
         // new field for Finance
         finance: financeSchema,
+
+        // new field to track auto message sent count
+        autoMessageSentCount: { type: Number, default: 0 },
     },
     {
         timestamps: true,

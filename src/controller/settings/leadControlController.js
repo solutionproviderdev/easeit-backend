@@ -2,7 +2,6 @@
 const User = require('../../schemas/auth/UserSchema');
 const Settings = require('../../schemas/SettingsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
-
 const getCREPerformance = require('../../helpers/getCREPerformance');
 
 exports.getLeadSettingsDoc = async () => {
@@ -274,6 +273,63 @@ exports.deleteManualOverride = async (req, res) => {
         res.status(200).json({ message: 'Manual override deleted successfully' });
     } catch (error) {
         console.error('Error deleting manual override:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+/**
+ * Controller to update the auto message settings in the lead control configuration.
+ * Route: PUT /lead/autoMessage
+ * Expects in req.body:
+ * {
+ *   autoMessage: {
+ *     enabled: <boolean>,
+ *     message: <string>
+ *     delayHours: <number>
+ *   }
+ * }
+ */
+exports.updateAutoMessage = async (req, res) => {
+    try {
+        const { autoMessage } = req.body;
+
+        // Validate the input: ensure enabled is boolean, message is a non-empty string,
+        // and delayHours is a number between 1 and 23.
+        if (
+            typeof autoMessage?.enabled !== 'boolean' ||
+            !autoMessage.message ||
+            typeof autoMessage.message !== 'string' ||
+            typeof autoMessage.delayHours !== 'number' ||
+            autoMessage.delayHours < 1 ||
+            autoMessage.delayHours > 23
+        ) {
+            return res.status(400).json({ error: 'Invalid autoMessage data provided' });
+        }
+
+        // Use findOneAndUpdate with upsert to update (or create)
+        //  the settings document with name 'lead'
+        const updatedSettings = await Settings.findOneAndUpdate(
+            { name: 'lead' },
+            {
+                $set: {
+                    'settingsData.global.autoMessage': {
+                        enabled: autoMessage.enabled,
+                        message: autoMessage.message,
+                        delayHours: autoMessage.delayHours,
+                    },
+                },
+            },
+            { new: true, upsert: true }
+        );
+
+        if (!updatedSettings) {
+            return res.status(404).json({ error: 'Settings not found' });
+        }
+
+        // Return the updated autoMessage settings
+        res.status(200).json(updatedSettings.settingsData.global.autoMessage);
+    } catch (error) {
+        console.error('Error updating auto message:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
