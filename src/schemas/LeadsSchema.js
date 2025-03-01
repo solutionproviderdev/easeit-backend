@@ -146,6 +146,7 @@ const leadSchema = mongoose.Schema(
                 'Meeting Fixed',
                 'Meeting Complete',
                 'Sold',
+                'Prospect',
             ],
             required: true,
             default: 'unread',

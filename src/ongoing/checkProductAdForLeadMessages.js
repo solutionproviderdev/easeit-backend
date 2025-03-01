@@ -22,9 +22,15 @@ async function checkProductAdForLeadMessages() {
         const pattern =
             /^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$/i;
 
+        // Initialize counters
+        let totalPatternMatches = 0;
+        let totalMissingProductAds = 0;
+
+        // Map to count each extracted product name occurrence
+        const productNameCount = new Map();
+
         for (const lead of leads) {
             let leadUpdated = false;
-
             if (!Array.isArray(lead.messages)) continue;
 
             // Get lead's pageId; if missing, skip this lead
@@ -37,8 +43,13 @@ async function checkProductAdForLeadMessages() {
                 const match = pattern.exec(content);
                 if (!match) continue;
 
+                totalPatternMatches++;
+
                 const extractedProductName = match[2].trim();
                 const key = extractedProductName.toLowerCase();
+
+                // Count each product name occurrence
+                productNameCount.set(key, (productNameCount.get(key) || 0) + 1);
 
                 // Check cache first
                 let productAd = productAdCache.get(key);
@@ -49,7 +60,10 @@ async function checkProductAdForLeadMessages() {
                     productAdCache.set(key, productAd);
                 }
 
-                if (!productAd) continue;
+                if (!productAd) {
+                    totalMissingProductAds++;
+                    continue;
+                }
 
                 // Check if any image in the product ad has a matching pageId
                 const pageIdMatch = productAd.images.some((img) => img.pageId === leadPageId);
@@ -70,8 +84,18 @@ async function checkProductAdForLeadMessages() {
             }
 
             if (leadUpdated) {
-                console.log(`Lead ${lead._id}: Product ad relation created/linked.`);
+                console.log(`Lead ${lead._id}: Product ad for relation created/linked.`);
             }
+        }
+
+        // Log the overall counts
+        console.log(`Total pattern matches found: ${totalPatternMatches}`);
+        console.log(`Product names extracted but not found in DB: ${totalMissingProductAds}`);
+
+        // Log each product name count
+        console.log('Product name counts:');
+        for (const [product, count] of productNameCount.entries()) {
+            console.log(`${product}: ${count}`);
         }
     } catch (error) {
         console.error('Error checking product ads:', error);
