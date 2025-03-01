@@ -28,7 +28,10 @@ const getCREPerformance = async (
         });
 
         // Get the leads for this CRE in the 7-day window to derive meeting metrics
-        const leadsForCRE = await Lead.find({ creName: creId }).select('_id');
+        const leadsForCRE = await Lead.find({
+            creName: creId,
+            createdAt: { $gte: startDateinUTC, $lte: endDate },
+        }).select('_id');
         const leadIds = leadsForCRE.map((lead) => lead._id);
 
         // Count meetings set (from Meeting collection) with a lower bound (7-day window)

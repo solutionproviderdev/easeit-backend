@@ -1,5 +1,6 @@
 /* eslint-disable no-shadow */
 const moment = require('moment');
+const momenttz = require('moment-timezone');
 const User = require('../../schemas/auth/UserSchema');
 const Meeting = require('../../schemas/MeetingSchema');
 const Lead = require('../../schemas/LeadsSchema');
@@ -16,14 +17,25 @@ const getAllCREsPerformanceData = async (req, res) => {
         }
 
         // Parse and normalize start and end dates
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        let start = new Date(startDate);
+        let end = new Date(endDate);
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             return res.status(400).json({ message: 'Invalid date format' });
         }
+
+        // console.log('Start Date:', start.toString());
+
+        // const date = '2023-02-28'; // your date string
+        // const start = momenttz.tz(date, 'Asia/Dhaka').startOf('day').utc();
+        // const end = momenttz.tz(date, 'Asia/Dhaka').endOf('day').utc();
+
         // Normalize start and end times to cover the entire day
-        start.setUTCHours(0, 0, 0, 0);
-        end.setUTCHours(23, 59, 59, 999);
+        // start.setUTCHours(0, 0, 0, 0);
+        start = momenttz.tz(start, 'Asia/Dhaka').startOf('day').utc();
+        end = momenttz.tz(end, 'Asia/Dhaka').endOf('day').utc();
+        // end.setUTCHours(23, 59, 59, 999);
+
+        // console.log('End Date:', start.toString());
 
         // Find the department ID for "CRE" department
         const department = await Department.findOne({ departmentName: 'CRE' });
@@ -126,14 +138,14 @@ const getCREPerformanceDataById = async (req, res) => {
         }
 
         // Parse and normalize start and end dates
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        let start = new Date(startDate);
+        let end = new Date(endDate);
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             return res.status(400).json({ message: 'Invalid date format' });
         }
         // Normalize times to cover the entire days
-        start.setUTCHours(0, 0, 0, 0);
-        end.setUTCHours(23, 59, 59, 999);
+        start = momenttz.tz(start, 'Asia/Dhaka').startOf('day').utc();
+        end = momenttz.tz(end, 'Asia/Dhaka').endOf('day').utc();
 
         // Find the CRE user by ID and populate its department info
         const user = await User.findById(creId).populate('departmentId');
@@ -342,7 +354,7 @@ const getDateWiseLeadData = async (req, res) => {
             return res.status(400).json({ message: 'Start date and end date are required' });
         }
 
-        // Parse and normalize start and end dates
+        // Parse input dates as Date objects
         const start = new Date(startDate);
         const end = new Date(endDate);
 
@@ -350,23 +362,31 @@ const getDateWiseLeadData = async (req, res) => {
             return res.status(400).json({ message: 'Invalid date format' });
         }
 
-        // Normalize start and end times to include entire day in UTC
-        start.setUTCHours(0, 0, 0, 0);
-        end.setUTCHours(23, 59, 59, 999);
+        // Normalize start and end times in Asia/Dhaka and convert to UTC for querying MongoDB.
+        const startMomentUTC = moment.tz(start, 'Asia/Dhaka').startOf('day').utc();
+        const endMomentUTC = moment.tz(end, 'Asia/Dhaka').endOf('day').utc();
+        const startUTC = startMomentUTC.toDate();
+        const endUTC = endMomentUTC.toDate();
 
-        // Initialize the date range
+        console.log('Start Date & End Date', startUTC, endUTC);
+
+        // Build days array by iterating over each local day in Asia/Dhaka,
+        // then converting the start of that day to its UTC representation (including hour info).
         const daysArray = [];
-        const currentDate = new Date(start);
+        const currentLocal = moment.tz(start, 'Asia/Dhaka').startOf('day');
+        const endLocal = moment.tz(end, 'Asia/Dhaka').startOf('day');
 
-        while (currentDate <= end) {
-            daysArray.push(currentDate.toISOString().split('T')[0]); // Format: YYYY-MM-DD
-            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        while (currentLocal.isSameOrBefore(endLocal)) {
+            // For example, local "2025-03-01T00:00:00+06:00" becomes "2025-02-28T18:00:00.000Z"
+            daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
+            currentLocal.add(1, 'day');
         }
+        console.log('Days Array', daysArray);
 
-        // Initialize data structure for bar chart
-        const groupedData = daysArray.reduce((acc, date) => {
-            acc[date] = {
-                date,
+        // Initialize data structure using the UTC start-of-day strings as keys
+        const groupedData = daysArray.reduce((acc, dateKey) => {
+            acc[dateKey] = {
+                date: dateKey,
                 leads: 0,
                 numberCollected: 0,
                 meetingsFixed: 0,
@@ -376,20 +396,22 @@ const getDateWiseLeadData = async (req, res) => {
             return acc;
         }, {});
 
-        // Aggregate data from the Leads collection
+        // Aggregate leads data.
+        // Note: We use timezone 'Asia/Dhaka' so that the createdAt dates are converted to the local day.
         const leads = await Lead.aggregate([
             {
                 $match: {
-                    createdAt: { $gte: start, $lte: end },
+                    createdAt: { $gte: startUTC, $lte: endUTC },
                 },
             },
             {
                 $project: {
-                    date: {
+                    // Format the createdAt date into a local date string (YYYY-MM-DD)
+                    localDate: {
                         $dateToString: {
                             format: '%Y-%m-%d',
                             date: '$createdAt',
-                            timezone: 'UTC',
+                            timezone: 'Asia/Dhaka',
                         },
                     },
                     hasPhone: { $gt: [{ $size: { $ifNull: ['$phone', []] } }, 0] },
@@ -398,20 +420,20 @@ const getDateWiseLeadData = async (req, res) => {
             },
         ]);
 
-        // Aggregate data from the Meetings collection
+        // Aggregate meetings data using the same timezone setting.
         const meetings = await Meeting.aggregate([
             {
                 $match: {
-                    date: { $gte: start, $lte: end },
+                    date: { $gte: startUTC, $lte: endUTC },
                 },
             },
             {
                 $project: {
-                    date: {
+                    localDate: {
                         $dateToString: {
                             format: '%Y-%m-%d',
                             date: '$date',
-                            timezone: 'UTC',
+                            timezone: 'Asia/Dhaka',
                         },
                     },
                     isMeetingCompleted: { $eq: ['$status', 'Complete'] },
@@ -420,24 +442,35 @@ const getDateWiseLeadData = async (req, res) => {
             },
         ]);
 
-        // Populate grouped data for leads
+        // Populate grouped data for leads.
+        // Convert the local date string back into the UTC start-of-day key.
         leads.forEach((lead) => {
-            if (groupedData[lead.date]) {
-                groupedData[lead.date].leads += 1;
-                if (lead.hasPhone) groupedData[lead.date].numberCollected += 1;
-                if (lead.isMeetingFixed) groupedData[lead.date].meetingsFixed += 1;
+            const leadDateKey = moment
+                .tz(lead.localDate, 'YYYY-MM-DD', 'Asia/Dhaka')
+                .startOf('day')
+                .utc()
+                .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
+            if (groupedData[leadDateKey]) {
+                groupedData[leadDateKey].leads += 1;
+                if (lead.hasPhone) groupedData[leadDateKey].numberCollected += 1;
+                if (lead.isMeetingFixed) groupedData[leadDateKey].meetingsFixed += 1;
             }
         });
 
-        // Populate grouped data for meetings
+        // Populate grouped data for meetings.
         meetings.forEach((meeting) => {
-            if (groupedData[meeting.date]) {
-                if (meeting.isMeetingCompleted) groupedData[meeting.date].meetingsCompleted += 1;
-                if (meeting.isMeetingSold) groupedData[meeting.date].meetingsSold += 1;
+            const meetingDateKey = moment
+                .tz(meeting.localDate, 'YYYY-MM-DD', 'Asia/Dhaka')
+                .startOf('day')
+                .utc()
+                .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
+            if (groupedData[meetingDateKey]) {
+                if (meeting.isMeetingCompleted) groupedData[meetingDateKey].meetingsCompleted += 1;
+                if (meeting.isMeetingSold) groupedData[meetingDateKey].meetingsSold += 1;
             }
         });
 
-        // Prepare the response in an array format
+        // Prepare the response as an array.
         const responseData = Object.values(groupedData);
 
         res.status(200).json(responseData);
