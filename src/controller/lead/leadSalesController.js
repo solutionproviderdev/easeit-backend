@@ -206,7 +206,7 @@ exports.getAllFollowUps = async (req, res) => {
                 populate: { path: 'commentBy', select: 'nickname email' },
             })
             .populate('salesFollowUp.meetingId', 'date slot status salesExecutive')
-            .select('name status phone salesFollowUp');
+            .select('-messages -pageInfo -reminder');
 
         res.status(200).json(leadsWithFollowUps);
     } catch (error) {

@@ -7,6 +7,7 @@ const {
     updatePayment,
     deletePayment,
     updateFinanceDetails,
+    getAllLeadsWithFinanceDetails,
 } = require('../../../controller/lead/leadFinanceController');
 const {
     validateAddPayment,
@@ -14,6 +15,9 @@ const {
 } = require('../../../validators/leadFinanceValidators');
 
 const leadFinanceRouter = express.Router();
+
+// get all leads with finance details
+leadFinanceRouter.get('/', checkAuth, getAllLeadsWithFinanceDetails);
 
 // GET /finance/:leadID - Retrieve finance details for a lead
 leadFinanceRouter.get('/:leadID', checkAuth, getFinanceDetails);

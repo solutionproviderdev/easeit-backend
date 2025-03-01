@@ -250,17 +250,17 @@ const updateExistingLead = async (
 ) => {
     let isNewMessageAdded = false;
     let newCreId = lead.creName;
-    let isNewMessagesFromUs = false;
+    // let isNewMessagesFromUs = false;
 
     // Loop through each processed message.
     for (const message of processedMessages) {
         // If the message is not already in the lead's messages array.
         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
             lead.messages.push(message);
-            // Determine if the message is from a user (not from the Facebook page).
-            isNewMessagesFromUs = message?.senderId !== pageInfo.fbSenderID;
-            // Set messagesSeen based on whether the message is from us.
-            lead.messagesSeen = isNewMessagesFromUs;
+            // // Determine if the message is from a user (not from the Facebook page).
+            // isNewMessagesFromUs = message?.senderId !== pageInfo.fbSenderID;
+            // // Set messagesSeen based on whether the message is from us.
+            // lead.messagesSeen = isNewMessagesFromUs;
             // Check if the message content includes any known CRE names to update assignment.
             Object.entries(nameToCreId).forEach(([name, id]) => {
                 if (message.content.includes(name)) {
@@ -380,6 +380,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         lastCustomerMessageTime,
         sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
         createdAt: savedLead.createdAt,
+        messagesSeen: savedLead.messagesSeen,
         creName: { ...creName },
         pageInfo: {
             pageName: pageInfo.pageName,
