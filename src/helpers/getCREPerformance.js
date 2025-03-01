@@ -37,7 +37,7 @@ const getCREPerformance = async (
         // Count meetings set (from Meeting collection) with a lower bound (7-day window)
         const meetingsSet = await Meeting.countDocuments({
             lead: { $in: leadIds },
-            date: { $gte: startDateinUTC },
+            date: { $gte: startDateinUTC, $lte: endDate },
         });
 
         // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
