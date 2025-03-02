@@ -39,7 +39,7 @@ const getCREPerformance = async (
             lead: { $in: leadIds },
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
@@ -49,7 +49,7 @@ const getCREPerformance = async (
             status: { $in: ['Complete', 'Sold'] },
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
@@ -59,7 +59,7 @@ const getCREPerformance = async (
             status: 'Rescheduled',
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
@@ -69,7 +69,7 @@ const getCREPerformance = async (
             status: 'Postponed',
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
@@ -78,7 +78,7 @@ const getCREPerformance = async (
             status: 'Canceled',
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
@@ -88,7 +88,7 @@ const getCREPerformance = async (
             status: 'Sold',
             date: {
                 $gte: startDateinUTC,
-                // $lte: endDate,
+                $lte: endDate,
             },
         });
 
