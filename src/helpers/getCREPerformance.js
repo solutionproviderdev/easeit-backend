@@ -49,6 +49,8 @@ const getCREPerformance = async (
             creName: creId,
             // createdAt: { $gte: startDate },
         }).select('_id');
+
+        // Extract lead IDs from the leadsForCRE array
         const leadIds = leadsForCRE.map((lead) => lead._id);
 
         // Count meetings set (from Meeting collection) with a lower bound (7-day window)
