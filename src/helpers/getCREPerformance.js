@@ -42,8 +42,6 @@ const getCREPerformance = async (
         // filter out the undefined values from the meetingIds array
         const filteredMeetingIds = meetingIds.filter((id) => id !== undefined);
 
-        console.log(filteredMeetingIds);
-
         // Get the leads for this CRE in the 7-day window to derive meeting metrics
         const leadsForCRE = await Lead.find({
             creName: creId,

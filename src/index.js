@@ -158,7 +158,6 @@ cron.schedule('*/1 * * * * *', async () => { // Runs every second
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
-	await checkProductAdForLeadMessages();
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
@@ -170,9 +169,10 @@ cron.schedule(
 	'* * * * *',
 	async () => {
 		try {
+			await checkProductAdForLeadMessages();
 			await reAssignOnNotReplied(io);
 			await reAssignOnNotSeen(io);
-			sendAutoMessage(io);
+			await sendAutoMessage(io);
 			console.log('Re-Assign executed successfully.');
 		} catch (error) {
 			console.error('Error in reAssignOnNotReplied cron job:', error);
