@@ -1,4 +1,6 @@
 // leadFinanceController.js
+
+const momenttz = require('moment-timezone');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Lead = require('../../schemas/LeadsSchema');
@@ -34,8 +36,15 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
 
         // Apply Date Range filter based on createdAt if both startDate and endDate are provided
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
+            // const start = new Date(startDate);
+            // const end = new Date(endDate);
+
+            const start = momenttz.tz(startDate, 'Asia/Dhaka').startOf('day').toDate();
+            const end = momenttz.tz(endDate, 'Asia/Dhaka').endOf('day').toDate();
+
+            console.log('start time:', start);
+            console.log('end time:', end);
+
             if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
                 filter.createdAt = { $gte: start, $lte: end };
             }
