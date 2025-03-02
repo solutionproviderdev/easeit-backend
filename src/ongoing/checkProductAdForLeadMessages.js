@@ -84,7 +84,7 @@ async function checkProductAdForLeadMessages() {
             }
 
             if (leadUpdated) {
-                console.log(`Lead ${lead._id}: Product ad for relation created/linked.`);
+                console.log(`Lead ${lead.name}: Product ad for relation created/linked.`);
             }
         }
 
