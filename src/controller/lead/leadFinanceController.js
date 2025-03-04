@@ -4,6 +4,7 @@ const momenttz = require('moment-timezone');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Lead = require('../../schemas/LeadsSchema');
+const { formatDateRange } = require('../../helpers/firmatDateRange');
 
 exports.getAllLeadsWithFinanceDetails = async (req, res) => {
     try {
@@ -39,8 +40,7 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
             // const start = new Date(startDate);
             // const end = new Date(endDate);
 
-            const start = momenttz.tz(startDate, 'Asia/Dhaka').startOf('day').toDate();
-            const end = momenttz.tz(endDate, 'Asia/Dhaka').endOf('day').toDate();
+            const { start, end } = formatDateRange(startDate, endDate);
 
             console.log('start time:', start);
             console.log('end time:', end);
@@ -188,11 +188,11 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
 exports.getFinanceDetails = async (req, res) => {
     try {
         const { leadID } = req.params;
-        const lead = await Lead.findById(leadID).select('finance');
+        const lead = await Lead.findById(leadID).select('finance _id');
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
         }
-        res.status(200).json(lead.finance || []);
+        res.status(200).json(lead.finance || {});
     } catch (error) {
         console.error('Error fetching finance details:', error);
         res.status(500).json({ error: 'Internal Server Error' });
