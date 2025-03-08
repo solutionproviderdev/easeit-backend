@@ -1,4 +1,20 @@
-const { messaging } = require('../config/firebaseAdmin');
+const { messaging } = require('../../config/firebaseAdmin');
+
+const errorsToRemoveToken = [
+    'messaging/registration-token-not-registered',
+    'messaging/invalid-registration-token',
+    'messaging/invalid-recipient',
+    'messaging/sender-id-mismatch',
+];
+
+const errorsToKeepToken = [
+    'messaging/message-rate-exceeded',
+    'messaging/server-unavailable',
+    'messaging/internal-error',
+    'messaging/quota-exceeded',
+    'messaging/invalid-argument',
+    'messaging/invalid-apns-credentials',
+];
 
 /**
  * Sends a push notification to a single user via Firebase Cloud Messaging.
@@ -44,7 +60,10 @@ const sendNotificationToUser = async (
             response,
         };
     } catch (error) {
-        console.error('Error sending notification:', error);
+        const {
+            errorInfo: { code, message },
+        } = error;
+        console.error(message, code);
         return { success: false, message: 'Failed to send notification.', error };
     }
 };

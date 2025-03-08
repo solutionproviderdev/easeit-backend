@@ -25,20 +25,9 @@ const meetingsRouter = require('./routes/meetings/meeting');
 const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
-const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const {
-	updateLeadsWithPhoneNumbersAndStatus,
-	updateLeadsStatusToMeetingFixed,
-	assignLeadsToCRE,
-	deleteLeadsWithInvalidMessageIds,
-	assignLeadsToCREInOrder,
-	randomlyFixMeetings,
 	nameBasedLeadAssign,
-	imageLinkChange,
-	imageLinkChangeLead,
-	findDuplicateMeetings,
-	findAdMessagePatterns,
 	findDuplicateLeads,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
@@ -49,7 +38,7 @@ const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
 const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
-const { sendAutoMessage, getEligibleLeadsForAutoMessage } = require('./ongoing/sendAutoMessage');
+const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 
 // Initialize app

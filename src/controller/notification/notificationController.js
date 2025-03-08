@@ -1,5 +1,6 @@
 const { messaging } = require('../../config/firebaseAdmin');
-const { sendNotificationToUser } = require('../../helpers/sendNotification');
+const { sendNotificationToUser } = require('../../helpers/notification/sendNotification');
+const Notification = require('../../schemas/Notification');
 
 /**
  * API Endpoint: Send Notification to a Single User
@@ -51,5 +52,59 @@ exports.sendNotificationToMultiple = async (req, res) => {
             message: 'Failed to send notifications.',
             error,
         });
+    }
+};
+
+/**
+ * Fetch the latest notifications for a user.
+ * GET /notifications/:userId
+ */
+exports.getUserNotifications = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        // Retrieve the latest 50 notifications for the user, sorted by createdAt descending
+        const notifications = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(50);
+        res.status(200).json({ success: true, data: notifications });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ success: false, message: 'Error fetching notifications' });
+    }
+};
+
+/**
+ * Mark a notification as read.
+ * POST /notifications/mark-as-read
+ */
+exports.markNotificationAsRead = async (req, res) => {
+    try {
+        const { notificationId } = req.body;
+        if (!notificationId) {
+            return res.status(400).json({ success: false, message: 'Notification ID is required' });
+        }
+        await Notification.findByIdAndUpdate(notificationId, { status: 'read' });
+        res.status(200).json({ success: true, message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('Error updating notification:', error);
+        res.status(500).json({ success: false, message: 'Error updating notification' });
+    }
+};
+
+/**
+ * Mark all notifications for a user as read.
+ * POST /notifications/mark-all-as-read/:userId
+ */
+exports.markAllNotificationsAsRead = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        // Update all notifications for the user to status "read"
+        const result = await Notification.updateMany({ userId }, { status: 'read' });
+        res.status(200).json({
+            success: true,
+            message: 'All notifications marked as read',
+            result,
+        });
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        res.status(500).json({ success: false, message: 'Error marking notifications as read' });
     }
 };
