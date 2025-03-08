@@ -63,6 +63,8 @@ const getAllCREsPerformanceData = async (req, res) => {
             creUsers.map(async (user) => {
                 const performances = await getCREPerformance(user._id, start, end);
 
+                
+
                 const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } =
                     performances.performanceRates || {};
 
@@ -222,7 +224,7 @@ const getCREPerformanceDataById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-
+//data
 // Controller function to get monthly/weekly meetings
 const getMeetingsData = async (req, res) => {
     try {
@@ -269,7 +271,8 @@ const getMeetingsData = async (req, res) => {
 
         // Count meetings and populate groupedMeetings
         meetings.forEach((meeting) => {
-            const dayLabel =                timeLength === 'week'
+            const dayLabel =
+                timeLength === 'week'
                     ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
                     : moment(meeting.date).format('D'); // Day of the month as a number
 
@@ -368,7 +371,7 @@ const getDateWiseLeadData = async (req, res) => {
         const startUTC = startMomentUTC.toDate();
         const endUTC = endMomentUTC.toDate();
 
-        console.log('Start Date & End Date', startUTC, endUTC);
+        // console.log('Start Date & End Date', startUTC, endUTC);
 
         // Build days array by iterating over each local day in Asia/Dhaka,
         // then converting the start of that day to its UTC representation (including hour info).
@@ -381,7 +384,7 @@ const getDateWiseLeadData = async (req, res) => {
             daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
             currentLocal.add(1, 'day');
         }
-        console.log('Days Array', daysArray);
+        
 
         // Initialize data structure using the UTC start-of-day strings as keys
         const groupedData = daysArray.reduce((acc, dateKey) => {

@@ -26,6 +26,7 @@ const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversa
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const {
 	updateLeadsWithPhoneNumbersAndStatus,
 	updateLeadsStatusToMeetingFixed,
@@ -195,7 +196,7 @@ reAssignOnNotReplied(io);
 reAssignOnNotSeen(io);
 findDuplicateLeads();
 
-getPerformanceBasedCRE();
+// getPerformanceBasedCRE();
 
 // 404 error handling
 app.use(notFoundHandler);
