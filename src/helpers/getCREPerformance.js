@@ -57,6 +57,18 @@ const getCREPerformance = async (
         //     date: { $gte: startDate, $lte: endDate },
         // });
 
+
+        // Pending Meetings data (Which meeting has set but not event occured)
+        const pendingMeeting = await Meeting.countDocuments({
+            // lead: { $in: leadIds },
+            _id: { $in: filteredMeetingIds },
+            status: { $in: ['Fixed'] },
+            // date: { $gte: startDate, $lte: endDate },
+        });
+
+        //finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
+        const meetingOccurrence = meetingsSet - pendingMeeting;
+
         // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
         const meetingsCompleted = await Meeting.countDocuments({
             // lead: { $in: leadIds },
@@ -105,15 +117,16 @@ const getCREPerformance = async (
 
         const target = 200;
 
+
         // Calculate performance metrics:
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
         const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
         const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
-        const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
+        const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingOccurrence) * 100 : 0;
         const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
-        const MRR = meetingsSet > 0 ? (meetingsRescheduled / meetingsSet) * 100 : 0;
-        const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
-        const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
+        const MRR = meetingsSet > 0 ? (meetingsRescheduled / meetingOccurrence) * 100 : 0;
+        const MPR = meetingsSet > 0 ? (meetingPostponed / meetingOccurrence) * 100 : 0;
+        const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingOccurrence) * 100 : 0;
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
         // Complete performance formula:
@@ -132,6 +145,8 @@ const getCREPerformance = async (
                 assigned,
                 numberCollected,
                 meetingsSet,
+                pendingMeeting,
+                meetingOccurrence,
                 meetingsCompleted,
                 meetingsRescheduled,
                 meetingPostponed,

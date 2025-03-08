@@ -164,6 +164,7 @@ const getCREPerformanceDataById = async (req, res) => {
 
         const performances = await getCREPerformance(user._id, start, end);
 
+        console.log('perfomences', performances);
         const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } = performances.performanceRates || {};
 
         const {
@@ -269,7 +270,8 @@ const getMeetingsData = async (req, res) => {
 
         // Count meetings and populate groupedMeetings
         meetings.forEach((meeting) => {
-            const dayLabel =                timeLength === 'week'
+            const dayLabel =
+                timeLength === 'week'
                     ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
                     : moment(meeting.date).format('D'); // Day of the month as a number
 
