@@ -520,12 +520,22 @@ exports.reassignOrSwapMeeting = async (req, res) => {
                 { new: true }
             );
 
+            // Update the `salesExqName` field in the respective Leads
+            await Lead.findByIdAndUpdate(currentMeeting.lead, {
+                salesExqName: updatedCurrentMeeting.salesExecutive,
+            });
+
+            await Lead.findByIdAndUpdate(existingMeeting.lead, {
+                salesExqName: updatedExistingMeeting.salesExecutive,
+            });
+
             return res.status(200).json({
                 msg: 'Meetings swapped successfully',
                 updatedCurrentMeeting,
                 updatedExistingMeeting,
             });
         }
+
         // Reassign case: update the meeting with the new slot and/or sales executive
         const updatedMeeting = await Meeting.findByIdAndUpdate(
             id,
@@ -536,6 +546,11 @@ exports.reassignOrSwapMeeting = async (req, res) => {
             },
             { new: true }
         );
+
+        // Update the `salesExqName` field in the corresponding Lead
+        await Lead.findByIdAndUpdate(currentMeeting.lead, {
+            salesExqName: newSalesExecutiveId,
+        });
 
         return res.status(200).json({
             msg: 'Meeting reassigned successfully',

@@ -49,6 +49,7 @@ const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMe
 const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
 const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
 const { sendAutoMessage, getEligibleLeadsForAutoMessage } = require('./ongoing/sendAutoMessage');
+const notificationRouter = require('./routes/notifications/notifications');
 
 // Initialize app
 const app = express();
@@ -138,6 +139,7 @@ app.use('/map', mapDataRouter);
 app.use('/dashboard', dashBoardRouter);
 app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
+app.use('/notifications', notificationRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
