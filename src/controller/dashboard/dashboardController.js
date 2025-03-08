@@ -166,7 +166,6 @@ const getCREPerformanceDataById = async (req, res) => {
 
         const performances = await getCREPerformance(user._id, start, end);
 
-        
         const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } = performances.performanceRates || {};
 
         const {
@@ -372,7 +371,7 @@ const getDateWiseLeadData = async (req, res) => {
         const startUTC = startMomentUTC.toDate();
         const endUTC = endMomentUTC.toDate();
 
-        console.log('Start Date & End Date', startUTC, endUTC);
+        // console.log('Start Date & End Date', startUTC, endUTC);
 
         // Build days array by iterating over each local day in Asia/Dhaka,
         // then converting the start of that day to its UTC representation (including hour info).
@@ -385,7 +384,7 @@ const getDateWiseLeadData = async (req, res) => {
             daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
             currentLocal.add(1, 'day');
         }
-        console.log('Days Array', daysArray);
+        
 
         // Initialize data structure using the UTC start-of-day strings as keys
         const groupedData = daysArray.reduce((acc, dateKey) => {

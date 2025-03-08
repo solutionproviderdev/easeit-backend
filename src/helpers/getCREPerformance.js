@@ -58,6 +58,7 @@ const getCREPerformance = async (
         // });
 
 
+        // Pending Meetings data (Which meeting has set but not event occured)
 
 
         //finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
@@ -139,6 +140,7 @@ const getCREPerformance = async (
                 assigned,
                 numberCollected,
                 meetingsSet,
+                
                 meetingsCompleted,
                 meetingsRescheduled,
                 meetingPostponed,
