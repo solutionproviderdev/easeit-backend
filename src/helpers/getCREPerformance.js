@@ -57,6 +57,12 @@ const getCREPerformance = async (
         //     date: { $gte: startDate, $lte: endDate },
         // });
 
+
+
+
+        //finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
+
+
         // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
         const meetingsCompleted = await Meeting.countDocuments({
             // lead: { $in: leadIds },
@@ -104,6 +110,7 @@ const getCREPerformance = async (
         // });
 
         const target = 200;
+
 
         // Calculate performance metrics:
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
