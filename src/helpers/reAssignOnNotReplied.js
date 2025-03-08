@@ -8,6 +8,7 @@ const {
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const Lead = require('../schemas/LeadsSchema');
+const { formatThreshold } = require('./firmatDateRange');
 const getCREPerformance = require('./getCREPerformance');
 const { selectCREBasedOnOverFlow } = require('./getPerformanceBasedCRE');
 
@@ -55,8 +56,9 @@ const reAssignOnNotReplied = async (io) => {
         }));
 
         // 4. Only fetch leads that have been assigned more than messageReplyTimeMin minutes ago.
-        const now = new Date();
-        const threshold = new Date(now.getTime() - messageReplyTimeMin * 60 * 1000);
+        // const now = new Date();
+        // const threshold = new Date(now.getTime() - messageReplyTimeMin * 60 * 1000);
+        const threshold = formatThreshold(messageReplyTimeMin);
         const leads = await Lead.find({
             repliedFromSystem: false,
             status: { $in: ['New', 'Number Collected'] },
