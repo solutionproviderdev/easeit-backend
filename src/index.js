@@ -25,20 +25,9 @@ const meetingsRouter = require('./routes/meetings/meeting');
 const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
-const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
 const {
-	updateLeadsWithPhoneNumbersAndStatus,
-	updateLeadsStatusToMeetingFixed,
-	assignLeadsToCRE,
-	deleteLeadsWithInvalidMessageIds,
-	assignLeadsToCREInOrder,
-	randomlyFixMeetings,
 	nameBasedLeadAssign,
-	imageLinkChange,
-	imageLinkChangeLead,
-	findDuplicateMeetings,
-	findAdMessagePatterns,
 	findDuplicateLeads,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
@@ -49,7 +38,9 @@ const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
 const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
-const { sendAutoMessage, getEligibleLeadsForAutoMessage } = require('./ongoing/sendAutoMessage');
+const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
+const notificationRouter = require('./routes/notifications/notifications');
+const { setIO } = require('./socket/socketService');
 
 // Initialize app
 const app = express();
@@ -116,9 +107,21 @@ app.get('/', (req, res) => {
 	res.send('Hello Solution Provider...!');
 });
 
+// Set the io instance in your socket service
+setIO(io);
+
 // io connection start
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
+
+    // Listen for the register-user event to join a room named after the userId
+    socket.on('register-user', (userId) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`Socket ${socket.id} joined room ${userId}`);
+        }
+    });
+
     socket.on('disconnect', (reason) => {
         console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
     });
@@ -139,6 +142,7 @@ app.use('/map', mapDataRouter);
 app.use('/dashboard', dashBoardRouter);
 app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
+app.use('/notifications', notificationRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
@@ -216,4 +220,4 @@ if (require.main === module) {
 	});
 }
 
-module.exports = app;
+module.exports = { app, io };

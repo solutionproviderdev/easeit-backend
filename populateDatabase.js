@@ -989,11 +989,11 @@ const nameBasedLeadAssign = async () => {
         if (leads.length === 0) return;
 
         const creCRMNamesToFacebookNames = {
-					'Morium Ritu': 'Morium Ritu',
-					'Antika Sadia Islam': 'Antika Sadia Islam',
-					'Ariha Tania Islam': 'Ariha Taniya Islam',
-					'Joynob Islam': 'Joynob Islam',
-				};
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'Ariha Tania Islam': 'Ariha Taniya Islam',
+            'Joynob Islam': 'Joynob Islam',
+        };
 
         const normalizeName = (name) =>
             name
@@ -1329,6 +1329,39 @@ const findDuplicateLeads = async () => {
     }
 };
 
+const assignToRightSalesExecutive = async () => {
+    try {
+        // Get all the meetings
+        const meetings = await Meeting.find({});
+        let totalUpdatedLeads = 0;
+
+        // Loop over each meeting
+        for (const meeting of meetings) {
+            const { lead, salesExecutive } = meeting;
+            try {
+                const updatedLead = await Lead.findByIdAndUpdate(
+                    lead,
+                    { salesExqName: salesExecutive },
+                    { new: true }
+                );
+                if (updatedLead) {
+                    console.log(
+                        `Assigned lead: ${updatedLead.name} to sales executive: ${updatedLead.salesExqName}`
+                    );
+                    totalUpdatedLeads++;
+                }
+            } catch (error) {
+                console.error(`Error updating lead ${lead}: ${error}`);
+                // Continue with the next meeting
+            }
+        }
+
+        console.log(`Total leads updated: ${totalUpdatedLeads}`);
+    } catch (error) {
+        console.error('Error assigning leads to sales executive:', error);
+    }
+};
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -1341,6 +1374,7 @@ module.exports = {
     createDummyUsers,
     generateRandomDate,
     isAutomatedMessage,
+    assignToRightSalesExecutive,
     findHighQualityLeads,
     logAutomatedMessages,
     updateMeetingStatuses,
