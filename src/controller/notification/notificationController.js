@@ -7,9 +7,9 @@ const Notification = require('../../schemas/Notification');
  */
 exports.sendNotification = async (req, res) => {
     try {
-        const { token, title, body, image } = req.body;
+        const { userId, title, body, image } = req.body;
 
-        const response = await sendNotificationToUser(token, title, body, image);
+        const response = await sendNotificationToUser(userId, title, body, image);
 
         return res.status(response.success ? 200 : 500).json(response);
     } catch (error) {
@@ -64,7 +64,7 @@ exports.getUserNotifications = async (req, res) => {
         const { userId } = req.params;
         // Retrieve the latest 50 notifications for the user, sorted by createdAt descending
         const notifications = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(50);
-        res.status(200).json({ success: true, data: notifications });
+        res.status(200).json(notifications);
     } catch (error) {
         console.error('Error fetching notifications:', error);
         res.status(500).json({ success: false, message: 'Error fetching notifications' });

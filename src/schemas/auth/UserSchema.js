@@ -46,6 +46,12 @@ const userSchema = new Schema({
         phone: { type: String, required: true },
         relation: { type: String, required: true },
     },
+
+    // to store device tokens
+    deviceTokens: {
+        type: [String],
+        default: [],
+    },
 });
 
 const User = mongoose.model('User', userSchema);

@@ -7,21 +7,22 @@ const {
     markNotificationAsRead,
     markAllNotificationsAsRead,
 } = require('../../controller/notification/notificationController');
+const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
 const notificationRouter = express.Router();
 
 // Send Push Notification
-notificationRouter.post('/send', sendNotification);
+notificationRouter.post('/send', checkAuth, sendNotification);
 
-notificationRouter.post('/send-to-multiple', sendNotificationToMultiple);
+notificationRouter.post('/send-to-multiple', checkAuth, sendNotificationToMultiple);
 
 // Route to fetch the latest notifications for a user
-notificationRouter.get('/:userId', getUserNotifications);
+notificationRouter.get('/:userId', checkAuth, getUserNotifications);
 
 // Route to mark a notification as read
-notificationRouter.post('/mark-as-read', markNotificationAsRead);
+notificationRouter.post('/mark-as-read', checkAuth, markNotificationAsRead);
 
 // Route to mark all notifications for a user as read
-notificationRouter.post('/mark-all-as-read/:userId', markAllNotificationsAsRead);
+notificationRouter.post('/mark-all-as-read/:userId', checkAuth, markAllNotificationsAsRead);
 
 module.exports = notificationRouter;

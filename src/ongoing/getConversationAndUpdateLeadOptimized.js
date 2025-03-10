@@ -15,6 +15,7 @@ const { isAutomatedMessage } = require('../helpers/isAutomatedMessage');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
 const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
+const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -335,6 +336,9 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
 
     const savedNewLead = await newLead.save();
     emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
+
+    // notify the user about the new lead
+    await notifyNewLeadAssignment(savedNewLead._id, cre._id);
 
     return savedNewLead;
 };
