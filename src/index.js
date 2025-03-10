@@ -107,9 +107,6 @@ app.get('/', (req, res) => {
 	res.send('Hello Solution Provider...!');
 });
 
-// Set the io instance in your socket service
-setIO(io);
-
 // io connection start
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
@@ -126,6 +123,9 @@ io.on('connection', (socket) => {
         console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
     });
 });
+
+// Set the io instance in your socket service
+setIO(io);
 
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {

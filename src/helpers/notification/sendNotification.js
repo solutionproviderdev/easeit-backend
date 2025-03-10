@@ -35,6 +35,8 @@ const getTockenOfAnUser = async (userId) => {
  * It sends the notification to each token individually, then emits a socket event.
  * Metadata is stringified and included in the data payload.
  *
+ * If push notifications fail, the socket event will still be sent.
+ *
  * @param {string} userId - The recipient's user ID.
  * @param {string} title - Notification title.
  * @param {string} body - Notification body.
@@ -51,6 +53,7 @@ const sendNotificationToUser = async (
     image = 'https://solutionprovider.online/assets/images/logo.png',
     savedNotification
 ) => {
+    const responses = [];
     try {
         // Retrieve the device tokens (an array) for the user.
         const tokens = await getTockenOfAnUser(userId);
@@ -58,7 +61,6 @@ const sendNotificationToUser = async (
             throw new Error('No FCM tokens available for this user');
         }
 
-        const responses = [];
         // Loop over each token and send notification individually.
         for (const token of tokens) {
             const message = {
@@ -82,6 +84,7 @@ const sendNotificationToUser = async (
 
             try {
                 const response = await messaging.send(message);
+                console.log(`Notification sent to token ${token}:`, response);
                 responses.push({ token, success: true, response });
             } catch (error) {
                 const errorCode = error?.errorInfo?.code;
@@ -107,21 +110,24 @@ const sendNotificationToUser = async (
                 }
             }
         }
-
-        // Emit a socket event to notify the user with the saved notification entry as payload
-        const io = getIO();
-        console.log('user ID', userId.toString());
-        io.to(userId.toString()).emit('new-notification', savedNotification);
-
-        return {
-            success: true,
-            message: 'Notifications processed individually and socket event emitted.',
-            responses,
-        };
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        return { success: false, message: 'Failed to send notification.', error };
+    } catch (pushError) {
+        console.error('Error sending push notifications:', pushError);
     }
+
+    // Emit a socket event to notify the user, regardless of push notification results.
+    try {
+        const io = getIO();
+        console.log('Emitting socket event to user:', userId);
+        io.to(userId.toString()).emit('new-notification', savedNotification);
+    } catch (socketError) {
+        console.error('Error emitting socket notification:', socketError);
+    }
+
+    return {
+        success: true,
+        message: 'Notifications processed individually and socket event emitted.',
+        responses,
+    };
 };
 
 module.exports = { sendNotificationToUser };
