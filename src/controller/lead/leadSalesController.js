@@ -200,6 +200,7 @@ exports.getAllFollowUps = async (req, res) => {
         // Query leads with follow-ups, applying filters
         const leadsWithFollowUps = await Lead.find(filter)
             .populate('salesExqName', 'nickname profilePicture nameAsPerNID') // Populate sales executive details
+            .populate('creName', 'nickname profilePicture nameAsPerNID') // Populate sales executive details
             .populate({
                 path: 'salesFollowUp.commentId',
                 select: 'comment commentBy',

@@ -266,7 +266,14 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         // Extract unique pageInfo objects
         const uniquePagesMap = new Map();
         leadsPopulated.forEach((lead) => {
+            if (!lead.pageInfo) {
+                console.log('Lead with missing pageInfo:', lead.name);
+                return;
+            }
+
+            // Extract pageInfo details
             const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+
             if (!uniquePagesMap.has(pageId)) {
                 uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
             }
