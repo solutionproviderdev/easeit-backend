@@ -63,7 +63,7 @@ const getAllCREsPerformanceData = async (req, res) => {
             creUsers.map(async (user) => {
                 const performances = await getCREPerformance(user._id, start, end);
 
-                
+
 
                 const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } =
                     performances.performanceRates || {};
@@ -78,6 +78,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     meetingCancelled,
                     totalSales,
                     completePerformance,
+                    followUpPerformance,
                     target,
                 } = performances.performanceMetrics;
 
@@ -93,6 +94,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     { label: 'Target Achieved', value: TA },
                     { label: 'Sold Rate', value: SR },
                     { label: 'Complete Performance', value: completePerformance },
+                    { label: 'FollowUp Perfomance', value: followUpPerformance },
                 ];
 
                 return {
@@ -113,6 +115,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                         meetingCancelled,
                         totalSales,
                         completePerformance,
+                        followUpPerformance,
                         target, // remaining target
                     },
                     barChartData,
@@ -178,7 +181,9 @@ const getCREPerformanceDataById = async (req, res) => {
             meetingCancelled,
             totalSales,
             completePerformance,
+            followUpPerformance,
             target,
+
         } = performances.performanceMetrics;
 
         const barChartData = [
@@ -192,6 +197,8 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Target Achieved', value: TA },
             { label: 'Sold Rate', value: SR },
             { label: 'Complete Performance', value: completePerformance },
+            { label: 'FollowUp Perfomance', value: followUpPerformance },
+
         ];
 
         const response = {
@@ -213,6 +220,7 @@ const getCREPerformanceDataById = async (req, res) => {
                 totalSales,
                 soldRate: SR,
                 completePerformance,
+                followUpPerformance,
                 target: target - meetingsCompleted,
             },
             barChartData,
@@ -384,7 +392,7 @@ const getDateWiseLeadData = async (req, res) => {
             daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
             currentLocal.add(1, 'day');
         }
-        
+
 
         // Initialize data structure using the UTC start-of-day strings as keys
         const groupedData = daysArray.reduce((acc, dateKey) => {

@@ -1,6 +1,14 @@
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
 
+// Helper function to calculate performance
+const calculatePerformance = (completed, lateCompleted, missed) => {
+    const resolved = completed + lateCompleted + missed;
+    if (resolved === 0) return 0; // To avoid division by zero if no reminders are resolved
+    const weightedSum = completed + (0.7 * lateCompleted);
+    return (weightedSum / resolved) * 100;
+};
+
 const getCREPerformance = async (
     creId,
     startDate,
@@ -112,6 +120,40 @@ const getCREPerformance = async (
 
         const target = 200;
 
+        // --- Follow-up Data Calculation ---
+        // Count follow-up statuses for the given CRE within the date range
+        const pendingFollowups = await Lead.countDocuments({
+            creName: creId,
+            "reminder.status": "Pending",
+            createdAt: { $gte: startDate, $lte: endDate },
+        });
+
+        const completeFollowups = await Lead.countDocuments({
+            creName: creId,
+            "reminder.status": "Complete",
+            createdAt: { $gte: startDate, $lte: endDate },
+        });
+
+        const lateCompleteFollowups = await Lead.countDocuments({
+            creName: creId,
+            "reminder.status": "Late Complete",
+            createdAt: { $gte: startDate, $lte: endDate },
+        });
+
+        const missedFollowups = await Lead.countDocuments({
+            creName: creId,
+            "reminder.status": "Missed",
+            createdAt: { $gte: startDate, $lte: endDate },
+        });
+
+        // Calculate follow-up performance using your equation
+        // Note: Only resolved follow-ups are used (i.e. excluding pending)
+        const followUpPerformance = calculatePerformance(
+            completeFollowups,
+            lateCompleteFollowups,
+            missedFollowups
+        );
+
 
         // Calculate performance metrics:
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
@@ -140,12 +182,12 @@ const getCREPerformance = async (
                 assigned,
                 numberCollected,
                 meetingsSet,
-                
                 meetingsCompleted,
                 meetingsRescheduled,
                 meetingPostponed,
                 meetingCancelled,
                 totalSales,
+                followUpPerformance,
                 completePerformance: performance,
                 target: target - meetingsCompleted, // remaining target
             },
