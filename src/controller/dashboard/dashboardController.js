@@ -269,7 +269,8 @@ const getMeetingsData = async (req, res) => {
 
         // Count meetings and populate groupedMeetings
         meetings.forEach((meeting) => {
-            const dayLabel =                timeLength === 'week'
+            const dayLabel =
+                timeLength === 'week'
                     ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
                     : moment(meeting.date).format('D'); // Day of the month as a number
 
@@ -397,7 +398,8 @@ const getDateWiseLeadData = async (req, res) => {
         }, {});
 
         // Aggregate leads data.
-        // Note: We use timezone 'Asia/Dhaka' so that the createdAt dates are converted to the local day.
+        // Note: We use timezone 'Asia/Dhaka' so that the
+        // createdAt dates are converted to the local day.
         const leads = await Lead.aggregate([
             {
                 $match: {
