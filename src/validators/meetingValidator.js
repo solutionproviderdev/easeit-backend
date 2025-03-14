@@ -40,6 +40,7 @@ exports.meetingValidationRules = [
 
     // Validate salesExecutive (must be a valid MongoDB ObjectId)
     check('salesExecutive')
+        .optional()
         .isMongoId()
         .withMessage('Sales Executive ID must be a valid MongoDB ObjectId'),
 
