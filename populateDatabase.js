@@ -21,6 +21,7 @@ const { getPerformanceBasedCRE } = require('./src/helpers/getPerformanceBasedCRE
 const Meeting = require('./src/schemas/MeetingSchema');
 const MapData = require('./src/schemas/MapData'); // Adjust the path as needed
 const ProductAd = require('./src/schemas/ProductAdSchema');
+const { notifyNewLeadAssignment } = require('./src/helpers/notification/lead/leadTriggers');
 
 // Function to generate random departments
 const generateDepartments = (num) => {
@@ -989,11 +990,12 @@ const nameBasedLeadAssign = async () => {
         if (leads.length === 0) return;
 
         const creCRMNamesToFacebookNames = {
-					'Morium Ritu': 'Morium Ritu',
-					'Antika Sadia Islam': 'Antika Sadia Islam',
-					'Ariha Tania Islam': 'Ariha Taniya Islam',
-					'Joynob Islam': 'Joynob Islam',
-				};
+            'Morium Ritu': 'Morium Ritu',
+            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
+            'Joynob Islam': 'Joynob Islam',
+            'Sumaia Akter Aysa': 'Sumaiya Akter',
+        };
 
         const normalizeName = (name) =>
             name
@@ -1035,6 +1037,9 @@ const nameBasedLeadAssign = async () => {
                 if (!creId) return;
 
                 if (lead.creName?.toString() === creId) return;
+
+                // send notification to user
+                notifyNewLeadAssignment(lead._id, creId);
 
                 bulkOperations.push({
                     updateOne: {
@@ -1329,6 +1334,118 @@ const findDuplicateLeads = async () => {
     }
 };
 
+const assignToRightSalesExecutive = async () => {
+    try {
+        // Get all the meetings
+        const meetings = await Meeting.find({});
+        let totalUpdatedLeads = 0;
+
+        // Loop over each meeting
+        for (const meeting of meetings) {
+            const { lead, salesExecutive } = meeting;
+            try {
+                const updatedLead = await Lead.findByIdAndUpdate(
+                    lead,
+                    { salesExqName: salesExecutive },
+                    { new: true }
+                );
+                if (updatedLead) {
+                    console.log(
+                        `Assigned lead: ${updatedLead.name} to sales executive: ${updatedLead.salesExqName}`
+                    );
+                    totalUpdatedLeads++;
+                }
+            } catch (error) {
+                console.error(`Error updating lead ${lead}: ${error}`);
+                // Continue with the next meeting
+            }
+        }
+
+        console.log(`Total leads updated: ${totalUpdatedLeads}`);
+    } catch (error) {
+        console.error('Error assigning leads to sales executive:', error);
+    }
+};
+
+const getAllProfilePictureurl = async () => {
+    try {
+        const users = await User.find({}).select('profilePicture nameAsPerNID');
+        const profilePictureUrls = users.map((user) => ({
+            name: user.nameAsPerNID,
+            profilePictureUrl: user.profilePicture,
+        }));
+
+        const allURL = [
+            {
+                name: 'Solution Provider',
+                profilePictureUrl: 'http://localhost:5000/images/image_1729451457799.jpg',
+            },
+            {
+                name: 'Supto Bala Kumar',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735566009070.png',
+            },
+            {
+                name: 'Morium Ritu',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735566511088.png',
+            },
+            {
+                name: 'Antika Sadia Islam',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735566725892.png',
+            },
+            {
+                name: 'Ariha Taniya Islam',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735566882610.png',
+            },
+            {
+                name: 'Md. Saidul Islam Emon',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735567145979.png',
+            },
+            {
+                name: 'Rahat Shekh',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1735567335950.png',
+            },
+            {
+                name: 'Yasin Arafat',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1737191072164.png',
+            },
+            {
+                name: 'Shishir Ahmed',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1737459653547.png',
+            },
+            {
+                name: 'MD Nadim Mahmud',
+                profilePictureUrl:
+                    'https://crm.solutionprovider.com.bd/api/images/image_1737459937929.png',
+            },
+            {
+                name: 'Joynob Islam',
+                profilePictureUrl:
+                    'http://crm.solutionprovider.com.bd/api/images/image_1738390967808.png',
+            },
+            {
+                name: 'SR Sompod',
+                profilePictureUrl:
+                    'http://crm.solutionprovider.com.bd/api/images/image_1738672635152.png',
+            },
+            {
+                name: 'Sumaiya Akter',
+                profilePictureUrl:
+                    'http://crm.solutionprovider.com.bd/api/images/image_1739601147125.jpg',
+            },
+        ];
+
+        console.log(profilePictureUrls);
+    } catch (error) {}
+};
+
 // Export all the functions as a module
 module.exports = {
     generateDepartments,
@@ -1341,6 +1458,7 @@ module.exports = {
     createDummyUsers,
     generateRandomDate,
     isAutomatedMessage,
+    assignToRightSalesExecutive,
     findHighQualityLeads,
     logAutomatedMessages,
     updateMeetingStatuses,
@@ -1362,4 +1480,5 @@ module.exports = {
     findDuplicateMeetings,
     checkProductAdForLeadMessages,
     findDuplicateLeads,
+    getAllProfilePictureurl,
 };

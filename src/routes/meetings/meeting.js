@@ -24,6 +24,9 @@ const {
     updateMeetingDetailsValidationRules,
     reassignOrSwapMeetingValidationRules,
 } = require('../../validators/meetingValidator');
+const {
+    getRandomFreeSalesExecutiveFromSlot,
+} = require('../../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
 
 // Router Declaration
 const meetingsRouter = express.Router();

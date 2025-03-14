@@ -1,10 +1,10 @@
 /* eslint-disable no-restricted-syntax */
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../../schemas/auth/UserSchema');
 const ActivityLog = require('../../schemas/ActivityLogSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
-const mongoose = require('mongoose');
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -566,11 +566,26 @@ exports.loginUser = async (req, res) => {
 
 // Logout User
 exports.logoutUser = async (req, res) => {
-    res.cookie('session_token', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        expires: new Date(0), // Set expiration date to the past
-    });
-    res.status(200).json({ msg: 'Logged out successfully' });
+    try {
+        const { deviceToken } = req.body;
+        const userId = req.user._id;
+
+        // If a deviceToken is provided, remove it from the user's deviceTokens array.
+        if (deviceToken && userId) {
+            await User.updateOne({ _id: userId }, { $pull: { deviceTokens: deviceToken } });
+            console.log(`Device token ${deviceToken} removed for user ${userId}`);
+        }
+
+        // Clear the session token cookie.
+        res.cookie('session_token', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict',
+            expires: new Date(0), // Set expiration date to the past.
+        });
+        res.status(200).json({ msg: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Error during logout:', error);
+        res.status(500).json({ error: 'Server error during logout' });
+    }
 };

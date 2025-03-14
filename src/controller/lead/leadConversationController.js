@@ -5,6 +5,7 @@ const { default: mongoose } = require('mongoose');
 const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
+const Department = require('../../schemas/auth/DepartmentSchema');
 
 // reused Functions for only this files.
 exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
@@ -176,12 +177,31 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const skip = (page - 1) * limit;
         const { creId } = req.query;
 
+        const { _id: userId, roleId: userRoleId } = req.user;
+
         // Build match conditions for aggregation
         const matchConditions = { source: 'Facebook' };
         // If a CRE id is provided, add it to the match filter
         // (assuming creName is stored as ObjectId)
         if (creId) {
             matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        }
+
+        // check if the user is a CRE
+        // 1. get the cre Department
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        });
+
+        // 2. get the cre Role ID
+        const creRoleId = creDepartment.roles.find((role) => role.roleName === 'CRE')._id;
+
+        // 3. check if the user is a CRE
+        const isCRE = userRoleId.toString() === creRoleId.toString();
+
+        // If the user is a CRE, add the creName field to the match filter
+        if (isCRE) {
+            matchConditions.creName = userId;
         }
 
         const leadsWithLastMessage = await Lead.aggregate([
@@ -246,7 +266,14 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         // Extract unique pageInfo objects
         const uniquePagesMap = new Map();
         leadsPopulated.forEach((lead) => {
+            if (!lead.pageInfo) {
+                console.log('Lead with missing pageInfo:', lead.name);
+                return;
+            }
+
+            // Extract pageInfo details
             const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+
             if (!uniquePagesMap.has(pageId)) {
                 uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
             }
