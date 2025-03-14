@@ -665,37 +665,40 @@ exports.addReminderWithComment = async (req, res) => {
 };
 
 // Handler function to update a reminder status
+// Handler function to update a reminder status with differentiated complete statuses
 exports.updateReminderStatus = async (req, res) => {
     const { leadId, reminderId } = req.params;
-    const { status } = req.body;
-
+    // Assuming the request indicates a completion action, e.g., via a flag in req.body
     try {
-        // Find the lead by ID
         const lead = await Lead.findById(leadId);
-
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
         }
 
-        // Find the reminder by its ID within the lead's reminders array
+        // Locate the reminder within the lead's reminders array
         const reminder = lead.reminder.id(reminderId);
-
         if (!reminder) {
             return res.status(404).json({ msg: 'Reminder not found' });
         }
 
-        // Update the status of the reminder
-        reminder.status = status;
+        // Update the status based on current state
+        if (reminder.status === 'Missed') {
+            reminder.status = 'Late Complete';
+        } else if (reminder.status === 'Pending') {
+            reminder.status = 'Complete';
+        } else {
+            return res.status(400).json({ msg: 'Reminder cannot be completed in its current state.' });
+        }
 
         // Save the updated lead
         await lead.save();
-
-        res.status(200).json({ msg: 'Reminder status updated successfully', lead });
+        res.status(200).json({ msg: 'Reminder status updated successfully', reminder });
     } catch (error) {
         console.error(`Error updating reminder status for lead ${leadId}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
+
 
 // Handler function to add a call log to a Lead
 exports.addCallLog = async (req, res) => {
