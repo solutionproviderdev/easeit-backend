@@ -122,7 +122,7 @@ const getCREPerformance = async (
 
         const target = 200;
 
-
+        // reminder counting mongoose Query
         const reminderStatusCounts = await Lead.aggregate([
             // Only consider leads with non-empty reminder arrays.
             {
@@ -155,17 +155,11 @@ const getCREPerformance = async (
         ]);
 
         const lateCompleteCount = reminderStatusCounts.find(item => item.status === 'Late Complete')?.count || 0;
-        const pendingCount = reminderStatusCounts.find(item => item.status === 'Pending')?.count || 0;
+        // const pendingCount = reminderStatusCounts.find(item => item.status === 'Pending')?.count || 0;
         const completeCount = reminderStatusCounts.find(item => item.status === 'Complete')?.count || 0;
         const missedCount = reminderStatusCounts.find(item => item.status === 'Missed')?.count || 0;
 
-        console.log("Late Complete:", lateCompleteCount);
-        console.log("Pending:", pendingCount);
-        console.log("Complete:", completeCount);
-        console.log("Missed:", missedCount);
-        // console.log("Complete Count:", completeCount);
-        // console.log("Late Complete Count:", lateCompleteCount);
-        // console.log("Missed Count:", missedCount);
+
 
         // Calculate follow-up performance using your equation
         // Note: Only resolved follow-ups are used (i.e. excluding pending)
