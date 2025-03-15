@@ -149,12 +149,12 @@ const getCREPerformance = async (
             },
         ]);
 
-        const lateCompleteCount = reminderStatusCounts.find(item => item.status === 'Late Complete')?.count || 0;
-        // const pendingCount = reminderStatusCounts.find(item => item.status === 'Pending')?.count || 0;
-        const completeCount = reminderStatusCounts.find(item => item.status === 'Complete')?.count || 0;
-        const missedCount = reminderStatusCounts.find(item => item.status === 'Missed')?.count || 0;
-
-
+        const lateCompleteCount =
+            reminderStatusCounts.find((item) => item.status === 'Late Complete')?.count || 0;
+        const completeCount =
+            reminderStatusCounts.find((item) => item.status === 'Complete')?.count || 0;
+        const missedCount =
+            reminderStatusCounts.find((item) => item.status === 'Missed')?.count || 0;
 
         // Calculate follow-up performance using your equation
         // Note: Only resolved follow-ups are used (i.e. excluding pending)
