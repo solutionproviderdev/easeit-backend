@@ -1,13 +1,12 @@
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
 
-
 // Helper function to calculate performance
 const calculatePerformance = (completed, lateCompleted, missed) => {
     // console.log("completed data", completed);
     const resolved = completed + lateCompleted + missed;
     if (resolved === 0) return 0; // To avoid division by zero if no reminders are resolved
-    const weightedSum = completed + (0.7 * lateCompleted);
+    const weightedSum = completed + 0.7 * lateCompleted;
     return (weightedSum / resolved) * 100;
 };
 
@@ -67,12 +66,9 @@ const getCREPerformance = async (
         //     date: { $gte: startDate, $lte: endDate },
         // });
 
-
         // Pending Meetings data (Which meeting has set but not event occured)
 
-
-        //finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
-
+        // finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
 
         // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
         const meetingsCompleted = await Meeting.countDocuments({
@@ -122,47 +118,45 @@ const getCREPerformance = async (
 
         const target = 200;
 
-
         const reminderStatusCounts = await Lead.aggregate([
             // Only consider leads with non-empty reminder arrays.
             {
-
                 $match: {
                     creName: creId,
-                    reminder: { $exists: true, $ne: [] }
-                }
+                    reminder: { $exists: true, $ne: [] },
+                },
             },
 
             // Unwind the reminder array so each reminder is processed individually.
-            { $unwind: "$reminder" },
+            { $unwind: '$reminder' },
 
             // Group the reminders by their status and count each one.
             {
                 $group: {
-                    _id: "$reminder.status",   // Grouping key is the reminder status.
-                    count: { $sum: 1 }          // Count each reminder.
-                }
+                    _id: '$reminder.status', // Grouping key is the reminder status.
+                    count: { $sum: 1 }, // Count each reminder.
+                },
             },
 
             // Optionally, project the output to rename _id to status.
             {
                 $project: {
-                    status: "$_id",
+                    status: '$_id',
                     count: 1,
-                    _id: 0
+                    _id: 0,
                 },
             },
         ]);
 
-        const lateCompleteCount = reminderStatusCounts.find(item => item.status === 'Late Complete')?.count || 0;
-        const pendingCount = reminderStatusCounts.find(item => item.status === 'Pending')?.count || 0;
-        const completeCount = reminderStatusCounts.find(item => item.status === 'Complete')?.count || 0;
-        const missedCount = reminderStatusCounts.find(item => item.status === 'Missed')?.count || 0;
+        const lateCompleteCount =
+            reminderStatusCounts.find((item) => item.status === 'Late Complete')?.count || 0;
+        const pendingCount =
+            reminderStatusCounts.find((item) => item.status === 'Pending')?.count || 0;
+        const completeCount =
+            reminderStatusCounts.find((item) => item.status === 'Complete')?.count || 0;
+        const missedCount =
+            reminderStatusCounts.find((item) => item.status === 'Missed')?.count || 0;
 
-        console.log("Late Complete:", lateCompleteCount);
-        console.log("Pending:", pendingCount);
-        console.log("Complete:", completeCount);
-        console.log("Missed:", missedCount);
         // console.log("Complete Count:", completeCount);
         // console.log("Late Complete Count:", lateCompleteCount);
         // console.log("Missed Count:", missedCount);
@@ -172,9 +166,8 @@ const getCREPerformance = async (
         const followUpPerformance = calculatePerformance(
             completeCount,
             lateCompleteCount,
-            missedCount);
-
-
+            missedCount
+        );
 
         // Calculate performance metrics:
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
