@@ -41,6 +41,7 @@ const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
 const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
+const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 
 // Initialize app
 const app = express();
@@ -198,7 +199,7 @@ reAssignOnNotReplied(io);
 reAssignOnNotSeen(io);
 findDuplicateLeads();
 
-// getPerformanceBasedCRE();
+getPerformanceBasedCRE();
 
 // 404 error handling
 app.use(notFoundHandler);
