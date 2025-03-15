@@ -1,15 +1,17 @@
 const { default: mongoose } = require('mongoose');
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
+const {
+    getRandomFreeSalesExecutiveFromSlot,
+} = require('../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
 
-// Fix a new meeting
 exports.fixMeeting = async (req, res) => {
     try {
         const {
             leadId,
             date,
             slot,
-            salesExecutive,
+            salesExecutive, // optional
             visitCharge,
             name,
             address,
@@ -20,12 +22,24 @@ exports.fixMeeting = async (req, res) => {
             comment,
         } = req.body;
 
-        // Create a new meeting
+        let assignedSalesExecutive = salesExecutive;
+
+        // If no salesExecutive is provided, find a random free one based on the date and slot
+        if (!assignedSalesExecutive) {
+            assignedSalesExecutive = await getRandomFreeSalesExecutiveFromSlot(date, slot);
+            if (!assignedSalesExecutive) {
+                return res
+                    .status(400)
+                    .json({ msg: 'No free sales executive available for this slot.' });
+            }
+        }
+
+        // Create a new meeting with the determined sales executive
         const newMeeting = new Meeting({
             lead: leadId,
             date,
             slot,
-            salesExecutive,
+            salesExecutive: assignedSalesExecutive,
             status: 'Fixed',
             visitCharge,
             auditFields: {
@@ -41,34 +55,29 @@ exports.fixMeeting = async (req, res) => {
         const leadUpdate = {
             $push: { meetings: newMeeting._id },
             status: 'Meeting Fixed',
-            salesExqName: salesExecutive,
+            salesExqName: assignedSalesExecutive,
         };
 
         // Conditionally update lead's name
         if (name) {
             leadUpdate.name = name;
         }
-
-        // conditionally update lead's address
+        // Conditionally update lead's address
         if (address) {
             leadUpdate.address = address;
         }
-
         // Conditionally update lead's phone
         if (phone) {
             leadUpdate.phone = phone;
         }
-
         // Conditionally update lead's project location
         if (projectLocation) {
             leadUpdate.projectLocation = projectLocation;
         }
-
         // Conditionally update lead's requirements
         if (requirements && Array.isArray(requirements)) {
             leadUpdate.requirements = requirements;
         }
-
         // Conditionally update lead's project status
         if (projectStatus && projectStatus.status && projectStatus.subStatus) {
             leadUpdate.projectStatus = {
@@ -76,7 +85,6 @@ exports.fixMeeting = async (req, res) => {
                 subStatus: projectStatus.subStatus,
             };
         }
-
         // Conditionally add a new comment
         if (comment && comment.text) {
             const newComment = {
@@ -88,7 +96,7 @@ exports.fixMeeting = async (req, res) => {
             leadUpdate.$push = { ...leadUpdate.$push, comment: newComment };
         }
 
-        // Update the lead's reference to this meeting
+        // Update the lead with the new meeting and sales executive assignment
         await Lead.findByIdAndUpdate(leadId, leadUpdate);
 
         res.status(201).json(newMeeting);
@@ -520,12 +528,22 @@ exports.reassignOrSwapMeeting = async (req, res) => {
                 { new: true }
             );
 
+            // Update the `salesExqName` field in the respective Leads
+            await Lead.findByIdAndUpdate(currentMeeting.lead, {
+                salesExqName: updatedCurrentMeeting.salesExecutive,
+            });
+
+            await Lead.findByIdAndUpdate(existingMeeting.lead, {
+                salesExqName: updatedExistingMeeting.salesExecutive,
+            });
+
             return res.status(200).json({
                 msg: 'Meetings swapped successfully',
                 updatedCurrentMeeting,
                 updatedExistingMeeting,
             });
         }
+
         // Reassign case: update the meeting with the new slot and/or sales executive
         const updatedMeeting = await Meeting.findByIdAndUpdate(
             id,
@@ -536,6 +554,11 @@ exports.reassignOrSwapMeeting = async (req, res) => {
             },
             { new: true }
         );
+
+        // Update the `salesExqName` field in the corresponding Lead
+        await Lead.findByIdAndUpdate(currentMeeting.lead, {
+            salesExqName: newSalesExecutiveId,
+        });
 
         return res.status(200).json({
             msg: 'Meeting reassigned successfully',

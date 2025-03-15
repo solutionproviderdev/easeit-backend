@@ -33,12 +33,14 @@ const {
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 const activityLogRouter = require('./activityLog');
 const departmentRouter = require('./department');
+const deviceTokenRouter = require('./deviceToken');
 
 // Router Declaration
 const userRouter = express.Router();
 
 userRouter.use('/activity-logs', activityLogRouter);
 userRouter.use('/departments', departmentRouter);
+userRouter.use('/device-token', deviceTokenRouter);
 
 // Get All Users
 userRouter.get('/', getAllUsers);

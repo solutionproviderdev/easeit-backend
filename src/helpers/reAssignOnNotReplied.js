@@ -8,9 +8,10 @@ const {
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const Lead = require('../schemas/LeadsSchema');
-const { formatThreshold } = require('./firmatDateRange');
+const { formatThreshold, rightNow } = require('./firmatDateRange');
 const getCREPerformance = require('./getCREPerformance');
 const { selectCREBasedOnOverFlow } = require('./getPerformanceBasedCRE');
+const { notifyNewLeadAssignment } = require('./notification/lead/leadTriggers');
 
 const reAssignOnNotReplied = async (io) => {
     console.time('reAssignOnNotReplied');
@@ -99,6 +100,8 @@ const reAssignOnNotReplied = async (io) => {
                     })
                 );
 
+                const now = rightNow();
+
                 // Use overflow management to select the best candidate.
                 const selectedCRE = selectCREBasedOnOverFlow(creMetrics, 0);
                 if (selectedCRE && selectedCRE.creId) {
@@ -110,6 +113,9 @@ const reAssignOnNotReplied = async (io) => {
                     );
                     // eslint-disable-next-line no-plusplus
                     reAssignedCount++;
+
+                    // notify the user about the new assignment
+                    await notifyNewLeadAssignment(savedLead._id, selectedCRE.creId);
 
                     // Emit socket events for the new assignment.
                     emitSocketEventsForNewMessage(io, savedLead, savedLead.pageInfo);

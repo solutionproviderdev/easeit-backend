@@ -8,11 +8,12 @@ const {
     searchLeads,
 } = require('../../../controller/lead/leadConversationController');
 const { validateSendMetaMessage } = require('../../../validators/leadConversationValidators');
+const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 
 const leadConversationRouter = express.Router();
 
 // Existing endpoint to get all lead conversations
-leadConversationRouter.get('/', getAllLeadConversationUpdated);
+leadConversationRouter.get('/', checkAuth, getAllLeadConversationUpdated);
 
 // search endpoint for name and phone number
 leadConversationRouter.get('/search/:pharams', searchLeads);

@@ -8,6 +8,7 @@ const Department = require('../../schemas/auth/DepartmentSchema');
 const {
     emitSocketEventsForNewMessage,
 } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
+const { notifyNewLeadAssignment } = require('../../helpers/notification/lead/leadTriggers');
 
 // Utility function to add a comment to a lead and emit a Socket.io event
 const addCommentToLead = async (leadId, commentData, user, io) => {
@@ -752,6 +753,9 @@ exports.assignCreToLead = async (req, res) => {
         emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
 
         await lead.save();
+
+        // send notification to CRE
+        await notifyNewLeadAssignment(lead._id, newCREId);
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
     } catch (error) {
