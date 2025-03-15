@@ -1,8 +1,10 @@
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
 
+
 // Helper function to calculate performance
 const calculatePerformance = (completed, lateCompleted, missed) => {
+    // console.log("completed data", completed);
     const resolved = completed + lateCompleted + missed;
     if (resolved === 0) return 0; // To avoid division by zero if no reminders are resolved
     const weightedSum = completed + (0.7 * lateCompleted);
@@ -120,39 +122,58 @@ const getCREPerformance = async (
 
         const target = 200;
 
-        // --- Follow-up Data Calculation ---
-        // Count follow-up statuses for the given CRE within the date range
-        const pendingFollowups = await Lead.countDocuments({
-            creName: creId,
-            "reminder.status": "Pending",
-            createdAt: { $gte: startDate, $lte: endDate },
-        });
 
-        const completeFollowups = await Lead.countDocuments({
-            creName: creId,
-            "reminder.status": "Complete",
-            createdAt: { $gte: startDate, $lte: endDate },
-        });
+        const reminderStatusCounts = await Lead.aggregate([
+            // Only consider leads with non-empty reminder arrays.
+            {
 
-        const lateCompleteFollowups = await Lead.countDocuments({
-            creName: creId,
-            "reminder.status": "Late Complete",
-            createdAt: { $gte: startDate, $lte: endDate },
-        });
+                $match: {
+                    creName: creId,
+                    reminder: { $exists: true, $ne: [] }
+                }
+            },
 
-        const missedFollowups = await Lead.countDocuments({
-            creName: creId,
-            "reminder.status": "Missed",
-            createdAt: { $gte: startDate, $lte: endDate },
-        });
+            // Unwind the reminder array so each reminder is processed individually.
+            { $unwind: "$reminder" },
+
+            // Group the reminders by their status and count each one.
+            {
+                $group: {
+                    _id: "$reminder.status",   // Grouping key is the reminder status.
+                    count: { $sum: 1 }          // Count each reminder.
+                }
+            },
+
+            // Optionally, project the output to rename _id to status.
+            {
+                $project: {
+                    status: "$_id",
+                    count: 1,
+                    _id: 0
+                },
+            },
+        ]);
+
+        const lateCompleteCount = reminderStatusCounts.find(item => item.status === 'Late Complete')?.count || 0;
+        const pendingCount = reminderStatusCounts.find(item => item.status === 'Pending')?.count || 0;
+        const completeCount = reminderStatusCounts.find(item => item.status === 'Complete')?.count || 0;
+        const missedCount = reminderStatusCounts.find(item => item.status === 'Missed')?.count || 0;
+
+        console.log("Late Complete:", lateCompleteCount);
+        console.log("Pending:", pendingCount);
+        console.log("Complete:", completeCount);
+        console.log("Missed:", missedCount);
+        // console.log("Complete Count:", completeCount);
+        // console.log("Late Complete Count:", lateCompleteCount);
+        // console.log("Missed Count:", missedCount);
 
         // Calculate follow-up performance using your equation
         // Note: Only resolved follow-ups are used (i.e. excluding pending)
         const followUpPerformance = calculatePerformance(
-            completeFollowups,
-            lateCompleteFollowups,
-            missedFollowups
-        );
+            completeCount,
+            lateCompleteCount,
+            missedCount);
+
 
 
         // Calculate performance metrics:
