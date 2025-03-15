@@ -35,7 +35,7 @@ const checkAndUpdateMissedReminders = async (io) => {
                 (reminder) => reminder.status === 'Missed'
             );
 
-            console.log(`Missed reminders for lead ${lead._id}:`, missedReminders);
+            console.log(`Missed reminders for lead ${lead._id}:`);
 
             // Emit a socket event for each new missed reminder
             for (const reminder of missedReminders) {
