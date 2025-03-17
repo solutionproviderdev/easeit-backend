@@ -63,8 +63,6 @@ const getAllCREsPerformanceData = async (req, res) => {
             creUsers.map(async (user) => {
                 const performances = await getCREPerformance(user._id, start, end);
 
-
-
                 const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } =
                     performances.performanceRates || {};
 
@@ -121,6 +119,12 @@ const getAllCREsPerformanceData = async (req, res) => {
                     barChartData,
                 };
             })
+        );
+
+        // sort crePerformanceData by completePerformance in descending order
+        crePerformanceData.sort(
+            // eslint-disable-next-line max-len
+            (a, b) => b.performanceMetrics.completePerformance - a.performanceMetrics.completePerformance
         );
 
         res.status(200).json(crePerformanceData);
@@ -183,7 +187,6 @@ const getCREPerformanceDataById = async (req, res) => {
             completePerformance,
             followUpPerformance,
             target,
-
         } = performances.performanceMetrics;
 
         const barChartData = [
@@ -198,7 +201,6 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Sold Rate', value: SR },
             { label: 'Complete Performance', value: completePerformance },
             { label: 'FollowUp Perfomance', value: followUpPerformance },
-
         ];
 
         const response = {
@@ -232,7 +234,7 @@ const getCREPerformanceDataById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-//data
+// data
 // Controller function to get monthly/weekly meetings
 const getMeetingsData = async (req, res) => {
     try {
@@ -392,7 +394,6 @@ const getDateWiseLeadData = async (req, res) => {
             daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
             currentLocal.add(1, 'day');
         }
-
 
         // Initialize data structure using the UTC start-of-day strings as keys
         const groupedData = daysArray.reduce((acc, dateKey) => {
