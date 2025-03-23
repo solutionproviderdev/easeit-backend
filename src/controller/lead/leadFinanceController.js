@@ -35,18 +35,15 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
             filter.salesExqName = sales;
         }
 
-        // Apply Date Range filter based on createdAt if both startDate and endDate are provided
+        // Apply Date Range filter: include leads that were created in the range
+        // OR those that have a soldDate within the range.
         if (startDate && endDate) {
-            // const start = new Date(startDate);
-            // const end = new Date(endDate);
-
             const { start, end } = formatDateRange(startDate, endDate);
-
-            console.log('start time:', start);
-            console.log('end time:', end);
-
             if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                filter.createdAt = { $gte: start, $lte: end };
+                filter.$or = [
+                    { createdAt: { $gte: start, $lte: end } },
+                    { 'finance.soldDate': { $gte: start, $lte: end } },
+                ];
             }
         }
 
@@ -138,9 +135,9 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
             throw new Error('CRE role not found in department');
         }
         // Retrieve all active CREs with the role 'CRE' from the User schema.
-        const creOptions = await User.find({
-            roleId: creRole._id,
-        }).select('_id nameAsPerNID profilePicture');
+        const creOptions = await User.find({ roleId: creRole._id }).select(
+            '_id nameAsPerNID profilePicture'
+        );
 
         // 2. Get the Sales department and roles from the Department schema.
         const salesDepartment = await Department.findOne({
@@ -155,9 +152,9 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
             throw new Error('Sales Executive role not found in department');
         }
         // Retrieve all active Sales Executives with the role 'Sales Executive' from the User schema.
-        const salesOptions = await User.find({
-            roleId: salesRole._id,
-        }).select('_id nameAsPerNID profilePicture');
+        const salesOptions = await User.find({ roleId: salesRole._id }).select(
+            '_id nameAsPerNID profilePicture'
+        );
 
         // Define status options (could also be derived from your Lead schema enum)
         const statusOptions = ['Meeting Complete', 'Sold', 'Prospect'];
