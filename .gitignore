@@ -15,7 +15,17 @@
 .env
 *.env
 
-/.yarn
+# Ignore all files in .yarn except specific folders
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Ignore the Yarn 2/3 generated PnP files
+.pnp.*
+
 
 # # misc
 # .DS_Store
