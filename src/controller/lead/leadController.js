@@ -289,7 +289,7 @@ exports.getLeadById = async (req, res) => {
 exports.createLead = async (req, res) => {
     const { name, phone, source, status, comment, images, cre } = req.body;
 
-    console.log(req.body);
+    // console.log(req.body);
 
     try {
         // Normalize the input phone number
@@ -334,11 +334,11 @@ exports.createLead = async (req, res) => {
             newLead.comment.push(populatedComment);
         }
 
-        console.log(newLead);
+        // console.log(newLead);
 
         res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -389,7 +389,7 @@ exports.getComments = async (req, res) => {
 exports.updateRequirements = async (req, res) => {
     const { id } = req.params;
     const { requirements } = req.body;
-    console.log('id and requirement for update', id, requirements);
+    // console.log('id and requirement for update', id, requirements);
 
     try {
         // Find the lead by ID

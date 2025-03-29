@@ -63,8 +63,6 @@ const getAllCREsPerformanceData = async (req, res) => {
             creUsers.map(async (user) => {
                 const performances = await getCREPerformance(user._id, start, end);
 
-                
-
                 const { LAR, NCR, MSR, MCR, TA, MRR, MPR, MCeR, SR } =
                     performances.performanceRates || {};
 
@@ -224,7 +222,7 @@ const getCREPerformanceDataById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-//data
+// data
 // Controller function to get monthly/weekly meetings
 const getMeetingsData = async (req, res) => {
     try {
@@ -384,7 +382,6 @@ const getDateWiseLeadData = async (req, res) => {
             daysArray.push(currentLocal.clone().utc().format('YYYY-MM-DDTHH:mm:ss.SSS[Z]'));
             currentLocal.add(1, 'day');
         }
-        
 
         // Initialize data structure using the UTC start-of-day strings as keys
         const groupedData = daysArray.reduce((acc, dateKey) => {
