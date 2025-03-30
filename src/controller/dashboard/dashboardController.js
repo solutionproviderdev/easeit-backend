@@ -76,6 +76,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     meetingCancelled,
                     totalSales,
                     completePerformance,
+                    followUpPerformance,
                     target,
                 } = performances.performanceMetrics;
 
@@ -91,6 +92,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                     { label: 'Target Achieved', value: TA },
                     { label: 'Sold Rate', value: SR },
                     { label: 'Complete Performance', value: completePerformance },
+                    { label: 'FollowUp Perfomance', value: followUpPerformance },
                 ];
 
                 return {
@@ -111,11 +113,18 @@ const getAllCREsPerformanceData = async (req, res) => {
                         meetingCancelled,
                         totalSales,
                         completePerformance,
+                        followUpPerformance,
                         target, // remaining target
                     },
                     barChartData,
                 };
             })
+        );
+
+        // sort crePerformanceData by completePerformance in descending order
+        crePerformanceData.sort(
+            // eslint-disable-next-line max-len
+            (a, b) => b.performanceMetrics.completePerformance - a.performanceMetrics.completePerformance
         );
 
         res.status(200).json(crePerformanceData);
@@ -176,6 +185,7 @@ const getCREPerformanceDataById = async (req, res) => {
             meetingCancelled,
             totalSales,
             completePerformance,
+            followUpPerformance,
             target,
         } = performances.performanceMetrics;
 
@@ -190,6 +200,7 @@ const getCREPerformanceDataById = async (req, res) => {
             { label: 'Target Achieved', value: TA },
             { label: 'Sold Rate', value: SR },
             { label: 'Complete Performance', value: completePerformance },
+            { label: 'FollowUp Perfomance', value: followUpPerformance },
         ];
 
         const response = {
@@ -211,6 +222,7 @@ const getCREPerformanceDataById = async (req, res) => {
                 totalSales,
                 soldRate: SR,
                 completePerformance,
+                followUpPerformance,
                 target: target - meetingsCompleted,
             },
             barChartData,

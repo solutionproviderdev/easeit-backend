@@ -41,6 +41,7 @@ const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
 const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
+const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 
 // Initialize app
 const app = express();
@@ -69,6 +70,7 @@ app.use(
 			const allowedOrigins = [
 				'http://localhost:3000',
 				'http://localhost:5000',
+				'http://localhost:8080',
 				'http://localhost:5173',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
@@ -198,7 +200,7 @@ reAssignOnNotReplied(io);
 reAssignOnNotSeen(io);
 findDuplicateLeads();
 
-// getPerformanceBasedCRE();
+getPerformanceBasedCRE();
 
 // 404 error handling
 app.use(notFoundHandler);
