@@ -116,26 +116,28 @@ exports.getAllLeads = async (req, res) => {
         }
 
         if (startDate || endDate) {
-            if (!startDate || !endDate) {
-                return res.status(400).json({
-                    msg: 'Both startDate and endDate are required.',
-                });
-            }
+            // if (!startDate || !endDate) {
+            //     return res.status(400).json({
+            //         msg: 'Both startDate and endDate are required.',
+            //     });
+            // }
 
-            const start = new Date(startDate).setHours(0, 0, 0, 0);
-            const end = new Date(endDate).setHours(23, 59, 59, 999);
+            // const start = new Date(startDate).setHours(0, 0, 0, 0);
+            // const end = new Date(endDate).setHours(23, 59, 59, 999);
 
-            if (start > end) {
-                return res.status(400).json({
-                    msg: 'startDate cannot be after endDate.',
-                });
-            }
+            // if (start > end) {
+            //     return res.status(400).json({
+            //         msg: 'startDate cannot be after endDate.',
+            //     });
+            // }
 
             // // If startDate and endDate are the same, set end to end of the day
             // if (startDate === endDate) {
             //     start.setHours(0, 0, 0, 0);
             //     end.setHours(23, 59, 59, 999);
             // }
+
+            const { start, end } = formatDateRange(startDate, endDate);
 
             filter.createdAt = {
                 $gte: start,
@@ -173,8 +175,9 @@ exports.getAllLeads = async (req, res) => {
             'Close',
             'Follow Up',
             'Meeting Fixed',
-            'Meeting Postponed',
-            'Cancel Meeting',
+            'Meeting Complete',
+            'Sold',
+            'Prospect',
         ];
 
         // Extract unique Sources
@@ -286,7 +289,7 @@ exports.getLeadById = async (req, res) => {
 exports.createLead = async (req, res) => {
     const { name, phone, source, status, comment, images, cre } = req.body;
 
-    console.log(req.body);
+    // console.log(req.body);
 
     try {
         // Normalize the input phone number
@@ -331,11 +334,11 @@ exports.createLead = async (req, res) => {
             newLead.comment.push(populatedComment);
         }
 
-        console.log(newLead);
+        // console.log(newLead);
 
         res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -386,7 +389,7 @@ exports.getComments = async (req, res) => {
 exports.updateRequirements = async (req, res) => {
     const { id } = req.params;
     const { requirements } = req.body;
-    console.log('id and requirement for update', id, requirements);
+    // console.log('id and requirement for update', id, requirements);
 
     try {
         // Find the lead by ID
