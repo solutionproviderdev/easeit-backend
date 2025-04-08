@@ -688,7 +688,9 @@ exports.updateReminderStatus = async (req, res) => {
         } else if (reminder.status === 'Pending') {
             reminder.status = 'Complete';
         } else {
-            return res.status(400).json({ msg: 'Reminder cannot be completed in its current state.' });
+            return res
+                .status(400)
+                .json({ msg: 'Reminder cannot be completed in its current state.' });
         }
 
         // Save the updated lead
@@ -699,7 +701,6 @@ exports.updateReminderStatus = async (req, res) => {
         res.status(500).json({ msg: 'Server error' });
     }
 };
-
 
 // Handler function to add a call log to a Lead
 exports.addCallLog = async (req, res) => {

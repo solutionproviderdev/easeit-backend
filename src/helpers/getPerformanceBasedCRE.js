@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable prefer-destructuring */
 const { getLeadSettingsDoc } = require('../controller/settings/leadControlController');
 const Department = require('../schemas/auth/DepartmentSchema');
@@ -5,6 +6,9 @@ const User = require('../schemas/auth/UserSchema');
 const getCREPerformance = require('./getCREPerformance');
 
 const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []) => {
+    // Use a fixed base count (10) to represent the max leads considered in the "recent" window.
+    const baseCount = 10;
+
     // Parse manual override values: build a map from creId to manual rate (numeric)
     const manualMap = {};
     manualOverrides.forEach((override) => {
@@ -28,18 +32,15 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
         }
     });
 
-    // Total assigned leads among all CREs
-    const totalAssigned = creMetrics.reduce((sum, m) => sum + m.assigned, 0);
-
-    // Sum of manual override percentages.
-    const sumManual = manualGroup.reduce((sum, m) => sum + manualMap[m.creId], 0);
-
-    // For each CRE with manual override, expected = (manualRate/100)*totalAssigned.
+    // Instead of aggregating the full assigned value over a long period, we
+    // now base our expected calculations on a constant maximum of 10 recent leads.
+    // For CREs with a manual override, expected leads are calculated as a percentage of baseCount.
     const manualMetrics = manualGroup.map((metric) => {
         const manualRate = manualMap[metric.creId];
-        const expected = (manualRate / 100) * totalAssigned;
-        const gap = expected - metric.assigned; // positive if under-assigned
-        const ratio = expected > 0 ? metric.assigned / expected : 1;
+        const expected = (manualRate / 100) * baseCount;
+        // Use metric.assignedRecent (should be the number of leads in the last 10 assigned to that CRE)
+        const gap = expected - metric.assignedRecent; // Positive if under-assigned within the recent 10
+        const ratio = expected > 0 ? metric.assignedRecent / expected : 1;
         return {
             ...metric,
             expected,
@@ -49,17 +50,22 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
         };
     });
 
-    // For non-manual CREs, use their performance share.
+    // For non-manual CREs, we first sum the performance for each.
     const totalPerformanceNonManual = nonManualGroup.reduce((sum, m) => sum + m.performance, 0);
-    // The available percentage for non-manual CREs is 100 - sumManual.
+    // Sum of manual override percentages from the manual group.
+    const sumManual = manualGroup.reduce((sum, m) => sum + manualMap[m.creId], 0);
+
+    // Calculate expected leads for non-manual CREs.
+    // The available portion of the baseCount for non-manual CREs is:
+    // baseCount * ((100 - sumManual) / 100)
     const nonManualMetrics = nonManualGroup.map((metric) => {
         const expected =
             totalPerformanceNonManual > 0
                 ? (metric.performance / totalPerformanceNonManual) *
-                  (totalAssigned * ((100 - sumManual) / 100))
+                  (baseCount * ((100 - sumManual) / 100))
                 : 0;
-        const gap = expected - metric.assigned;
-        const ratio = expected > 0 ? metric.assigned / expected : 1;
+        const gap = expected - metric.assignedRecent;
+        const ratio = expected > 0 ? metric.assignedRecent / expected : 1;
         return {
             ...metric,
             expected,
@@ -71,15 +77,16 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
     // Merge the two arrays.
     const mergedMetrics = [...manualMetrics, ...nonManualMetrics];
 
-    // Now select one candidate. We first try to find those under their expected quota (gap > 0).
+    // Now select one candidate.
+    // First, try to find those under their expected quota (gap > 0).
     const underQuota = mergedMetrics.filter((m) => m.gap > 0);
     let selectedCRE;
     if (underQuota.length > 0) {
-        // Sort underQuota descending by gap (choose the one with highest gap)
+        // Sort candidates descending by gap (largest gap first)
         underQuota.sort((a, b) => b.gap - a.gap);
         selectedCRE = underQuota[position];
     } else {
-        // Otherwise, sort by lowest ratio (i.e. most under-assigned relatively)
+        // Otherwise, sort by lowest ratio (i.e. most under-assigned relative to expectation)
         mergedMetrics.sort((a, b) => a.ratio - b.ratio);
         selectedCRE = mergedMetrics[position];
     }
@@ -87,9 +94,11 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
     // (Optional) Log debug info for underQuota candidates.
     underQuota.forEach((cre) => {
         console.log(
-            `CRE: ${cre.name}, Assigned: ${cre.assigned}, Expected: ${cre.expected.toFixed(
+            `CRE: ${cre.name}, AssignedRecent: ${
+                cre.assignedRecent
+            }, Expected: ${cre.expected.toFixed(2)}, Gap: ${cre.gap.toFixed(
                 2
-            )}, Gap: ${cre.gap.toFixed(2)}, Ratio: ${cre.ratio.toFixed(2)}`
+            )}, Ratio: ${cre.ratio.toFixed(2)}`
         );
     });
 
@@ -136,15 +145,18 @@ const getPerformanceBasedCRE = async (position) => {
         const dateRange = new Date(performanceRangeDays);
 
         // 3. Aggregate performance metrics for each active CRE over the performance window.
+        // IMPORTANT: Ensure each performance object includes a property "assignedRecent"
+        // that counts the number of leads assigned to the CRE in the last 10 leads.
         const creMetrics = await Promise.all(
             creIds.map(async ({ creId, name }) => {
                 const performances = await getCREPerformance(creId, dateRange);
-                const { assigned, performance } = performances || {};
+                const { assigned, performance, assignedRecent } = performances || {};
                 return {
                     creId,
                     name,
                     performance,
-                    assigned,
+                    // Use the new recent-assigned value instead of the full-window "assigned"
+                    assignedRecent,
                 };
             })
         );
