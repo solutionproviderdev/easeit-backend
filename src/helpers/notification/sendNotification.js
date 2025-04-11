@@ -84,14 +84,10 @@ const sendNotificationToUser = async (
 
             try {
                 const response = await messaging.send(message);
-                console.log(`Notification sent to token ${token}:`, response);
                 responses.push({ token, success: true, response });
             } catch (error) {
                 const errorCode = error?.errorInfo?.code;
                 if (errorsToRemoveToken.includes(errorCode)) {
-                    console.log(
-                        `Token ${token} is invalid and should be removed. Error: ${errorCode}`
-                    );
                     responses.push({
                         token,
                         success: false,
@@ -117,7 +113,6 @@ const sendNotificationToUser = async (
     // Emit a socket event to notify the user, regardless of push notification results.
     try {
         const io = getIO();
-        console.log('Emitting socket event to user:', userId);
         io.to(userId.toString()).emit('new-notification', savedNotification);
     } catch (socketError) {
         console.error('Error emitting socket notification:', socketError);

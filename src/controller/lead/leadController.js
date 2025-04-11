@@ -9,6 +9,7 @@ const {
     emitSocketEventsForNewMessage,
 } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const { notifyNewLeadAssignment } = require('../../helpers/notification/lead/leadTriggers');
+const { formatDateRange } = require('../../helpers/formatDateRange');
 
 // Utility function to add a comment to a lead and emit a Socket.io event
 const addCommentToLead = async (leadId, commentData, user, io) => {
@@ -116,27 +117,6 @@ exports.getAllLeads = async (req, res) => {
         }
 
         if (startDate || endDate) {
-            // if (!startDate || !endDate) {
-            //     return res.status(400).json({
-            //         msg: 'Both startDate and endDate are required.',
-            //     });
-            // }
-
-            // const start = new Date(startDate).setHours(0, 0, 0, 0);
-            // const end = new Date(endDate).setHours(23, 59, 59, 999);
-
-            // if (start > end) {
-            //     return res.status(400).json({
-            //         msg: 'startDate cannot be after endDate.',
-            //     });
-            // }
-
-            // // If startDate and endDate are the same, set end to end of the day
-            // if (startDate === endDate) {
-            //     start.setHours(0, 0, 0, 0);
-            //     end.setHours(23, 59, 59, 999);
-            // }
-
             const { start, end } = formatDateRange(startDate, endDate);
 
             filter.createdAt = {
