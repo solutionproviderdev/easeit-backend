@@ -9,7 +9,7 @@ const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
- const cron = require('node-cron');
+const cron = require('node-cron');
 const swaggerFile = require('../swagger_output.json');
 
 // internal imports
@@ -22,7 +22,9 @@ const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const mapDataRouter = require('./routes/mapDataRouters');
 const meetingsRouter = require('./routes/meetings/meeting');
-const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
+const {
+	getConversationsAndUpdateLeadsUpdated,
+} = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
 const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
@@ -31,8 +33,12 @@ const {
 	findDuplicateLeads,
 } = require('../populateDatabase');
 const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
-const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
-const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
+const {
+	checkAndUpdateMissedReminders,
+} = require('./ongoing/checkAndUpdateMissedReminders');
+const {
+	reschedulePendingReminders,
+} = require('./ongoing/reschedulePendingReminders');
 const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
 const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
@@ -42,6 +48,9 @@ const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const {
+	cronsFollowupsForAllUsers,
+} = require('./helpers/notification/sendMobilePushNotification');
 
 // Initialize app
 const app = express();
@@ -57,7 +66,7 @@ const io = new Server(server, {
 mongoose
 	.connect(process.env.MONGO_CONNECTION_STRING, {})
 	.then(() => console.log('🍀 Database connection successful'))
-	.catch((err) => console.log(err, 'Database connection Error'));
+	.catch(err => console.log(err, 'Database connection Error'));
 
 // request process
 app.use(express.json());
@@ -110,20 +119,20 @@ app.get('/', (req, res) => {
 });
 
 // io connection start
-io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+io.on('connection', socket => {
+	//  console.log(`User connected: ${socket.id}`);
 
-    // Listen for the register-user event to join a room named after the userId
-    socket.on('register-user', (userId) => {
-        if (userId) {
-            socket.join(userId);
-            console.log(`Socket ${socket.id} joined room ${userId}`);
-        }
-    });
+	// Listen for the register-user event to join a room named after the userId
+	socket.on('register-user', userId => {
+		if (userId) {
+			socket.join(userId);
+			//  console.log(`Socket ${socket.id} joined room ${userId}`);
+		}
+	});
 
-    socket.on('disconnect', (reason) => {
-        console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
-    });
+	socket.on('disconnect', reason => {
+		//  console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
+	});
 });
 
 // Set the io instance in your socket service
@@ -150,24 +159,34 @@ app.use('/notifications', notificationRouter);
 app.use('/settings', settingsRouter);
 
 // Replace setInterval with node-cron
-cron.schedule('*/1 * * * * *', async () => { // Runs every second
-    const now = new Date();
-    if (now.getSeconds() % 20 === 0) { // Check if the current second is a multiple of 20
-        getConversationsAndUpdateLeadsUpdated(io);
-		nameBasedLeadAssign();
-		findDuplicateLeads();
-    }
-}, {
-	timezone: 'Asia/Dhaka' // Set your timezone here
-});
+cron.schedule(
+	'*/1 * * * * *',
+	async () => {
+		// Runs every second
+		const now = new Date();
+		if (now.getSeconds() % 20 === 0) {
+			// Check if the current second is a multiple of 20
+			getConversationsAndUpdateLeadsUpdated(io);
+			nameBasedLeadAssign();
+			findDuplicateLeads();
+		}
+	},
+	{
+		timezone: 'Asia/Dhaka', // Set your timezone here
+	}
+);
 
 // Schedule the task to run every 10 minutes
-cron.schedule('*/10 * * * *', async () => {
-	await assignUnassignedLeads(io);
-	await checkAndUpdateMissedReminders(io);
-}, {
-	timezone: 'Asia/Dhaka' // Set your timezone here
-});
+cron.schedule(
+	'*/10 * * * *',
+	async () => {
+		await assignUnassignedLeads(io);
+		await checkAndUpdateMissedReminders(io);
+	},
+	{
+		timezone: 'Asia/Dhaka', // Set your timezone here
+	}
+);
 
 checkAndUpdateMissedReminders(io);
 
@@ -199,6 +218,9 @@ checkProductAdForLeadMessages();
 reAssignOnNotReplied(io);
 reAssignOnNotSeen(io);
 findDuplicateLeads();
+
+// auto-send followup notification after processs !
+cronsFollowupsForAllUsers();
 
 getPerformanceBasedCRE();
 

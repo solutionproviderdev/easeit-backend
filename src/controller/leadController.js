@@ -29,7 +29,7 @@ const addCommentToLead = async (leadId, images, comment, user, io) => {
 
             io.emit('commentAdded', { leadId, savedComment });
         } catch (error) {
-            console.error('Error adding comment to lead:', error);
+          //console.error('Error adding comment to lead:', error);
         }
     }
 };
@@ -218,7 +218,7 @@ const addLeads = async (req, res) => {
             lead: savedLead,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
 
         // Provide a more specific error message based on the nature of the error
         let errorMessage = 'There was a server side error';
@@ -271,7 +271,7 @@ const addComment = async (req, res) => {
             .status(200)
             .send({ message: 'Comment added successfully', data: comment });
     } catch (error) {
-        console.error('Error adding comment to lead:', error);
+      //console.error('Error adding comment to lead:', error);
         res.status(500).send({ message: 'Internal server error' });
     }
 };
@@ -375,7 +375,7 @@ const updateLeadbyStatus = async (req, res) => {
             updatedLead,
         });
     } catch (error) {
-        console.error('Error updating lead:', error);
+      //console.error('Error updating lead:', error);
         res.status(500).json({
             error: 'There was a server side error',
             message: error.message,
@@ -401,7 +401,7 @@ const updateLeadbyStatus = async (req, res) => {
 //         // Respond with the updated lead information
 //         res.status(200).json({ message: 'Lead updated successfully', updatedLead });
 //     } catch (error) {
-//         console.error('Error updating lead:', error);
+//       //console.error('Error updating lead:', error);
 //         res.status(500).json({ error: 'There was a server side error', message: error.message });
 //     }
 // };
@@ -410,7 +410,7 @@ const updateCreName = async (req, res) => {
     const { id } = req.params;
     const { creId } = req.body;
 
-    console.log(id, creId);
+  //  console.log(id, creId);
 
     try {
         const updatedLead = await Lead.findByIdAndUpdate(
@@ -646,7 +646,7 @@ const fixMeeting = async (req, res) => {
             .status(200)
             .json({ message: 'Meeting fixed successfully', lead: updatedLead, team });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res
             .status(500)
             .json({ message: 'Error fixing meeting', error: error.message });
@@ -760,7 +760,7 @@ const rescheduleMeeting = async (req, res) => {
 
         res.json({ message: 'Meeting rescheduled successfully', lead, newTeam });
     } catch (error) {
-        console.error('Error rescheduling meeting:', error);
+      //console.error('Error rescheduling meeting:', error);
         res.status(500).json({ message: 'Error rescheduling meeting', error: error.toString() });
     }
 };

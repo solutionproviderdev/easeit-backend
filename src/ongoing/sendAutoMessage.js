@@ -67,7 +67,7 @@ const getEligibleLeadsForAutoMessage = async (twentyFourHoursAgo, delayThreshold
     ];
 
     const eligibleLeads = await Lead.aggregate(pipeline).exec();
-    console.log(`Found ${eligibleLeads.length} eligible leads for auto messaging.`);
+  //  console.log(`Found ${eligibleLeads.length} eligible leads for auto messaging.`);
     return eligibleLeads;
 };
 
@@ -84,24 +84,24 @@ const sendAutoMessage = async (io) => {
         // Retrieve the lead control settings document (creates one if not exists)
         const settings = await getLeadSettingsDoc();
         if (!settings) {
-            console.error('Lead control settings not found');
+          //console.error('Lead control settings not found');
             return;
         }
 
         // Extract autoMessage settings from the global settings
         const { autoMessage } = settings.settingsData.global;
         if (!autoMessage || !autoMessage.enabled) {
-            console.log('Auto message is disabled.');
+          //  console.log('Auto message is disabled.');
             return;
         }
 
         // Delay hours from settings (should be a number between 1 and 23)
         const delayHours = Number(autoMessage.delayHours);
         if (isNaN(delayHours) || delayHours < 1 || delayHours > 23) {
-            console.error('Invalid delayHours value in autoMessage settings');
+          //console.error('Invalid delayHours value in autoMessage settings');
             return;
         }
-        console.log('Delay hours:', delayHours);
+      //  console.log('Delay hours:', delayHours);
 
         // Calculate the time thresholds in milliseconds
         const now = Date.now();
@@ -113,7 +113,7 @@ const sendAutoMessage = async (io) => {
             delayThreshold
         );
 
-        console.log(`Found ${leadsToAutoMessage.length} leads eligible for auto messaging.`);
+      //  console.log(`Found ${leadsToAutoMessage.length} leads eligible for auto messaging.`);
 
         // Loop over each eligible lead and send the auto message.
         // (Replace this part with your actual message sending logic.)
@@ -126,7 +126,7 @@ const sendAutoMessage = async (io) => {
             // save the lead
         }
     } catch (error) {
-        console.error('Error sending auto message:', error);
+      //console.error('Error sending auto message:', error);
     }
 };
 

@@ -63,7 +63,7 @@ const addMeetingToTeam = async (req, res) => {
         await team.save();
         res.status(200).json({ message: 'Meeting added to team successfully', team });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
@@ -85,15 +85,15 @@ const getTeamDetails = async (req, res) => {
 const updateTeam = async (req, res) => {
     try {
         const updatedTeam = await Team.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        console.log(req.body);
-        console.log(updateTeam);
+      //  console.log(req.body);
+      //  console.log(updateTeam);
         if (!updatedTeam) {
             return res.status(404).json({ message: 'Team not found' });
         }
         res.status(200).json({ message: 'Team updated successfully', updatedTeam });
     } catch (error) {
         res.status(500).json({ error: 'There was a server side error', message: error.message });
-        console.log(error);
+      //  console.log(error);
     }
 };
 
@@ -195,7 +195,7 @@ const getMeetingsByDate = async (req, res) => {
 
         res.status(200).json(formattedResponse);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ message: 'Error fetching meetings by date', error: error.message });
     }
 };
@@ -289,7 +289,7 @@ const swapMeetingBetweenTeams = async (req, res) => {
             meetingDetails: lead.meetingDetails
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
@@ -299,7 +299,7 @@ const swapSlotsWithinTeam = async (req, res) => {
  teamId, sourceSlot, destinationSlot, leadId
 } = req.body;
     const { date } = req.params; // Extracting date from the request parameters
-    console.log(leadId);
+  //  console.log(leadId);
     try {
         // Check if the lead exists
         const lead = await Lead.findById(leadId);
@@ -374,7 +374,7 @@ const swapSlotsWithinTeam = async (req, res) => {
             meetingDetails: lead.meetingDetails,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

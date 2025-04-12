@@ -127,16 +127,16 @@ const populateDatabase = async () => {
         // Generate and insert departments
         const departments = generateDepartments(numDepartments);
         const insertedDepartments = await Department.insertMany(departments);
-        console.log(`Inserted ${insertedDepartments.length} departments`);
+        //  console.log(`Inserted ${insertedDepartments.length} departments`);
 
         // Generate and insert users
         const users = await generateUsers(numUsers, insertedDepartments);
         const insertedUsers = await User.insertMany(users);
-        console.log(`Inserted ${insertedUsers.length} users`);
+        //  console.log(`Inserted ${insertedUsers.length} users`);
 
         mongoose.connection.close();
     } catch (error) {
-        console.error(`Error populating database: ${error.message}`);
+        // console.error(`Error populating database: ${error.message}`);
         mongoose.connection.close();
     }
 };
@@ -147,7 +147,7 @@ const generateRandomReminder = async () => {
         const leads = await Lead.find();
 
         if (!leads.length) {
-            console.log('No leads found in the collection');
+            //  console.log('No leads found in the collection');
             return;
         }
 
@@ -160,11 +160,11 @@ const generateRandomReminder = async () => {
 
             lead.reminder.push(randomReminder);
             await lead.save();
-            console.log(`Reminder added to lead ${lead.name}`);
+            //  console.log(`Reminder added to lead ${lead.name}`);
         }
-        console.log('All reminders added successfully!');
+        //  console.log('All reminders added successfully!');
     } catch (error) {
-        console.error('Error generating random reminders:', error.message);
+        // console.error('Error generating random reminders:', error.message);
     }
 };
 
@@ -186,9 +186,9 @@ const updateUnreadLeadsToNew = async () => {
     try {
         const result = await Lead.updateMany({ status: 'unread' }, { $set: { status: 'New' } });
 
-        console.log(`Updated ${result.modifiedCount} leads.`);
+        //  console.log(`Updated ${result.modifiedCount} leads.`);
     } catch (error) {
-        console.error('Error updating leads:', error.message);
+        // console.error('Error updating leads:', error.message);
     }
 };
 
@@ -198,7 +198,7 @@ const generateAllLeadsMessagesCsv = async () => {
         const leads = await Lead.find();
 
         if (!leads || leads.length === 0) {
-            console.log('No leads found');
+            //  console.log('No leads found');
             return;
         }
 
@@ -225,9 +225,9 @@ const generateAllLeadsMessagesCsv = async () => {
         const csv = json2csvParser.parse(csvData);
 
         fs.writeFileSync('all_leads_messages.csv', csv);
-        console.log('CSV file for all leads created successfully!');
+        //  console.log('CSV file for all leads created successfully!');
     } catch (error) {
-        console.error('Error generating CSV for all leads:', error);
+        // console.error('Error generating CSV for all leads:', error);
     }
 };
 
@@ -237,7 +237,8 @@ const isAutomatedMessage = (message) => {
 
     // Add a pattern to detect the message "You can call [name] back within the next 7 days."
     // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
-    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+    const automatedPattern =
+        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
 
     return automatedPattern.test(lowerCaseMessage);
 };
@@ -249,12 +250,12 @@ const logAutomatedMessages = async () => {
         leads.forEach((lead) => {
             lead.messages.forEach((message) => {
                 if (isAutomatedMessage(message.content)) {
-                    console.log(`Lead ID: ${lead._id}, Message: ${message.content}`);
+                    //  console.log(`Lead ID: ${lead._id}, Message: ${message.content}`);
                 }
             });
         });
     } catch (error) {
-        console.error('Error reading messages:', error);
+        // console.error('Error reading messages:', error);
     }
 };
 
@@ -275,12 +276,12 @@ const updateAutomatedMessages = async () => {
 
             if (isUpdated) {
                 await lead.save();
-                console.log(`Lead ID: ${lead._id} has been updated.`);
+                //  console.log(`Lead ID: ${lead._id} has been updated.`);
             }
         }
-        console.log('Automated message update process completed.');
+        //  console.log('Automated message update process completed.');
     } catch (error) {
-        console.error('Error updating automated messages:', error);
+        // console.error('Error updating automated messages:', error);
     }
 };
 
@@ -303,9 +304,7 @@ const findHighQualityLeads = async () => {
         // Iterate over each lead
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
-            const hasHighQualityMessage = lead.messages.some((message) =>
-                isHighQualityLeadMessage(message.content)
-            );
+            const hasHighQualityMessage = lead.messages.some((message) => isHighQualityLeadMessage(message.content));
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -324,12 +323,12 @@ const findHighQualityLeads = async () => {
         if (highQualityLeads.length > 0) {
             console.table(highQualityLeads);
         } else {
-            console.log('No high-quality leads found.');
+            //  console.log('No high-quality leads found.');
         }
 
-        console.log(`Total High-Quality Leads: ${totalHighQualityLeads}`);
+        //  console.log(`Total High-Quality Leads: ${totalHighQualityLeads}`);
     } catch (error) {
-        console.error('Error fetching leads:', error);
+        // console.error('Error fetching leads:', error);
     }
 };
 
@@ -462,9 +461,9 @@ const createDummyUsers = async () => {
             await user.save(); // Save each user individually
         }
 
-        console.log('Dummy data created successfully!');
+        //  console.log('Dummy data created successfully!');
     } catch (error) {
-        console.error('Error creating dummy data:', error);
+        // console.error('Error creating dummy data:', error);
     }
 };
 
@@ -474,7 +473,7 @@ const assignLeadsToCRE = async () => {
         const unassignedLeads = await Lead.find();
 
         if (unassignedLeads.length === 0) {
-            console.log('No unassigned leads found.');
+            //  console.log('No unassigned leads found.');
             return;
         }
 
@@ -484,7 +483,7 @@ const assignLeadsToCRE = async () => {
             const creId = await getPerformanceBasedCRE();
 
             if (!creId) {
-                console.error('No CRE available for assignment.');
+                // console.error('No CRE available for assignment.');
                 continue;
             }
 
@@ -494,12 +493,12 @@ const assignLeadsToCRE = async () => {
             // Save the updated lead
             await lead.save();
 
-            console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
+            //  console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
         }
 
-        console.log('Lead assignment to CRE completed.');
+        //  console.log('Lead assignment to CRE completed.');
     } catch (error) {
-        console.error('Error assigning leads to CRE:', error);
+        // console.error('Error assigning leads to CRE:', error);
         throw error;
     }
 };
@@ -554,13 +553,13 @@ const updateLeadsWithPhoneNumbers = async () => {
             if (newPhoneAdded) {
                 lead.status = 'Number Collected';
                 await lead.save();
-                console.log(`Updated lead ID ${lead._id}: Number collected.`);
+                //  console.log(`Updated lead ID ${lead._id}: Number collected.`);
             }
         }
 
-        console.log('All leads processed for phone number updates.');
+        //  console.log('All leads processed for phone number updates.');
     } catch (error) {
-        console.error('Error updating leads with phone numbers:', error);
+        // console.error('Error updating leads with phone numbers:', error);
     }
 };
 
@@ -575,21 +574,21 @@ const updateLeadStatusBasedOnPhoneNumber = async () => {
                 if (lead.status !== 'Number Collected') {
                     lead.status = 'Number Collected';
                     await lead.save();
-                    console.log(`Lead ID ${lead._id} status updated to 'Number Collected'.`);
+                    //  console.log(`Lead ID ${lead._id} status updated to 'Number Collected'.`);
                 }
             } else {
                 // Lead has no phone numbers, check if status is incorrectly set to 'Number Collected'
                 if (lead.status === 'Number Collected') {
                     lead.status = 'New';
                     await lead.save();
-                    console.log(`Lead ID ${lead._id} status corrected to 'New'.`);
+                    //  console.log(`Lead ID ${lead._id} status corrected to 'New'.`);
                 }
             }
         }
 
-        console.log('Lead statuses updated based on phone number presence.');
+        //  console.log('Lead statuses updated based on phone number presence.');
     } catch (error) {
-        console.error('Error updating lead statuses based on phone number:', error);
+        // console.error('Error updating lead statuses based on phone number:', error);
     }
 };
 
@@ -603,13 +602,13 @@ const updateLeadsStatusToMeetingFixed = async () => {
             if (meeting.lead && meeting.lead.status !== 'Meeting Fixed') {
                 meeting.lead.status = 'Meeting Fixed'; // Update status
                 await meeting.lead.save(); // Save the updated lead
-                console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
+                //  console.log(`Lead ID ${meeting.lead._id} status updated to 'Meeting Fixed'.`);
             }
         }
 
-        console.log('All relevant lead statuses updated to "Meeting Fixed".');
+        //  console.log('All relevant lead statuses updated to "Meeting Fixed".');
     } catch (error) {
-        console.error('Error updating lead statuses:', error);
+        // console.error('Error updating lead statuses:', error);
     }
 };
 
@@ -632,13 +631,13 @@ const updateMeetingStatuses = async () => {
                 // Update the status to the new value
                 meeting.status = statusMapping[meeting.status];
                 await meeting.save();
-                console.log(`Updated meeting ID ${meeting._id} status to '${meeting.status}'.`);
+                //  console.log(`Updated meeting ID ${meeting._id} status to '${meeting.status}'.`);
             }
         }
 
-        console.log('All meeting statuses updated successfully.');
+        //  console.log('All meeting statuses updated successfully.');
     } catch (error) {
-        console.error('Error updating meeting statuses:', error);
+        // console.error('Error updating meeting statuses:', error);
     }
 };
 
@@ -703,7 +702,7 @@ const updateLeadsWithPhoneNumbersAndStatus = async () => {
 
             // Save the updated lead
             await lead.save();
-            console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
+            //  console.log(`Processed lead ID ${lead._id}: Status updated to '${lead.status}'.`);
         }
 
         // Fetch total counts of leads by status
@@ -722,11 +721,11 @@ const updateLeadsWithPhoneNumbersAndStatus = async () => {
         console.log(
             `Total leads with 'Number Collected' status: ${totalNumberCollectedLeads} (${percentNumberCollected}%)`
         );
-        console.log(`Total leads with 'New' status: ${totalNewLeads} (${percentNew}%)`);
-        console.log(`Total leads processed: ${totalLeads}`);
-        console.log('All leads processed and updated.');
+        //  console.log(`Total leads with 'New' status: ${totalNewLeads} (${percentNew}%)`);
+        //  console.log(`Total leads processed: ${totalLeads}`);
+        //  console.log('All leads processed and updated.');
     } catch (error) {
-        console.error('Error processing leads for phone number updates:', error);
+        // console.error('Error processing leads for phone number updates:', error);
     }
 };
 
@@ -755,7 +754,7 @@ const assignLeadsToCREInOrder = async () => {
         }).select('_id');
 
         if (!activeCREs || activeCREs.length === 0) {
-            console.error('No active CREs available for assignment.');
+            // console.error('No active CREs available for assignment.');
             return;
         }
 
@@ -765,7 +764,7 @@ const assignLeadsToCREInOrder = async () => {
         const unassignedLeads = await Lead.find();
 
         if (unassignedLeads.length === 0) {
-            console.log('No unassigned leads found.');
+            //  console.log('No unassigned leads found.');
             return;
         }
 
@@ -779,15 +778,15 @@ const assignLeadsToCREInOrder = async () => {
             // Save the updated lead
             await lead.save();
 
-            console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
+            //  console.log(`Assigned lead ${lead._id} to CRE ${creIds[creIndex]}`);
 
             // Move to the next CRE in the list, wrapping around if necessary
             creIndex = (creIndex + 1) % creIds.length;
         }
 
-        console.log('Leads have been assigned to CREs in round-robin order.');
+        //  console.log('Leads have been assigned to CREs in round-robin order.');
     } catch (error) {
-        console.error('Error assigning leads to CREs in order:', error);
+        // console.error('Error assigning leads to CREs in order:', error);
         throw error;
     }
 };
@@ -800,20 +799,20 @@ const deleteLeadsWithInvalidMessageIds = async () => {
         });
 
         if (invalidLeads.length === 0) {
-            console.log('No leads with invalid message IDs found.');
+            //  console.log('No leads with invalid message IDs found.');
             return;
         }
 
-        console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
+        //  console.log(`Found ${invalidLeads.length} leads with invalid message IDs.`);
 
         // Delete all invalid leads
         const invalidLeadIds = invalidLeads.map((lead) => lead._id);
 
         await Lead.deleteMany({ _id: { $in: invalidLeadIds } });
 
-        console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
+        //  console.log(`Deleted ${invalidLeadIds.length} invalid leads.`);
     } catch (error) {
-        console.error('Error deleting leads with invalid message IDs:', error.message);
+        // console.error('Error deleting leads with invalid message IDs:', error.message);
     }
 };
 
@@ -824,19 +823,19 @@ const randomlyFixMeetings = async () => {
         const leads = await Lead.find({ status: { $ne: 'Meeting Fixed' } }); // Exclude leads already in "Meeting Fixed" status
 
         if (leads.length === 0) {
-            console.log('No leads available to fix meetings.');
+            //  console.log('No leads available to fix meetings.');
             return;
         }
 
         // Fetch map data for visit charges
         const mapData = await MapData.findOne({});
         if (!mapData) {
-            console.log('Map data not found. Cannot determine visit charges.');
+            //  console.log('Map data not found. Cannot determine visit charges.');
             return;
         }
 
         // Log the mapData to debug its structure
-        console.log('Map Data:', JSON.stringify(mapData, null, 2));
+        //  console.log('Map Data:', JSON.stringify(mapData, null, 2));
 
         // Fetch a sales executive from the User collection
         const salesExecutive = await User.findOne({
@@ -844,7 +843,7 @@ const randomlyFixMeetings = async () => {
         });
 
         if (!salesExecutive) {
-            console.log('No sales executive found in the Sales department.');
+            //  console.log('No sales executive found in the Sales department.');
             return;
         }
 
@@ -854,8 +853,10 @@ const randomlyFixMeetings = async () => {
 
         // Function to get a random address from mapData
         const getRandomAddress = () => {
-            const randomDistrict =                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
-            const randomArea =                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+            const randomDistrict =
+                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =
+                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
 
             return {
                 division: mapData.division,
@@ -874,7 +875,7 @@ const randomlyFixMeetings = async () => {
             // Determine visit charge based on lead's address and project location
             const district = mapData.districts.find((dist) => dist.name === address.district);
             if (!district) {
-                console.log(`District not found for lead: ${leadId}`);
+                //  console.log(`District not found for lead: ${leadId}`);
                 continue;
             }
 
@@ -925,12 +926,12 @@ const randomlyFixMeetings = async () => {
                 user: { _id: salesExecutive._id }, // Simulate the user object for audit fields
             });
 
-            console.log(`Meeting fixed for lead: ${leadId}`);
+            //  console.log(`Meeting fixed for lead: ${leadId}`);
         }
 
-        console.log(`Successfully fixed meetings for ${leadsToFix.length} leads.`);
+        //  console.log(`Successfully fixed meetings for ${leadsToFix.length} leads.`);
     } catch (error) {
-        console.error('Error fixing meetings:', error);
+        // console.error('Error fixing meetings:', error);
     }
 };
 
@@ -973,7 +974,7 @@ const fixMeeting = async (req) => {
 
         return newMeeting;
     } catch (error) {
-        console.error('Error in fixMeeting:', error);
+        // console.error('Error in fixMeeting:', error);
         throw error;
     }
 };
@@ -997,8 +998,7 @@ const nameBasedLeadAssign = async () => {
             'Sumaia Akter Aysa': 'Sumaiya Akter',
         };
 
-        const normalizeName = (name) =>
-            name
+        const normalizeName = (name) => name
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '')
                 .trim();
@@ -1020,9 +1020,7 @@ const nameBasedLeadAssign = async () => {
         const bulkOperations = [];
 
         leads.forEach((lead) => {
-            const automatedMessage = lead.messages.filter((message) =>
-                /assigned this conversation to/.test(message?.content)
-            );
+            const automatedMessage = lead.messages.filter((message) => /assigned this conversation to/.test(message?.content));
 
             if (automatedMessage.length > 0) {
                 const assigneeNameMatch = automatedMessage[
@@ -1054,7 +1052,7 @@ const nameBasedLeadAssign = async () => {
             await Lead.bulkWrite(bulkOperations);
         }
     } catch (error) {
-        console.error('Error in nameBasedLeadAssign:', error.message);
+        // console.error('Error in nameBasedLeadAssign:', error.message);
     }
 };
 
@@ -1090,35 +1088,35 @@ const imageLinkChange = async () => {
 
         if (bulkOperations.length > 0) {
             const result = await User.bulkWrite(bulkOperations);
-            console.log(`Updated ${result.modifiedCount} user records`);
+            //  console.log(`Updated ${result.modifiedCount} user records`);
         }
     } catch (error) {
-        console.error('Image link update failed:', error.message);
+        // console.error('Image link update failed:', error.message);
     }
 };
 
 const imageLinkChangeLead = async () => {
     try {
         const leads = await Lead.find({});
-        console.log(`Processing ${leads.length} leads`);
+        //  console.log(`Processing ${leads.length} leads`);
 
         const bulkOperations = [];
         const oldDomainPattern = /http:\/\/(192\.168\.68\.130|localhost:5000)/;
         const newDomain = 'https://crm.solutionprovider.com.bd';
 
         leads.forEach((lead, index) => {
-            console.log(`\nProcessing lead ${index + 1}/${leads.length}: ${lead._id}`);
+            //  console.log(`\nProcessing lead ${index + 1}/${leads.length}: ${lead._id}`);
 
             // Check nested property existence
             const profilePic = lead.pageInfo?.pageProfilePicture;
-            console.log('Current profile picture:', profilePic);
+            //  console.log('Current profile picture:', profilePic);
 
             if (profilePic && oldDomainPattern.test(profilePic)) {
-                console.log('Found matching URL:', profilePic);
+                //  console.log('Found matching URL:', profilePic);
 
                 try {
                     const updatedProfilePicture = profilePic.replace(oldDomainPattern, newDomain);
-                    console.log('Updated URL:', updatedProfilePicture);
+                    //  console.log('Updated URL:', updatedProfilePicture);
 
                     bulkOperations.push({
                         updateOne: {
@@ -1131,24 +1129,24 @@ const imageLinkChangeLead = async () => {
                         },
                     });
                 } catch (replaceError) {
-                    console.error('Replace error:', replaceError.message);
+                    // console.error('Replace error:', replaceError.message);
                 }
             } else {
-                console.log('No matching URL found - skipping');
+                //  console.log('No matching URL found - skipping');
             }
         });
 
-        console.log('\nBulk operations to execute:', bulkOperations.length);
-        console.log('Sample operation:', bulkOperations[0]);
+        //  console.log('\nBulk operations to execute:', bulkOperations.length);
+        //  console.log('Sample operation:', bulkOperations[0]);
 
         if (bulkOperations.length > 0) {
             const result = await Lead.bulkWrite(bulkOperations);
-            console.log(`Successfully updated ${result.modifiedCount} lead profile pictures`);
+            //  console.log(`Successfully updated ${result.modifiedCount} lead profile pictures`);
             return result.modifiedCount;
         }
         return 0;
     } catch (error) {
-        console.error('Lead image link update failed:', error);
+        // console.error('Lead image link update failed:', error);
         throw error;
     }
 };
@@ -1163,14 +1161,14 @@ const findDuplicateMeetings = async () => {
                 // Retrieve the meeting documents referenced in the lead.meetings array,
                 // sorted by date descending (most recent first)
 
-                console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
+                //  console.log(`Lead "${lead.name}" has ${lead.meetings.length} meetings.`);
                 // make the metings array to string
                 const meetingsString = lead.meetings.map((m) => m.toString());
                 const meetings = await Meeting.find({
                     _id: { $in: meetingsString },
                 }).sort({ date: -1 });
 
-                console.log(meetings.length);
+                //  console.log(meetings.length);
 
                 if (meetings.length > 1) {
                     // Keep the first meeting (most recent) and consider the rest as duplicates
@@ -1195,7 +1193,7 @@ const findDuplicateMeetings = async () => {
             }
         }
     } catch (error) {
-        console.log('Error in findDuplicateMeetings:', error.message);
+        //  console.log('Error in findDuplicateMeetings:', error.message);
     }
 };
 
@@ -1250,9 +1248,7 @@ async function checkProductAdForLeadMessages() {
                             if (pageIdMatch) {
                                 // Check if the relation already exists
                                 const productAdIdStr = productAd._id.toString();
-                                const leadProductAds = (lead.productAds || []).map((id) =>
-                                    id.toString()
-                                );
+                                const leadProductAds = (lead.productAds || []).map((id) => id.toString());
                                 if (!leadProductAds.includes(productAdIdStr)) {
                                     await Lead.updateOne(
                                         { _id: lead._id },
@@ -1278,17 +1274,17 @@ async function checkProductAdForLeadMessages() {
             }
         }
 
-        console.log('\n--- Detailed Product Stats ---');
+        //  console.log('\n--- Detailed Product Stats ---');
         for (const [product, stats] of productStats.entries()) {
             console.log(
                 `Product: "${product}"  |  Found: ${stats.found}  |  Not Found: ${stats.notFound}`
             );
         }
-        console.log('--------------------------------');
-        console.log(`Overall Found: ${overallFoundCount}`);
-        console.log(`Overall Not Found: ${overallNotFoundCount}`);
+        //  console.log('--------------------------------');
+        //  console.log(`Overall Found: ${overallFoundCount}`);
+        //  console.log(`Overall Not Found: ${overallNotFoundCount}`);
     } catch (error) {
-        console.error('Error checking product ads:', error);
+        // console.error('Error checking product ads:', error);
     }
 }
 
@@ -1328,9 +1324,9 @@ const findDuplicateLeads = async () => {
             totalDeleted += result.deletedCount || 0;
         }
 
-        console.log(`Deleted ${totalDeleted} duplicate leads.`);
+        //  console.log(`Deleted ${totalDeleted} duplicate leads.`);
     } catch (error) {
-        console.error('Error finding duplicate leads:', error);
+        // console.error('Error finding duplicate leads:', error);
     }
 };
 
@@ -1356,14 +1352,14 @@ const assignToRightSalesExecutive = async () => {
                     totalUpdatedLeads++;
                 }
             } catch (error) {
-                console.error(`Error updating lead ${lead}: ${error}`);
+                // console.error(`Error updating lead ${lead}: ${error}`);
                 // Continue with the next meeting
             }
         }
 
-        console.log(`Total leads updated: ${totalUpdatedLeads}`);
+        //  console.log(`Total leads updated: ${totalUpdatedLeads}`);
     } catch (error) {
-        console.error('Error assigning leads to sales executive:', error);
+        // console.error('Error assigning leads to sales executive:', error);
     }
 };
 
@@ -1442,7 +1438,7 @@ const getAllProfilePictureurl = async () => {
             },
         ];
 
-        console.log(profilePictureUrls);
+        //  console.log(profilePictureUrls);
     } catch (error) {}
 };
 

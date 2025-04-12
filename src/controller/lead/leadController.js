@@ -257,7 +257,7 @@ exports.getAllLeads = async (req, res) => {
             leads,
         });
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -280,7 +280,7 @@ exports.getLeadById = async (req, res) => {
 
         res.status(200).json(lead);
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -339,7 +339,7 @@ exports.createLead = async (req, res) => {
         res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
     } catch (error) {
         // console.log(error);
-        console.error(`Error creating lead: ${error.message}`);
+      //console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -359,7 +359,7 @@ exports.addComment = async (req, res) => {
             savedComment: populatedComment,
         });
     } catch (error) {
-        console.error(`Error adding comment to lead ${id}: ${error.message}`);
+      //console.error(`Error adding comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -380,7 +380,7 @@ exports.getComments = async (req, res) => {
 
         res.status(200).json({ comments: lead.comment });
     } catch (error) {
-        console.error(`Error fetching comments for lead ${id}: ${error.message}`);
+      //console.error(`Error fetching comments for lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -407,7 +407,7 @@ exports.updateRequirements = async (req, res) => {
 
         res.status(200).json({ msg: 'Requirements updated successfully', lead });
     } catch (error) {
-        console.error(`Error updating requirements for lead ${id}: ${error.message}`);
+      //console.error(`Error updating requirements for lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -461,7 +461,7 @@ exports.addPhoneNumberToLead = async (req, res) => {
             updatedPhoneNumbers: lead.phone,
         });
     } catch (error) {
-        console.error(`Error adding phone number to lead ${id}: ${error.message}`);
+      //console.error(`Error adding phone number to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -497,7 +497,7 @@ exports.updateLead = async (req, res) => {
 
         res.status(200).json({ msg: 'Lead updated successfully', lead: updatedLead });
     } catch (error) {
-        console.error(`Error updating lead ${id}: ${error.message}`);
+      //console.error(`Error updating lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -577,7 +577,7 @@ exports.addReminder = async (req, res) => {
         // Return only the updated reminders array
         res.status(200).json({ msg: 'Reminder added successfully', reminders: lead.reminder });
     } catch (error) {
-        console.error(`Error adding reminder to lead ${id}: ${error.message}`);
+      //console.error(`Error adding reminder to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -663,7 +663,7 @@ exports.addReminderWithComment = async (req, res) => {
             reminders: lead.reminder,
         });
     } catch (error) {
-        console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
+      //console.error(`Error adding reminder with comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -700,7 +700,7 @@ exports.updateReminderStatus = async (req, res) => {
         await lead.save();
         res.status(200).json({ msg: 'Reminder status updated successfully', reminder });
     } catch (error) {
-        console.error(`Error updating reminder status for lead ${leadId}: ${error.message}`);
+      //console.error(`Error updating reminder status for lead ${leadId}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -732,7 +732,7 @@ exports.addCallLog = async (req, res) => {
 
         res.status(200).json({ msg: 'Call log added successfully', lead });
     } catch (error) {
-        console.error(`Error adding call log to lead ${id}: ${error.message}`);
+      //console.error(`Error adding call log to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error', error });
     }
 };
@@ -763,7 +763,7 @@ exports.assignCreToLead = async (req, res) => {
 
         res.status(200).json({ msg: 'CRE assigned successfully', lead });
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -874,7 +874,7 @@ exports.getAllLeadsWithReminders = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };

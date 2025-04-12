@@ -128,7 +128,7 @@ const sendMessege = async (req, res) => {
         if (error.response && error.response.data && error.response.data.error) {
             return res.status(500).json({ error: error.response.data.error.message });
         }
-        console.log(error);
+      //  console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -197,7 +197,7 @@ const sendFile = async (req, res) => {
 
         return res.status(200).json({ success: true, data: newMessages[0] });
     } catch (error) {
-        console.error('Error sending files:', error);
+      //console.error('Error sending files:', error);
         return res.status(500).json({ error: error.message || 'Internal server error.' });
     }
 };
@@ -263,7 +263,7 @@ const getLeadDetailsWithLastMessage = async (req, res) => {
 
         res.status(200).json(leadsWithLastMessage);
     } catch (error) {
-        console.error('Error getting leads with last message:', error);
+      //console.error('Error getting leads with last message:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -362,7 +362,7 @@ const sendMessageWithAttachment = async (req, res) => {
                         newMessages.push(newMessage);
                     }
                 } catch (error) {
-                    console.error('Error sending file:', error);
+                  //console.error('Error sending file:', error);
                     continue;
                 }
             }
@@ -375,7 +375,7 @@ const sendMessageWithAttachment = async (req, res) => {
         // If no messages were sent, consider this a failed operation
         return res.status(500).json({ error: 'Failed to send message' });
     } catch (error) {
-        console.error('Error sending message with attachment:', error);
+      //console.error('Error sending message with attachment:', error);
         return res.status(500).json({ error: error.toString() });
     }
 };

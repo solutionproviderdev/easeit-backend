@@ -90,7 +90,7 @@ const generateAIResponse = async (message, name, phoneNumber, previousMessages) 
         // Enforce additional safeguard in case the model exceeds the limit
         return aiResponse.slice(0, 2000);
     } catch (error) {
-        console.error('Error generating AI response:', error);
+      //console.error('Error generating AI response:', error);
         return 'I’m sorry, but I’m unable to process your request at the moment.';
     }
 };
@@ -120,7 +120,7 @@ const sendFacebookMessage = async (recipientId, message, pageAccessToken) => {
 
         return response.data;
     } catch (error) {
-        console.error('Error sending message to Facebook:', error.response?.data || error.message);
+      //console.error('Error sending message to Facebook:', error.response?.data || error.message);
         throw error;
     }
 };
@@ -154,7 +154,7 @@ const SholutionBot = async (leadId, io) => {
 
         // Skip if the message is not sent by "me" or is already an AI message
         if (lastMessage?.sentByMe || lastMessage?.isAiMessage) {
-            console.log(
+           console.log(
                 'Skipping message processing as it is either sent by me or is an AI message.'
             );
             return;
@@ -177,7 +177,7 @@ const SholutionBot = async (leadId, io) => {
 
         // Ensure the response is unique
         if (aiResponse.trim() === lastAIResponse.trim()) {
-            console.log('AI response is too similar to the last one, skipping...');
+          //  console.log('AI response is too similar to the last one, skipping...');
             return;
         }
 
@@ -199,9 +199,9 @@ const SholutionBot = async (leadId, io) => {
 
         // Emit the new message via Socket.IO
         io.emit(`fbMessage${lead._id}`, aiMessage);
-        console.log('SholutionBot replied successfully.');
+      //  console.log('SholutionBot replied successfully.');
     } catch (error) {
-        console.error('Error in SholutionBot function:', error);
+      //console.error('Error in SholutionBot function:', error);
     }
 };
 

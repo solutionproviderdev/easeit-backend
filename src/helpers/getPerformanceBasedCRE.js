@@ -93,7 +93,7 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
 
     // (Optional) Log debug info for underQuota candidates.
     underQuota.forEach((cre) => {
-        console.log(
+       console.log(
             `CRE: ${cre.name}, AssignedRecent: ${
                 cre.assignedRecent
             }, Expected: ${cre.expected.toFixed(2)}, Gap: ${cre.gap.toFixed(
@@ -163,7 +163,7 @@ const getPerformanceBasedCRE = async (position) => {
 
         // If no performance data exists, assign randomly.
         if (!creMetrics || creMetrics.length === 0) {
-            console.log('No performance data found, assigning randomly.');
+          //  console.log('No performance data found, assigning randomly.');
             if (creIds.length === 0) {
                 console.warn('No active CREs available for random assignment.');
                 return null;
@@ -174,10 +174,10 @@ const getPerformanceBasedCRE = async (position) => {
 
         // Use the overflow management helper to select the appropriate CRE.
         const selectedCRE = selectCREBasedOnOverFlow(creMetrics, position, manualOverrides);
-        console.log('Selected CRE:', selectedCRE.name);
+      //  console.log('Selected CRE:', selectedCRE.name);
         return selectedCRE.creId;
     } catch (error) {
-        console.error('Error in getPerformanceBasedCRE:', error);
+        // console.error('Error in getPerformanceBasedCRE:', error);
         throw error;
     }
 };

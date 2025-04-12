@@ -12,7 +12,7 @@ const getCreInfo = async (id) => {
         const cre = await User.findOne({ _id: id });
         return cre || null;
     } catch (error) {
-        console.error(`Error fetching CRE info for ID ${id}:`, error);
+      //console.error(`Error fetching CRE info for ID ${id}:`, error);
         return null;
     }
 };
@@ -41,7 +41,7 @@ const assignUnassignedLeads = async (io) => {
         ]);
 
         if (invalidLeads.length === 0) {
-            console.log('No unassigned or invalid leads found.');
+          //  console.log('No unassigned or invalid leads found.');
             return;
         }
 
@@ -55,7 +55,7 @@ const assignUnassignedLeads = async (io) => {
             if (creId) {
                 // Ensure that the creId is a valid ObjectId
                 if (!mongoose.Types.ObjectId.isValid(creId)) {
-                    console.error(`Invalid creId: ${creId} for lead ${lead._id}`);
+                  //console.error(`Invalid creId: ${creId} for lead ${lead._id}`);
                     continue;
                 }
 
@@ -74,14 +74,14 @@ const assignUnassignedLeads = async (io) => {
                     continue;
                 }
 
-                console.log(`Assigned lead ${lead._id} to CRE ${creId} (${creInfo.nameAsPerNID}).`);
+              //  console.log(`Assigned lead ${lead._id} to CRE ${creId} (${creInfo.nameAsPerNID}).`);
 
                 // Fetch the updated lead
                 const updatedLead = await Lead.findById(lead._id)
                     .populate('creName', 'nameAsPerNID profilePicture')
                     .lean();
 
-                console.log('CRE', updatedLead.creName);
+              //  console.log('CRE', updatedLead.creName);
 
                 // Emit a socket event for the assigned lead
                 if (updatedLead) {
@@ -114,10 +114,10 @@ const assignUnassignedLeads = async (io) => {
         // Step 3: Perform bulk update to improve efficiency
         if (leadsToUpdate.length > 0) {
             await Lead.bulkWrite(leadsToUpdate);
-            console.log(`Updated ${leadsToUpdate.length} leads.`);
+          //  console.log(`Updated ${leadsToUpdate.length} leads.`);
         }
     } catch (error) {
-        console.error('Error assigning unassigned or invalid leads:', error);
+      //console.error('Error assigning unassigned or invalid leads:', error);
     }
 };
 

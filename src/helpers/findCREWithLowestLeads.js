@@ -63,7 +63,7 @@ const findCREWithLowestLeads = async () => {
 
         return selectedCRE._id;
     } catch (error) {
-        console.error('Error finding CRE with lowest leads:', error);
+      //console.error('Error finding CRE with lowest leads:', error);
         throw error;
     }
 };

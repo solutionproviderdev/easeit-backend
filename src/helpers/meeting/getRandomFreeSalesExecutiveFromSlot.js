@@ -17,14 +17,14 @@ async function getRandomFreeSalesExecutiveFromSlot(date, slot) {
             departmentName: 'Sales',
         });
         if (!salesDepartment) {
-            console.error('Sales department not found.');
+          //console.error('Sales department not found.');
             return null;
         }
 
         // 2. Get the Sales role from the department
         const salesRole = salesDepartment.roles.find((role) => role.roleName === 'Sales');
         if (!salesRole) {
-            console.error('Sales role not found in department.');
+          //console.error('Sales role not found in department.');
             return null;
         }
 
@@ -33,7 +33,7 @@ async function getRandomFreeSalesExecutiveFromSlot(date, slot) {
             roleId: salesRole._id.toString(),
         }).select('_id');
         if (salesExecs.length === 0) {
-            console.log('No sales executives found.');
+          //  console.log('No sales executives found.');
             return null;
         }
 
@@ -52,16 +52,16 @@ async function getRandomFreeSalesExecutiveFromSlot(date, slot) {
         const freeExecs = salesExecs.filter((exec) => !busyExecIds.has(exec._id.toString()));
 
         if (freeExecs.length === 0) {
-            console.log('No free sales executives for that slot.');
+          //  console.log('No free sales executives for that slot.');
             return null;
         }
 
         // 7. Pick a random free executive and return its ID as a string
         const randomIndex = Math.floor(Math.random() * freeExecs.length);
-        console.log('Random free sales executive:', freeExecs[randomIndex]._id.toString());
+      //  console.log('Random free sales executive:', freeExecs[randomIndex]._id.toString());
         return freeExecs[randomIndex]._id.toString();
     } catch (error) {
-        console.error('Error getting random free sales executive:', error);
+      //console.error('Error getting random free sales executive:', error);
         return null;
     }
 }

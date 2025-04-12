@@ -8,7 +8,7 @@ exports.getAllProductAds = async (req, res) => {
         const productAds = await ProductAd.find();
         res.status(200).json(productAds);
     } catch (error) {
-        console.error('Error fetching product ads:', error);
+      //console.error('Error fetching product ads:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -28,7 +28,7 @@ exports.getProductAdById = async (req, res) => {
         }
         res.status(200).json(productAd);
     } catch (error) {
-        console.error('Error fetching product ad by ID:', error);
+      //console.error('Error fetching product ad by ID:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -40,7 +40,7 @@ exports.createProductAd = async (req, res) => {
         const savedProductAd = await newProductAd.save();
         res.status(201).json(savedProductAd);
     } catch (error) {
-        console.error('Error creating product ad:', error);
+      //console.error('Error creating product ad:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -58,7 +58,7 @@ exports.updateProductAd = async (req, res) => {
         }
         res.status(200).json(updatedProductAd);
     } catch (error) {
-        console.error('Error updating product ad:', error);
+      //console.error('Error updating product ad:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -73,7 +73,7 @@ exports.deleteProductAd = async (req, res) => {
         }
         res.status(200).json({ message: 'Product Ad deleted successfully' });
     } catch (error) {
-        console.error('Error deleting product ad:', error);
+      //console.error('Error deleting product ad:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -99,7 +99,7 @@ exports.addProductAdImage = async (req, res) => {
 
         res.status(200).json(productAd);
     } catch (error) {
-        console.error('Error adding image to product ad:', error);
+      //console.error('Error adding image to product ad:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -141,7 +141,7 @@ exports.getProductAdsForLead = async (req, res) => {
 
         res.status(200).json(response);
     } catch (error) {
-        console.error('Error fetching product ads for lead:', error);
+      //console.error('Error fetching product ads for lead:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

@@ -18,7 +18,7 @@ const MapData = require('../schemas/MapData');
 // });
 
 const fetchAndStoreDarazData = async () => {
-    console.log('Starting the data fetch and store process...');
+  //  console.log('Starting the data fetch and store process...');
     const startTime = new Date();
 
     const baseUrl = 'https://member.daraz.com.bd/locationtree/api/getSubAddressList';
@@ -30,7 +30,7 @@ const fetchAndStoreDarazData = async () => {
             const response = await axios.get(url);
             return response.data.module;
         } catch (error) {
-            console.error('Error fetching data:', error);
+          //console.error('Error fetching data:', error);
             return null;
         }
     };
@@ -49,7 +49,7 @@ const fetchAndStoreDarazData = async () => {
     if (!divisions) return;
 
     for (const division of divisions) {
-        console.log(`Processing division: ${division.name}`);
+      //  console.log(`Processing division: ${division.name}`);
 
         // Fetch and store districts for each division
         const districts = await fetchData(fetchUrl(division.id));
@@ -57,11 +57,11 @@ const fetchAndStoreDarazData = async () => {
 
         for (const district of districts) {
             if (await checkExists(district.name, division.name, 'district')) {
-                console.log(`District already exists: ${district.name}`);
+              //  console.log(`District already exists: ${district.name}`);
                 continue;
             }
 
-            console.log(`Processing district: ${district.name}`);
+          //  console.log(`Processing district: ${district.name}`);
 
             // Fetch and store areas for each district
             const areas = await fetchData(fetchUrl(district.id));
@@ -81,15 +81,15 @@ const fetchAndStoreDarazData = async () => {
                 { upsert: true, new: true }
             );
 
-            console.log(`Stored areas for district: ${district.name}`);
+          //  console.log(`Stored areas for district: ${district.name}`);
         }
 
-        console.log(`Completed processing for division: ${division.name}`);
+      //  console.log(`Completed processing for division: ${division.name}`);
     }
 
     const endTime = new Date();
     const duration = (endTime - startTime) / 1000;
-    console.log(`Data fetch and store process completed in ${duration} seconds.`);
+  //  console.log(`Data fetch and store process completed in ${duration} seconds.`);
 };
 
 module.exports = fetchAndStoreDarazData;

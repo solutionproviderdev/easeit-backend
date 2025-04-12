@@ -173,7 +173,7 @@ exports.getAllLeadsWithFinanceDetails = async (req, res) => {
             filterData,
         });
     } catch (error) {
-        console.error('Error fetching leads with finance details:', error);
+      //console.error('Error fetching leads with finance details:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -191,7 +191,7 @@ exports.getFinanceDetails = async (req, res) => {
         }
         res.status(200).json(lead.finance || {});
     } catch (error) {
-        console.error('Error fetching finance details:', error);
+      //console.error('Error fetching finance details:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -260,7 +260,7 @@ exports.addPayment = async (req, res) => {
             totalDue: lead.finance.totalDue,
         });
     } catch (error) {
-        console.error('Error adding payment:', error);
+      //console.error('Error adding payment:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -313,7 +313,7 @@ exports.updatePayment = async (req, res) => {
             totalDue: lead.finance.totalDue,
         });
     } catch (error) {
-        console.error('Error updating payment:', error);
+      //console.error('Error updating payment:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -360,7 +360,7 @@ exports.deletePayment = async (req, res) => {
             totalDue: lead.finance.totalDue,
         });
     } catch (error) {
-        console.error('Error deleting payment:', error);
+      //console.error('Error deleting payment:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -411,7 +411,7 @@ exports.updateFinanceDetails = async (req, res) => {
             finance: lead.finance,
         });
     } catch (error) {
-        console.error('Error updating finance details:', error);
+      //console.error('Error updating finance details:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

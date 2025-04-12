@@ -186,7 +186,7 @@ const getCREPerformance = async (
             },
         };
     } catch (error) {
-        console.error('Error getting CRE performance:', error);
+      //console.error('Error getting CRE performance:', error);
         return null;
     }
 };

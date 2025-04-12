@@ -130,7 +130,7 @@ const getAllCREsPerformanceData = async (req, res) => {
         res.status(200).json(crePerformanceData);
         req.io.emit('crePerformanceUpdated', crePerformanceData);
     } catch (error) {
-        console.error('Error fetching CRE performance data:', error);
+      //console.error('Error fetching CRE performance data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -230,7 +230,7 @@ const getCREPerformanceDataById = async (req, res) => {
 
         res.status(200).json(response);
     } catch (error) {
-        console.error('Error fetching CRE performance data:', error);
+      //console.error('Error fetching CRE performance data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -301,7 +301,7 @@ const getMeetingsData = async (req, res) => {
             meetings: meetingsData,
         });
     } catch (error) {
-        console.error('Error fetching meetings data:', error);
+      //console.error('Error fetching meetings data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -353,7 +353,7 @@ const getNotifications = async (req, res) => {
 
         res.status(200).json({ notifications });
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+      //console.error('Error fetching notifications:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -488,7 +488,7 @@ const getDateWiseLeadData = async (req, res) => {
 
         res.status(200).json(responseData);
     } catch (error) {
-        console.error('Error fetching date-wise lead data:', error);
+      //console.error('Error fetching date-wise lead data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -539,7 +539,7 @@ const getWeeklyLeadData = async (req, res) => {
 
         // Aggregate data from the Leads collection
     } catch (error) {
-        console.error('Error fetching weekly lead data:', error);
+      //console.error('Error fetching weekly lead data:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };

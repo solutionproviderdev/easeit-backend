@@ -42,7 +42,7 @@ const getAllFacebookPages = async (req, res) => {
 
         res.status(200).json({ pages: settings.settingsData.page || [] });
     } catch (error) {
-        console.error('Error fetching Facebook pages:', error);
+      //console.error('Error fetching Facebook pages:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -88,7 +88,7 @@ const addFacebookPage = async (req, res) => {
             pages: updatedSettings.settingsData.page,
         });
     } catch (error) {
-        console.error('Error adding Facebook page:', error);
+      //console.error('Error adding Facebook page:', error);
         res.status(500).json({ message: 'Error adding Facebook page', error: error.message });
     }
 };
@@ -113,7 +113,7 @@ const deleteFacebookPage = async (req, res) => {
             pages: updatedSettings.settingsData.page,
         });
     } catch (error) {
-        console.error('Error deleting Facebook page:', error);
+      //console.error('Error deleting Facebook page:', error);
         res.status(500).json({ message: 'Error deleting Facebook page', error: error.message });
     }
 };

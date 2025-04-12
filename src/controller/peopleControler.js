@@ -131,7 +131,6 @@ const peopleLogin = async (req, res) => {
             success: false,
         });
     }
-
     // That means the people is existing and trying to signin fro the right portal
     // Now check if the password match
     const isMatch = await bcrypt.compare(password, people.password);
@@ -193,7 +192,7 @@ const updatePeopleDetails = async (req, res) => {
             }
         }
 
-        console.log(updates);
+      //  console.log(updates);
 
         // Validate the updates if needed
 

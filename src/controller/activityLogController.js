@@ -6,7 +6,7 @@ exports.getAllActivityLogs = async (req, res) => {
         const activityLogs = await ActivityLog.find();
         res.status(200).json(activityLogs);
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -23,7 +23,7 @@ exports.deleteActivityLog = async (req, res) => {
         await ActivityLog.deleteOne({ _id: id });
         res.status(200).json({ msg: 'Activity log deleted' });
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -37,7 +37,7 @@ exports.getActivityLogsByUserId = async (req, res) => {
         }
         res.status(200).json(activityLogs);
     } catch (error) {
-        console.error(error.message);
+      //console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };

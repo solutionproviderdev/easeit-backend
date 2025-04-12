@@ -49,14 +49,14 @@ const sendMessageToLead = async (leadId, message, io) => {
         // Retrieve the lead document by ID.
         const lead = await Lead.findById(leadId);
         if (!lead || !lead.pageInfo || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
-            console.error('Lead missing required Facebook page information.');
+          //console.error('Lead missing required Facebook page information.');
             return false;
         }
 
         // Retrieve Facebook settings.
         const settings = await Settings.findOne({ name: 'facebook' });
         if (!settings || !settings.settingsData.page) {
-            console.error('Facebook settings or access token not found.');
+          //console.error('Facebook settings or access token not found.');
             return false;
         }
 
@@ -65,7 +65,7 @@ const sendMessageToLead = async (leadId, message, io) => {
             (page) => page.pageId === lead.pageInfo.pageId
         );
         if (!pageSettings) {
-            console.error('Facebook page settings not found.');
+          //console.error('Facebook page settings not found.');
             return false;
         }
 
@@ -108,10 +108,10 @@ const sendMessageToLead = async (leadId, message, io) => {
 
             return true;
         }
-        console.error('Failed to send message via Meta Messenger API.');
+      //console.error('Failed to send message via Meta Messenger API.');
         return false;
     } catch (error) {
-        console.error('Error in sendMessageToLead:', error.message);
+      //console.error('Error in sendMessageToLead:', error.message);
         return false;
     }
 };

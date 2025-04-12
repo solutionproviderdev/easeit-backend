@@ -21,7 +21,7 @@ const People = require('../schemas/PeopleSchema');
 
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
-    console.error(`${currentTime} => ${message}`);
+  //console.error(`${currentTime} => ${message}`);
     // Optionally, send the error to a logging service or notify via email/SMS
     // sendErrorNotification(message, error);
 };

@@ -79,7 +79,7 @@ const reAssignToRightCRE = async () => {
             return map;
         }, {});
 
-        console.log(nameToCreId);
+      //  console.log(nameToCreId);
 
         // For each lead, check every message
         leads.forEach(async (lead) => {
@@ -90,7 +90,7 @@ const reAssignToRightCRE = async () => {
                 // Check against each CRE name part
                 for (const [lastName, creId] of Object.entries(nameToCreId)) {
                     if (content.includes(lastName)) {
-                        console.log('Found a match:', lastName);
+                      //  console.log('Found a match:', lastName);
                         // Update the lead's CRE if a match is found
                         lead.creName = creId;
                         await lead.save();
@@ -104,9 +104,9 @@ const reAssignToRightCRE = async () => {
             }
         });
 
-        console.log('All leads have been reassigned appropriately.');
+      //  console.log('All leads have been reassigned appropriately.');
     } catch (error) {
-        console.error('Failed to reassign leads:', error);
+      //console.error('Failed to reassign leads:', error);
     }
 };
 
@@ -132,9 +132,9 @@ const getMessages = async () => {
         const csv = parse(messages);
         fs.writeFileSync('messages.csv', csv);
 
-        console.log('CSV file has been written successfully');
+      //  console.log('CSV file has been written successfully');
     } catch (error) {
-        console.error('Error fetching messages:', error);
+      //console.error('Error fetching messages:', error);
     }
 };
 
@@ -179,12 +179,12 @@ const parseAndExportLeadsWithPhoneNumbers = async () => {
         if (results.length > 0) {
             const csv = parse(results, { fields: ['name', 'phoneNumber', 'date'] });
             fs.writeFileSync('leads_with_phone_numbers.csv', csv);
-            console.log('CSV file has been written successfully with valid phone numbers');
+          //  console.log('CSV file has been written successfully with valid phone numbers');
         } else {
-            console.log('No valid phone numbers found in any messages.');
+          //  console.log('No valid phone numbers found in any messages.');
         }
     } catch (error) {
-        console.error('Error processing leads:', error);
+      //console.error('Error processing leads:', error);
     }
 };
 
@@ -194,7 +194,7 @@ const updateLeadsProfilePictures = async () => {
     try {
         const settings = await Settings.findOne({ name: 'facebook' });
         if (!settings || !settings.settingsData.page) {
-            console.error('Facebook settings or access token not found');
+          //console.error('Facebook settings or access token not found');
             return;
         }
 
@@ -213,14 +213,14 @@ const updateLeadsProfilePictures = async () => {
                     lead.sourcePageProfilePicture = sourcePageProfilePicture;
 
                     await lead.save();
-                    console.log(`Updated lead ${lead._id} with new profile picture.`);
+                  //  console.log(`Updated lead ${lead._id} with new profile picture.`);
                 }
             }
         }
 
-        console.log('All leads have been updated.');
+      //  console.log('All leads have been updated.');
     } catch (error) {
-        console.error('Error updating leads:', error);
+      //console.error('Error updating leads:', error);
     }
 };
 

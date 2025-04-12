@@ -33,7 +33,7 @@ const addMeterials = async (req, res) => {
             product: savedProduct,
         });
     } catch (error) {
-        console.error(error); // Implement logger function if any
+      //console.error(error); // Implement logger function if any
         return res.status(500).json({
             message: `Error adding product: ${error.message}`,
         });
@@ -62,7 +62,7 @@ const addMultipleMaterials = async (req, res) => {
             materials: savedMaterials,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         return res.status(500).json({
             message: `Error adding materials: ${error.message}`,
         });
@@ -89,7 +89,7 @@ const getAllMeterials = async (req, res) => {
             materials,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         return res.status(500).json({
             message: `Error fetching materials: ${error.message}`,
         });
@@ -113,7 +113,7 @@ const getSingleMeterials = async (req, res) => {
             material,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         return res.status(500).json({
             message: `Error retrieving material: ${error.message}`,
         });
@@ -138,7 +138,7 @@ const updateMeterials = async (req, res) => {
             material,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         return res.status(500).json({
             message: `Error updating material: ${error.message}`,
         });
@@ -161,7 +161,7 @@ const deleteMeterials = async (req, res) => {
             message: 'Material deleted successfully',
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         return res.status(500).json({
             message: `Error deleting material: ${error.message}`,
         });

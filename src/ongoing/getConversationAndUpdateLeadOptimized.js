@@ -126,11 +126,11 @@ const processMessages = (messages) => {
  * @param {any} data - Additional data to log.
  */
 const logError = (message, error, data) => {
-    console.error(`${message}: ${error}`);
+  //console.error(`${message}: ${error}`);
     const currentTime = new Date().toLocaleString();
-    console.error(`${currentTime} => ${message}`);
+  //console.error(`${currentTime} => ${message}`);
     if (data) {
-        console.error('Additional data:', data);
+      //console.error('Additional data:', data);
     }
 };
 

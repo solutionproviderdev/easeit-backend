@@ -27,8 +27,7 @@ const reschedulePendingReminders = async (io) => {
                             reminderToUpdate.status = 'Missed';
                             await updatedLead.save();
 
-                            console.log(
-                                `Reminder ${reminderToUpdate._id} for lead ${lead._id} marked as Missed.`
+                          console.log(                                `Reminder ${reminderToUpdate._id} for lead ${lead._id} marked as Missed.`
                             );
 
                             // Emit a socket event for the missed reminder
@@ -42,14 +41,14 @@ const reschedulePendingReminders = async (io) => {
                         }
                     });
 
-                    console.log(`Rescheduled reminder ${reminder._id} for lead ${lead._id}.`);
+                  //  console.log(`Rescheduled reminder ${reminder._id} for lead ${lead._id}.`);
                 }
             });
         }
 
-        console.log('Pending reminders rescheduled successfully.');
+      //  console.log('Pending reminders rescheduled successfully.');
     } catch (error) {
-        console.error('Error rescheduling pending reminders:', error);
+      //console.error('Error rescheduling pending reminders:', error);
     }
 };
 

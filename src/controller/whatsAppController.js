@@ -27,13 +27,13 @@ const sendTextWaMessage = async (req, res) => {
             data,
             config
         );
-        console.log('Message sent:', response.data);
+      //  console.log('Message sent:', response.data);
         res.status(200).json({
             message: 'WhatsApp message sent successfully!',
             data: response.data,
         });
     } catch (error) {
-        console.error(
+      //console.error(
             'Error sending message:',
             error.response ? error.response.data : error.message
         );
@@ -66,13 +66,13 @@ const sendImageWaMessage = async (req, res) => {
             data,
             config
         );
-        console.log('Message sent successfully:', response.data);
+      //  console.log('Message sent successfully:', response.data);
         res.status(200).json({
             message: 'WhatsApp image message sent successfully!',
             data: response.data,
         });
     } catch (error) {
-        console.error(
+      //console.error(
             'Error sending image message:',
             error.response ? JSON.stringify(error.response.data, null, 2) : error
         );
@@ -93,8 +93,7 @@ const sendTemplateWaMessage = async (req, res) => {
     //     return res.status(400).send('No image uploaded.');
     // }
 
-    console.log(
-        { number: req.body.number },
+  console.log(        { number: req.body.number },
         { name: req.body.name },
         { message: req.body.templateName },
         { image: req.body.image }
@@ -163,13 +162,13 @@ const sendTemplateWaMessage = async (req, res) => {
             data,
             config
         );
-        console.log('Message sent:', response.data);
+      //  console.log('Message sent:', response.data);
         res.status(200).json({
             message: 'WhatsApp message sent successfully!',
             data: response.data,
         });
     } catch (error) {
-        console.error(
+      //console.error(
             'Error sending message:',
             error.response ? error.response.data : error.message
         );

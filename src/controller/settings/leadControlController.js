@@ -118,7 +118,7 @@ exports.getLeadControl = async (req, res) => {
             creDistribution,
         });
     } catch (error) {
-        console.error('Error getting lead control settings:', error);
+      //console.error('Error getting lead control settings:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -142,7 +142,7 @@ exports.updateGlobalSettings = async (req, res) => {
 
         res.status(200).json(settings.settingsData.global);
     } catch (error) {
-        console.error('Error updating global settings:', error);
+      //console.error('Error updating global settings:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -153,7 +153,7 @@ exports.getManualOverrides = async (req, res) => {
         const overrides = settings.settingsData.creManualOverrides || [];
         res.status(200).json(overrides);
     } catch (error) {
-        console.error('Error getting manual overrides:', error);
+      //console.error('Error getting manual overrides:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -173,7 +173,7 @@ exports.getManualOverrideById = async (req, res) => {
         }
         res.status(200).json(override);
     } catch (error) {
-        console.error('Error getting manual override by id:', error);
+      //console.error('Error getting manual override by id:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -209,7 +209,7 @@ exports.createManualOverride = async (req, res) => {
 
         res.status(201).json(newOverride);
     } catch (error) {
-        console.error('Error creating manual override:', error);
+      //console.error('Error creating manual override:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -251,7 +251,7 @@ exports.updateManualOverride = async (req, res) => {
 
         res.status(200).json(updatedOverride);
     } catch (error) {
-        console.error('Error updating manual override:', error);
+      //console.error('Error updating manual override:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -272,7 +272,7 @@ exports.deleteManualOverride = async (req, res) => {
         }
         res.status(200).json({ message: 'Manual override deleted successfully' });
     } catch (error) {
-        console.error('Error deleting manual override:', error);
+      //console.error('Error deleting manual override:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -329,7 +329,7 @@ exports.updateAutoMessage = async (req, res) => {
         // Return the updated autoMessage settings
         res.status(200).json(updatedSettings.settingsData.global.autoMessage);
     } catch (error) {
-        console.error('Error updating auto message:', error);
+      //console.error('Error updating auto message:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

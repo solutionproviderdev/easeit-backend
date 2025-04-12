@@ -10,7 +10,7 @@ async function getSendersName(senderId) {
 
         return `${response.data.first_name} ${response.data.last_name}`;
     } catch (error) {
-        console.error('Error fetching sender name:', error);
+      //console.error('Error fetching sender name:', error);
         return null;
     }
 }
@@ -49,7 +49,7 @@ const addFbLead = async (req, res) => {
 
             res.sendStatus(200); // Acknowledge the request
         } catch (error) {
-            console.error('Error handling Facebook webhook:', error);
+          //console.error('Error handling Facebook webhook:', error);
             res.status(500).send('Server Error');
         }
     } else {

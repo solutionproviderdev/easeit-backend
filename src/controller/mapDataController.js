@@ -13,7 +13,7 @@ const getDivisions = async (req, res) => {
         // Respond with the list of divisions
         res.status(200).json(divisions);
     } catch (error) {
-        console.error('Error fetching divisions:', error);
+      //console.error('Error fetching divisions:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -39,7 +39,7 @@ const getDistrictsByDivision = async (req, res) => {
         // Respond with the list of district IDs and names
         res.status(200).json(districts);
     } catch (error) {
-        console.error('Error fetching districts:', error);
+      //console.error('Error fetching districts:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -68,7 +68,7 @@ const getAreasByDistrict = async (req, res) => {
         // Respond with the list of area IDs and names
         res.status(200).json(district.areas);
     } catch (error) {
-        console.error('Error fetching areas:', error);
+      //console.error('Error fetching areas:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -145,7 +145,7 @@ const searchLocation = async (req, res) => {
         // Send the results back
         res.status(200).json(results);
     } catch (error) {
-        console.error('Error searching locations:', error);
+      //console.error('Error searching locations:', error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -225,7 +225,7 @@ const addDistrictToDivision = async (req, res) => {
         }
         res.status(200).json(updatedMapData);
     } catch (error) {
-        console.error('Error adding district:', error);
+      //console.error('Error adding district:', error);
         res.status(500).json({ message: `Error adding district: ${error.message}` });
     }
 };
@@ -249,7 +249,7 @@ const addAreaToDistrict = async (req, res) => {
         });
         res.status(200).json(updatedMapData);
     } catch (error) {
-        console.error('Error adding area:', error);
+      //console.error('Error adding area:', error);
         res.status(500).json({ message: `Error adding area: ${error.message}` });
     }
 };

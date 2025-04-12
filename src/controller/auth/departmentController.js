@@ -36,7 +36,7 @@ exports.createDepartment = async (req, res) => {
 
         res.status(201).json(department);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -62,7 +62,7 @@ exports.getAllDepartments = async (req, res) => {
 
         res.status(200).json(departmentsWithStaffCount);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -76,7 +76,7 @@ exports.getDepartmentById = async (req, res) => {
         }
         res.status(200).json(department);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -113,7 +113,7 @@ exports.updateDepartment = async (req, res) => {
 
         res.status(200).json(department);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -138,7 +138,7 @@ exports.deleteDepartment = async (req, res) => {
 
         res.status(200).json({ msg: 'Department deleted' });
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -166,7 +166,7 @@ exports.addRoleToDepartment = async (req, res) => {
 
         res.status(200).json(department);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -197,7 +197,7 @@ exports.updateRoleInDepartment = async (req, res) => {
 
         res.status(200).json(department);
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -229,7 +229,7 @@ exports.deleteRoleFromDepartment = async (req, res) => {
 
         res.status(200).json({ msg: 'Role deleted from department' });
     } catch (error) {
-        console.error(error.message);
+        // console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -274,7 +274,7 @@ exports.getAllPermissions = (req, res) => {
 
 //         res.status(200).json(department);
 //     } catch (error) {
-//         console.error(error.message);
+//       //console.error(error.message);
 //         res.status(500).json({ msg: 'Server error' });
 //     }
 // };
@@ -289,9 +289,9 @@ exports.initializeDefaultDepartments = async () => {
             });
 
             if (existingDepartment) {
-                console.log(
-                    `Default department "${defaultDepartment.departmentName}" already exists.`
-                );
+                // console.log(
+                //     `Default department "${defaultDepartment.departmentName}" already exists.`
+                // );
             } else {
                 // Create the department if it doesn't exist
                 const newDepartment = new Department({
@@ -307,8 +307,8 @@ exports.initializeDefaultDepartments = async () => {
             }
         }
 
-        console.log('Default departments initialization complete.');
+        //  console.log('Default departments initialization complete.');
     } catch (error) {
-        console.error('Error initializing default departments:', error);
+        // console.error('Error initializing default departments:', error);
     }
 };

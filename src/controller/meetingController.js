@@ -101,7 +101,7 @@ exports.fixMeeting = async (req, res) => {
 
         res.status(201).json(newMeeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -187,7 +187,7 @@ exports.createLeadAndFixMeeting = async (req, res) => {
             meeting: newMeeting,
         });
     } catch (error) {
-        console.error('Error creating lead and fixing meeting:', error);
+      //console.error('Error creating lead and fixing meeting:', error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -238,7 +238,7 @@ exports.postponeMeeting = async (req, res) => {
 
         res.status(200).json(updatedMeeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -261,7 +261,7 @@ exports.rescheduleMeeting = async (req, res) => {
             projectStatus,
         } = req.body;
 
-        console.log(req.body);
+      //  console.log(req.body);
 
         // Update the meeting details
         const updatedMeeting = await Meeting.findByIdAndUpdate(
@@ -336,7 +336,7 @@ exports.rescheduleMeeting = async (req, res) => {
 
         res.status(200).json(updatedMeeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -387,7 +387,7 @@ exports.cancelMeeting = async (req, res) => {
 
         res.status(200).json(updatedMeeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -437,7 +437,7 @@ exports.getAllMeetings = async (req, res) => {
 
         res.status(200).json(meetings);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -456,7 +456,7 @@ exports.getMeetingById = async (req, res) => {
 
         res.status(200).json(meeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -479,7 +479,7 @@ exports.updateMeetingDetails = async (req, res) => {
 
         res.status(200).json(updatedMeeting);
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -565,7 +565,7 @@ exports.reassignOrSwapMeeting = async (req, res) => {
             updatedMeeting,
         });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -590,7 +590,7 @@ exports.deleteMeeting = async (req, res) => {
 
         res.status(200).json({ msg: 'Meeting deleted successfully' });
     } catch (error) {
-        console.error(error);
+      //console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
 };

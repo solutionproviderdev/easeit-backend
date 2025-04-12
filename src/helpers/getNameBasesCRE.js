@@ -56,10 +56,10 @@ const getNameBasedCRE = async (facebookName) => {
             return null;
         }
 
-        console.log(`Found CRE ID ${creId} for CRM Name ${crmName}`);
+      //  console.log(`Found CRE ID ${creId} for CRM Name ${crmName}`);
         return creId;
     } catch (error) {
-        console.error('Error in getNameBasedCRE:', error.message);
+        // console.error('Error in getNameBasedCRE:', error.message);
         return null;
     }
 };

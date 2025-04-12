@@ -33,7 +33,7 @@ const notifyNewLeadAssignment = async (leadId, userId) => {
         );
         return response;
     } catch (error) {
-        console.error('Error in notifyNewLeadAssignment:', error);
+      //console.error('Error in notifyNewLeadAssignment:', error);
         throw error;
     }
 };

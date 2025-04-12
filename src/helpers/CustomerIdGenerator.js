@@ -7,7 +7,7 @@ function generateCustomerID(name, phone) {
     // Get the first three letters of the name
     const namePrefix = name.substring(0, 3).toUpperCase();
 
-    console.log(phone.toString());
+  //  console.log(phone.toString());
 
     // Extract the last three digits from the phone number (assuming phone is a string)
     const phoneSuffix = phone.toString().slice(-3);

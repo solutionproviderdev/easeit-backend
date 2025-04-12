@@ -13,7 +13,7 @@ const getAllChats = async (req, res, next) => {
         res.status(200).json(conversations);
     } catch (error) {
         next(error);
-        console.log(error);
+      //  console.log(error);
     }
 };
 

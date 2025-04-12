@@ -165,7 +165,7 @@ exports.getAllLeadConversations = async (req, res) => {
             })),
         });
     } catch (error) {
-        console.error('Error getting leads with last message:', error);
+      //console.error('Error getting leads with last message:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -267,7 +267,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const uniquePagesMap = new Map();
         leadsPopulated.forEach((lead) => {
             if (!lead.pageInfo) {
-                console.log('Lead with missing pageInfo:', lead.name);
+              //  console.log('Lead with missing pageInfo:', lead.name);
                 return;
             }
 
@@ -332,7 +332,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
             })),
         });
     } catch (error) {
-        console.error('Error getting leads with last message:', error);
+      //console.error('Error getting leads with last message:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -340,9 +340,9 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;
-    console.log('lead id =', leadId);
+  //  console.log('lead id =', leadId);
 
-    console.log(leadId);
+  //  console.log(leadId);
 
     try {
         // Find the lead by ID
@@ -358,7 +358,7 @@ exports.getMessagesForLead = async (req, res) => {
             messagesSeen: lead.messagesSeen, // Include global message seen status
         });
     } catch (error) {
-        console.error(`Error fetching messages for lead ${leadId}:`, error);
+      //console.error(`Error fetching messages for lead ${leadId}:`, error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -383,7 +383,7 @@ exports.markMessagesAsSeen = async (req, res) => {
 
         res.status(200).json({ msg: 'Messages marked as seen' });
     } catch (error) {
-        console.error(`Error marking messages as seen for lead ${id}: ${error.message}`);
+      //console.error(`Error marking messages as seen for lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -529,7 +529,7 @@ exports.sendMetaMessage = async (req, res) => {
         // If no messages were sent
         return res.status(500).json({ error: 'Failed to send message' });
     } catch (error) {
-        console.error('Error sending message:', error);
+      //console.error('Error sending message:', error);
         return res.status(500).json({ error: error.toString() });
     }
 };
@@ -696,7 +696,7 @@ exports.searchLeads = async (req, res) => {
             matchPhoneNumber: phoneMatches,
         });
     } catch (error) {
-        console.error('Error searching leads:', error);
+      //console.error('Error searching leads:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };

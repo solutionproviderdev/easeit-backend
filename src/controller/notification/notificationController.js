@@ -13,7 +13,7 @@ exports.sendNotification = async (req, res) => {
 
         return res.status(response.success ? 200 : 500).json(response);
     } catch (error) {
-        console.error('Error sending notification:', error);
+      //console.error('Error sending notification:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to send notification.',
@@ -42,11 +42,11 @@ exports.sendNotificationToMultiple = async (req, res) => {
         };
 
         const response = await messaging.sendMulticast(message);
-        console.log('Notifications sent:', response);
+        //  console.log('Notifications sent:', response);
 
         return res.status(200).json({ success: true, message: 'Notifications sent successfully.' });
     } catch (error) {
-        console.error('Error sending notifications:', error);
+      //console.error('Error sending notifications:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to send notifications.',
@@ -66,7 +66,7 @@ exports.getUserNotifications = async (req, res) => {
         const notifications = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(50);
         res.status(200).json(notifications);
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+      //console.error('Error fetching notifications:', error);
         res.status(500).json({ success: false, message: 'Error fetching notifications' });
     }
 };
@@ -84,7 +84,7 @@ exports.markNotificationAsRead = async (req, res) => {
         await Notification.findByIdAndUpdate(notificationId, { status: 'read' });
         res.status(200).json({ success: true, message: 'Notification marked as read' });
     } catch (error) {
-        console.error('Error updating notification:', error);
+      //console.error('Error updating notification:', error);
         res.status(500).json({ success: false, message: 'Error updating notification' });
     }
 };
@@ -104,7 +104,7 @@ exports.markAllNotificationsAsRead = async (req, res) => {
             result,
         });
     } catch (error) {
-        console.error('Error marking all notifications as read:', error);
+      //console.error('Error marking all notifications as read:', error);
         res.status(500).json({ success: false, message: 'Error marking notifications as read' });
     }
 };

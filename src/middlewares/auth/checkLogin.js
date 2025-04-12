@@ -13,7 +13,7 @@ const checkLogin = async (req, res, next) => {
         const token = authHeader?.split(' ')[1];
         const decoded = await jwt.verify(token, process.env.JWT_SECRET);
 
-        console.log(decoded);
+      //  console.log(decoded);
 
         // Find the user based on decoded data
         const user = await People.findById(decoded.id);

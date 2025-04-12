@@ -31,12 +31,12 @@ async function getMaterialSkuCodeByName(materialName) {
     try {
         const material = await Meterials.findOne({ name: materialName }).select('skuCode');
         if (!material) {
-            console.log('Material not found.');
+          //  console.log('Material not found.');
             return null; // Or handle it as you prefer
         }
         return material.skuCode;
     } catch (error) {
-        console.error('Error fetching material SKU Code:', error);
+      //console.error('Error fetching material SKU Code:', error);
         throw error; // Or handle it as you prefer
     }
 }
