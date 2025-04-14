@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
-const SeriseSchema = new Schema(
+const SeriesSchema = new Schema(
     {
         name: {
             type: String,
@@ -18,5 +18,5 @@ const SeriseSchema = new Schema(
     { id: true }
 );
 
-const Serise = mongoose.model('Serise', SeriseSchema);
-module.exports = Serise;
+const Series = mongoose.model('Series', SeriesSchema);
+module.exports = Series;

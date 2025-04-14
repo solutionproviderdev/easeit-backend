@@ -42,6 +42,7 @@ const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const productRouter = require('./routes/product/product');
 
 // Initialize app
 const app = express();
@@ -145,6 +146,9 @@ app.use('/dashboard', dashBoardRouter);
 app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
+
+// product router
+app.use('/products', productRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);

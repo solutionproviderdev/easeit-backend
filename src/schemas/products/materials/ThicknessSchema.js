@@ -8,10 +8,11 @@ const ThicknessSchema = new Schema(
             type: Number,
             required: true,
         },
+        // Fix typo 'enam' to 'enum'
         unit: {
             type: String,
             required: true,
-            enam: ['mm', 'cm', 'm', 'in', 'ft'],
+            enum: ['mm', 'cm', 'm', 'in', 'ft'],
         },
     },
     { id: true }
