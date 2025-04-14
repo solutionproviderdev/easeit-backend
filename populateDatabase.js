@@ -995,6 +995,7 @@ const nameBasedLeadAssign = async () => {
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
             'Joynob Islam': 'Joynob Islam',
             'Sumaia Akter Aysa': 'Sumaiya Akter',
+            'Faima Kanïz Shorna': 'Faima Kaniz Shorna',
         };
 
         const normalizeName = (name) =>
