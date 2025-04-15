@@ -981,12 +981,15 @@ const fixMeeting = async (req) => {
 
 // name based lead assign
 const nameBasedLeadAssign = async () => {
+    // console.log('name based lead assign Stated');
     try {
         const oneDayEgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const leads = await Lead.find({
             source: 'Facebook',
             // createdAt: { $gte: oneDayEgo },
         }).select('messages creName');
+
+        // console.log(`Total leads found: ${leads.length}`);
 
         if (leads.length === 0) return;
 
@@ -996,7 +999,7 @@ const nameBasedLeadAssign = async () => {
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
             'Joynob Islam': 'Joynob Islam',
             'Sumaia Akter Aysa': 'Sumaiya Akter',
-            'Faima Kanïz Shorna': 'Faima Kanij Shorna',
+            'Faima Kanz Shorna': 'Faima Kanij Shorna',
         };
 
         const normalizeName = (name) => name
@@ -1019,14 +1022,19 @@ const nameBasedLeadAssign = async () => {
         }, {});
 
         const bulkOperations = [];
+        let updatedLeads = 0;
+        let matchedLeads = 0;
+        let unmatchedLeads = 0;
+
+        const availablefacebookNames = [];
 
         leads.forEach((lead) => {
             const automatedMessage = lead.messages.filter((message) => /assigned this conversation to/.test(message?.content));
 
             if (automatedMessage.length > 0) {
-                const assigneeNameMatch = automatedMessage[
-                    automatedMessage.length - 1
-                ].content.match(/assigned this conversation to (.+)$/);
+                matchedLeads++;
+
+                const assigneeNameMatch = automatedMessage[automatedMessage.length - 1].content.match(/assigned this conversation to (.+)$/);
 
                 const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
                 if (!facebookName) return;
@@ -1034,6 +1042,12 @@ const nameBasedLeadAssign = async () => {
                 const crmName = creCRMNamesToFacebookNames[facebookName];
                 const creId = creNameToIdMap[crmName];
                 if (!creId) return;
+
+                if (!availablefacebookNames.includes(facebookName)) {
+                    // New log for Facebook name that is not found in creCRMNamesToFacebookNames object
+                    console.log(`New Facebook name found that is not in creCRMNamesToFacebookNames: ${facebookName}`);
+                    availablefacebookNames.push(facebookName);
+                }
 
                 if (lead.creName?.toString() === creId) return;
 
@@ -1046,16 +1060,26 @@ const nameBasedLeadAssign = async () => {
                         update: { $set: { creName: creId } },
                     },
                 });
+
+                updatedLeads++;
+            } else {
+                unmatchedLeads++;
             }
         });
+
+        // console.log(`Total matched leads: ${matchedLeads}`);
+        // console.log(`Total unmatched leads: ${unmatchedLeads}`);
+        // console.log(`Total leads updated: ${updatedLeads}`);
 
         if (bulkOperations.length > 0) {
             await Lead.bulkWrite(bulkOperations);
         }
+        // console.log('name based lead assign Completed with', updatedLeads, 'leads updated');
     } catch (error) {
         console.error('Error in nameBasedLeadAssign:', error.message);
     }
 };
+
 
 const imageLinkChange = async () => {
     try {
