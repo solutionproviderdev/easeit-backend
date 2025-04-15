@@ -11,10 +11,11 @@ const EdgingSchema = new Schema(
         catagory: {
             type: String,
             required: true,
-            enum: [],
+            enum: ['PVC', 'Acrylic', 'Aluminium', 'Melamine', 'Wood Veneer', 'ABS', 'Other'],
         },
         thickness: {
-            type: { type: Schema.Types.ObjectId, ref: 'Thickness' },
+            type: Schema.Types.ObjectId, // Remove the nested type object
+            ref: 'Thickness',
             required: true,
         },
         image: {

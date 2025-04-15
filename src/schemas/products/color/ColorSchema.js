@@ -95,13 +95,11 @@ const paint = new mongoose.Schema({
     paintBaseType: {
         type: String,
         required: true,
-        enum: ['Water', 'Oil', 'Latex'], // Add your specific paint base types
     },
     applicationArea: [
         {
             type: String,
             required: true,
-            enum: ['Interior', 'Exterior', 'Both'], // Add your specific areas
         },
     ],
     pricePerSqFt: {

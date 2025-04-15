@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
  const cron = require('node-cron');
-const swaggerFile = require('../swagger_output.json');
+const swaggerSpec = require('../swagger_output.json');
 
 // internal imports
 const {
@@ -43,6 +43,7 @@ const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 const productRouter = require('./routes/product/product');
+const { swaggerUi } = require('../swagger');
 
 // Initialize app
 const app = express();
@@ -100,7 +101,8 @@ app.use(
 // set up EJS
 app.set('view engine', 'ejs');
 
-// swagger setup
+// Serve swagger API documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));

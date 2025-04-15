@@ -19,4 +19,5 @@ const BaseMaterialSchema = new Schema(
 );
 
 const BaseMaterial = mongoose.model('BaseMaterial', BaseMaterialSchema);
+
 module.exports = BaseMaterial;
