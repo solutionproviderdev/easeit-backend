@@ -237,7 +237,8 @@ const isAutomatedMessage = (message) => {
 
     // Add a pattern to detect the message "You can call [name] back within the next 7 days."
     // Also add a pattern for "Auto-detected outcome" and "added an Intake label"
-    const automatedPattern =        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
+    const automatedPattern =
+        /(replied to|automated welcome message|you missed a call from|back within the next 7 days.|automated activity was created|add comment|assigned this|change or remove|visit messaging settings|you are responding|comment to|called you|you can call\s+([a-zA-Z]+\s?){1,3}\s+back within the next 7 days\.|auto-detected outcome.*added an intake label)/;
 
     return automatedPattern.test(lowerCaseMessage);
 };
@@ -303,9 +304,7 @@ const findHighQualityLeads = async () => {
         // Iterate over each lead
         leads.forEach((lead) => {
             // Check if any message contains the high-quality tag
-            const hasHighQualityMessage = lead.messages.some((message) =>
-                isHighQualityLeadMessage(message.content)
-            );
+            const hasHighQualityMessage = lead.messages.some((message) => isHighQualityLeadMessage(message.content));
 
             // If a high-quality message is found, log the lead's name and phone numbers
             if (hasHighQualityMessage) {
@@ -854,8 +853,10 @@ const randomlyFixMeetings = async () => {
 
         // Function to get a random address from mapData
         const getRandomAddress = () => {
-            const randomDistrict =                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
-            const randomArea =                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
+            const randomDistrict =
+                mapData.districts[Math.floor(Math.random() * mapData.districts.length)];
+            const randomArea =
+                randomDistrict.areas[Math.floor(Math.random() * randomDistrict.areas.length)];
 
             return {
                 division: mapData.division,
@@ -995,11 +996,10 @@ const nameBasedLeadAssign = async () => {
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
             'Joynob Islam': 'Joynob Islam',
             'Sumaia Akter Aysa': 'Sumaiya Akter',
-            'Faima Kanïz Shorna': 'Faima Kaniz Shorna',
+            'Faima Kanïz Shorna': 'Faima Kanij Shorna',
         };
 
-        const normalizeName = (name) =>
-            name
+        const normalizeName = (name) => name
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
                 .replace(/[^a-zA-Z\u0980-\u09FF\s]/gu, '')
                 .trim();
@@ -1021,9 +1021,7 @@ const nameBasedLeadAssign = async () => {
         const bulkOperations = [];
 
         leads.forEach((lead) => {
-            const automatedMessage = lead.messages.filter((message) =>
-                /assigned this conversation to/.test(message?.content)
-            );
+            const automatedMessage = lead.messages.filter((message) => /assigned this conversation to/.test(message?.content));
 
             if (automatedMessage.length > 0) {
                 const assigneeNameMatch = automatedMessage[
@@ -1251,9 +1249,7 @@ async function checkProductAdForLeadMessages() {
                             if (pageIdMatch) {
                                 // Check if the relation already exists
                                 const productAdIdStr = productAd._id.toString();
-                                const leadProductAds = (lead.productAds || []).map((id) =>
-                                    id.toString()
-                                );
+                                const leadProductAds = (lead.productAds || []).map((id) => id.toString());
                                 if (!leadProductAds.includes(productAdIdStr)) {
                                     await Lead.updateOne(
                                         { _id: lead._id },
