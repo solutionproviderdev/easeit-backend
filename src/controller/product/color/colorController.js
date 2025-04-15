@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 const { validationResult } = require('express-validator');
 // eslint-disable-next-line import/no-unresolved
 const Color = require('../../../schemas/products/color/colorschema');
@@ -9,6 +10,22 @@ const createColor = async (req, res) => {
     }
 
     try {
+        // Determine color type and validate accordingly
+        const colorType = req.body.prefabricated
+            ? 'prefabricated'
+            : req.body.formicaLaminated
+              ? 'formicaLaminated'
+              : req.body.paint
+                ? 'paint'
+                : null;
+
+        if (!colorType) {
+            return res.status(400).json({
+                message:
+                    'Invalid color type. Must be one of: prefabricated, formicaLaminated, or paint',
+            });
+        }
+
         const color = new Color(req.body);
         await color.save();
         res.status(201).json(color);

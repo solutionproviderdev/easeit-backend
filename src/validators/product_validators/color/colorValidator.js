@@ -1,6 +1,11 @@
 const { body, param, query } = require('express-validator');
 
 const validatePrefabricated = [
+    body('prefabricated').notEmpty().withMessage('Prefabricated details are required'),
+    body('formicaLaminated')
+        .isEmpty()
+        .withMessage('Cannot include formica laminated details for prefabricated type'),
+    body('paint').isEmpty().withMessage('Cannot include paint details for prefabricated type'),
     body('prefabricated.spName').trim().notEmpty().withMessage('SP Name is required'),
     body('prefabricated.brandName').trim().notEmpty().withMessage('Brand Name is required'),
     body('prefabricated.board').isMongoId().withMessage('Valid board ID is required'),
@@ -13,8 +18,11 @@ const validatePrefabricated = [
 ];
 
 const validateFormicaLaminated = [
-    body('formicaLaminated.spName').trim().notEmpty().withMessage('SP Name is required'),
-    body('formicaLaminated.brandName').trim().notEmpty().withMessage('Brand Name is required'),
+    body('formicaLaminated').notEmpty().withMessage('Formica laminated details are required'),
+    body('prefabricated')
+        .isEmpty()
+        .withMessage('Cannot include prefabricated details for formica type'),
+    body('paint').isEmpty().withMessage('Cannot include paint details for formica type'),
     body('formicaLaminated.brand').isMongoId().withMessage('Valid brand ID is required'),
     body('formicaLaminated.spCode').trim().notEmpty().withMessage('SP Code is required'),
     body('formicaLaminated.brandCode').trim().notEmpty().withMessage('Brand Code is required'),
@@ -62,9 +70,21 @@ const validatePaint = [
 
 const validateColor = [
     body('type').isMongoId().withMessage('Valid surface finish ID is required'),
-    ...validatePrefabricated,
-    ...validateFormicaLaminated,
-    ...validatePaint,
+    body().custom((value, { req }) => {
+        const colorTypes = ['prefabricated', 'formicaLaminated', 'paint'];
+        const providedTypes = colorTypes.filter((type) => req.body[type]);
+
+        if (providedTypes.length !== 1) {
+            throw new Error('Exactly one color type must be provided');
+        }
+        return true;
+    }),
+    body().custom((value, { req }) => {
+        if (req.body.prefabricated) return validatePrefabricated;
+        if (req.body.formicaLaminated) return validateFormicaLaminated;
+        if (req.body.paint) return validatePaint;
+        return false;
+    }),
 ];
 
 const colorSearchValidation = [
