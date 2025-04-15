@@ -1026,15 +1026,15 @@ const nameBasedLeadAssign = async () => {
         let matchedLeads = 0;
         let unmatchedLeads = 0;
 
-        const availablefacebookNames = [];
-
         leads.forEach((lead) => {
             const automatedMessage = lead.messages.filter((message) => /assigned this conversation to/.test(message?.content));
 
             if (automatedMessage.length > 0) {
                 matchedLeads++;
 
-                const assigneeNameMatch = automatedMessage[automatedMessage.length - 1].content.match(/assigned this conversation to (.+)$/);
+                const assigneeNameMatch = automatedMessage[
+                    automatedMessage.length - 1
+                ].content.match(/assigned this conversation to (.+)$/);
 
                 const facebookName = assigneeNameMatch ? normalizeName(assigneeNameMatch[1]) : null;
                 if (!facebookName) return;
@@ -1043,10 +1043,12 @@ const nameBasedLeadAssign = async () => {
                 const creId = creNameToIdMap[crmName];
                 if (!creId) return;
 
-                if (!availablefacebookNames.includes(facebookName)) {
-                    // New log for Facebook name that is not found in creCRMNamesToFacebookNames object
-                    console.log(`New Facebook name found that is not in creCRMNamesToFacebookNames: ${facebookName}`);
-                    availablefacebookNames.push(facebookName);
+                // Check if the Facebook name is not in the keys of creCRMNamesToFacebookNames
+                if (!creCRMNamesToFacebookNames.hasOwnProperty(facebookName)) {
+                    // Log the new Facebook name that is not in the creCRMNamesToFacebookNames object
+                    console.log(
+                        `New Facebook name found that is not in creCRMNamesToFacebookNames: ${facebookName}`
+                    );
                 }
 
                 if (lead.creName?.toString() === creId) return;
@@ -1074,12 +1076,11 @@ const nameBasedLeadAssign = async () => {
         if (bulkOperations.length > 0) {
             await Lead.bulkWrite(bulkOperations);
         }
-        // console.log('name based lead assign Completed with', updatedLeads, 'leads updated');
+        console.log('name based lead assign Completed with', updatedLeads, 'leads updated');
     } catch (error) {
         console.error('Error in nameBasedLeadAssign:', error.message);
     }
 };
-
 
 const imageLinkChange = async () => {
     try {
