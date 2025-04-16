@@ -103,6 +103,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                         departmentName: department.departmentName,
                     },
                     profilePictureUrl: user.profilePicture || null,
+                    performanceMessages: performances.performanceMessages,
                     performanceMetrics: {
                         assigned,
                         numberCollected,

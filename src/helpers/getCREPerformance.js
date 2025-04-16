@@ -9,6 +9,45 @@ const calculatePerformance = (completed, lateCompleted, missed) => {
     return (weightedSum / resolved) * 100;
 };
 
+const findLowestperformanceMetric = (performanceRates) => {
+    // Extract metrics
+    const { NCR, MSR, MCR, MPR, MCeR } = performanceRates;
+
+    // Define thresholds for low positive metrics
+    const lowThresholds = {
+        NCR: 100, // Number Collection Ratio
+        MSR: 100, // Meeting Set Ratio
+        MCR: 100, // Meeting Completion Ratio
+    };
+
+    // Define thresholds for high negative metrics
+    const highThresholds = {
+        MPR: 1, // Meeting Postponed Ratio
+        MCeR: 1, // Meeting Cancelled Ratio
+    };
+
+    // Find the lowest positive metric
+    let lowestPositiveMessage = null;
+    if (NCR < lowThresholds.NCR) {
+        lowestPositiveMessage = `Number collection: ${NCR.toFixed(1)}%`;
+    } else if (MSR < lowThresholds.MSR) {
+        lowestPositiveMessage = `Meeting set: ${MSR.toFixed(1)}%`;
+    } else if (MCR < lowThresholds.MCR) {
+        lowestPositiveMessage = `Meeting completion: ${MCR.toFixed(1)}%`;
+    }
+
+    // Find the highest negative metric
+    let highestNegativeMessage = null;
+    if (MCeR > highThresholds.MCeR) {
+        highestNegativeMessage = `Meeting cancellation: ${MCeR.toFixed(1)}%`;
+    } else if (MPR > highThresholds.MPR) {
+        highestNegativeMessage = `Meeting postpone: ${MPR.toFixed(1)}%`;
+    }
+
+    // Return the lowest positive metric and the highest negative metric
+    return { lowestPositiveMessage, highestNegativeMessage };
+};
+
 const getCREPerformance = async (
     creId,
     startDate,
@@ -143,8 +182,12 @@ const getCREPerformance = async (
         const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
         const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
         const MRR = meetingsSet > 0 ? (meetingsRescheduled / meetingsSet) * 100 : 0;
+
+        // calculate nagative performance data
         const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
         const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
+
+        // Calculate sales performance.
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
         // Final composite performance score.
@@ -153,12 +196,22 @@ const getCREPerformance = async (
         const penaltyForCancel = MCeR * 0.5;
         const performance = positiveAverage - penalty - penaltyForCancel;
 
+        // Get performance messages
+        const performanceMessages = findLowestperformanceMetric({
+            NCR,
+            MSR,
+            MCR,
+            MPR,
+            MCeR,
+        });
+
         return {
             creId,
             performance,
             assigned,
             // NEW: Return the count of leads from the last 10 assignments.
             assignedRecent,
+            performanceMessages,
             performanceMetrics: {
                 totalLeads,
                 assigned,
