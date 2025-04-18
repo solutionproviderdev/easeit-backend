@@ -995,7 +995,7 @@ const nameBasedLeadAssign = async () => {
 
         const creCRMNamesToFacebookNames = {
             'Morium Ritu': 'Morium Ritu',
-            'Antika Sadia Islam': 'Antika Sadia Islam',
+            'Antika Sp': 'Antika Sadia Islam',
             'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
             'Joynob Islam': 'Joynob Islam',
             'Sumaia Akter Aysa': 'Sumaiya Akter',
