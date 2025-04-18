@@ -48,9 +48,10 @@ const BoardSchema = new Schema(
             type: String,
             validate: {
                 validator(v) {
-                    return !v || /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+                    if (!v) return true;
+                    return /^(https?:\/\/|\/|\w:\\).+\.(jpg|jpeg|png|gif|webp)$/i.test(v);
                 },
-                message: 'Invalid image URL format',
+                message: 'Invalid image URL or path format',
             },
         },
         description: {
