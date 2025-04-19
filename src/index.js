@@ -151,7 +151,7 @@ app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
 
 // product router
-app.use('/products', productRouter);
+// app.use('/products', productRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
