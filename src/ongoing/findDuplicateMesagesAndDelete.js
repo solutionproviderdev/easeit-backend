@@ -42,9 +42,6 @@ const findDuplicateMessagesAndDelete = async () => {
                 );
 
                 totalDuplicatesRemoved += duplicateMessageIds.length;
-                console.log(
-                    `Removed ${duplicateMessageIds.length} duplicate messages from lead ${lead.CID}`
-                );
             }
         }
 
