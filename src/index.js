@@ -42,7 +42,7 @@ const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
-const productRouter = require('./routes/product/product');
+// const productRouter = require('./routes/product/product');
 const { swaggerUi } = require('../swagger');
 
 // Initialize app
