@@ -173,12 +173,13 @@ cron.schedule('*/1 * * * * *', async () => { // Runs every second
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
+	findDuplicateMessagesAndDelete();
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
 
 checkAndUpdateMissedReminders(io);
-// findDuplicateMessagesAndDelete();
+findDuplicateMessagesAndDelete();
 
 // Schedule the task to run every 1 minutes
 cron.schedule(
