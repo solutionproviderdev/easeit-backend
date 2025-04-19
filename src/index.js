@@ -44,6 +44,7 @@ const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
 // const productRouter = require('./routes/product/product');
 const { swaggerUi } = require('../swagger');
+const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
 
 // Initialize app
 const app = express();
@@ -177,6 +178,7 @@ cron.schedule('*/10 * * * *', async () => {
 });
 
 checkAndUpdateMissedReminders(io);
+// findDuplicateMessagesAndDelete();
 
 // Schedule the task to run every 1 minutes
 cron.schedule(
