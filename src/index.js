@@ -42,9 +42,10 @@ const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
-// const productRouter = require('./routes/product/product');
+const productRouter = require('./routes/product/product');
 const { swaggerUi } = require('../swagger');
 const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
+const vendorRouter = require('./routes/inventory/vendor.routes');
 
 // Initialize app
 const app = express();
@@ -152,8 +153,9 @@ app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
 
-// product router
-// app.use('/products', productRouter);
+// product, vendor, router
+app.use('/products', productRouter);
+app.use('/vendors', vendorRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);

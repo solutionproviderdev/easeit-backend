@@ -1,6 +1,5 @@
 const { validationResult } = require('express-validator');
-// eslint-disable-next-line import/no-unresolved
-const Thickness = require('../../../schemas/products/materials/thicknessschema');
+const Thickness = require('../../../schemas/products/materials/ThicknessSchema');
 
 const createThickness = async (req, res) => {
     const errors = validationResult(req);

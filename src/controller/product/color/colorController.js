@@ -1,7 +1,6 @@
 /* eslint-disable no-nested-ternary */
 const { validationResult } = require('express-validator');
-// eslint-disable-next-line import/no-unresolved
-const Color = require('../../../schemas/products/color/colorschema');
+const Color = require('../../../schemas/products/color/ColorSchema');
 
 const createColor = async (req, res) => {
     const errors = validationResult(req);

@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const Product = require('../../schemas/products/productschema');
+const Product = require('../../schemas/products/ProductSchema');
 
 const createProduct = async (req, res) => {
     const errors = validationResult(req);

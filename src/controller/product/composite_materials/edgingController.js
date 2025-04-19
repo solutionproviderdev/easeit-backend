@@ -1,6 +1,5 @@
 const { validationResult } = require('express-validator');
-// eslint-disable-next-line import/no-unresolved
-const Edging = require('../../../schemas/products/composite-materials/edgingschema');
+const Edging = require('../../../schemas/products/composite-materials/EdgingSchema');
 
 const createEdging = async (req, res) => {
     const errors = validationResult(req);
