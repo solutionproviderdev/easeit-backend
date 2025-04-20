@@ -1,16 +1,3 @@
-// Messages from Facebook [
-//   {
-//     id: 'm_z4DrDGJMzheaei8jn0PjNuW5G3s2wYW8HBysYo-EVUxiWd2j5di650KziHCyr1a_XnHk2bzBkX8rXFCUYfTtEg',
-//     message: 'আসসালামু আলাইকুম স্যার।',
-//     created_time: '2025-04-19T09:41:04+0000',
-//     from: {
-//       name: 'Solution Provider',
-//       email: '289500500919707@facebook.com',
-//       id: '289500500919707'
-//     }
-//   },
-// ]
-
 const {
     notifyDeletedMessagesToAdmin,
 } = require('../helpers/notification/admin/MetaMessageDeleted');
