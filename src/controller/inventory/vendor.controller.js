@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const Vendor = require('../../schemas/inventory/VendorSchema');
+const Vendor = require('../../schemas/inventory/vendor.model');
 
 // Get all vendors with filters
 const getAllVendors = async (req, res) => {

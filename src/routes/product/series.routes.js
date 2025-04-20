@@ -7,7 +7,7 @@ const {
     deleteSeries,
     getAllSeries,
     getSeriesById,
-} = require('../../controller/product/materials/seriesController');
+} = require('../../controller/product/materials/series.controller');
 const {
     validateSeries,
     seriesSearchValidation,

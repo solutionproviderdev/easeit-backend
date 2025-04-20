@@ -7,7 +7,7 @@ const {
     deleteBaseMaterial,
     getAllBaseMaterials,
     getBaseMaterialById,
-} = require('../../../controller/product/materials/baseMaterialController');
+} = require('../../../controller/product/materials/baseMaterial.controller');
 const {
     validateBaseMaterial,
     baseMaterialSearchValidation,

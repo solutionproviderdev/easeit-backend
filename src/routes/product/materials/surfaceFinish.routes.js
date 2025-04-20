@@ -7,7 +7,7 @@ const {
     deleteSurfaceFinish,
     getAllSurfaceFinish,
     getSurfaceFinishById,
-} = require('../../../controller/product/materials/surfaceFinishController');
+} = require('../../../controller/product/materials/surfaceFinish.controller');
 const {
     validateSurfaceFinish,
     surfaceFinishSearchValidation,

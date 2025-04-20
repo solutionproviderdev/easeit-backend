@@ -7,7 +7,7 @@ const {
     deleteBoard,
     getAllBoards,
     getBoardById,
-} = require('../../../controller/product/composite_materials/boardController');
+} = require('../../../controller/product/composite_materials/board.controller');
 const {
     validateBoard,
     boardSearchValidation,

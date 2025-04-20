@@ -7,7 +7,7 @@ const {
     deleteThickness,
     getAllThickness,
     getThicknessById,
-} = require('../../../controller/product/materials/thicknessController');
+} = require('../../../controller/product/materials/thickness.controller');
 const {
     validateThickness,
     thicknessSearchValidation,

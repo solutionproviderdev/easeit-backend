@@ -7,7 +7,7 @@ const {
     deleteEdging,
     getAllEdgings,
     getEdgingById,
-} = require('../../../controller/product/composite_materials/edgingController');
+} = require('../../../controller/product/composite_materials/edging.controller');
 const {
     validateEdging,
     edgingSearchValidation,

@@ -1,16 +1,16 @@
 const express = require('express');
 
 // Internal Imports
-const baseMaterialsRouter = require('./materials/baseMaterial');
-const brandsRouter = require('./materials/brand');
-const hardwareRouter = require('./materials/hardwear');
-const surfaceRouter = require('./materials/surface');
-const seriesRouter = require('./series');
-const thicknessRouter = require('./materials/thickness');
-const surfaceFinishRouter = require('./materials/surfaceFinish');
-const edgingRouter = require('./composite_materials/edging');
-const colorRouter = require('./color/color');
-const boardRouter = require('./composite_materials/board');
+const baseMaterialsRouter = require('./materials/baseMaterial.routes');
+const brandsRouter = require('./materials/brand.routes');
+const hardwareRouter = require('./materials/hardwear.routes');
+const surfaceRouter = require('./materials/surface.routes');
+const seriesRouter = require('./series.routes');
+const thicknessRouter = require('./materials/thickness.routes');
+const surfaceFinishRouter = require('./materials/surfaceFinish.routes');
+const edgingRouter = require('./composite_materials/edging.routes');
+const colorRouter = require('./color/color.routes');
+const boardRouter = require('./composite_materials/board.routes');
 
 // Internal Imports
 const {
@@ -19,7 +19,7 @@ const {
     deleteProduct,
     getAllProducts,
     getProductById,
-} = require('../../controller/product/productController');
+} = require('../../controller/product/product.controller');
 const {
     validateProduct,
     productSearchValidation,

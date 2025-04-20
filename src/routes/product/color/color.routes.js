@@ -7,7 +7,7 @@ const {
     deleteColor,
     getAllColors,
     getColorById,
-} = require('../../../controller/product/color/colorController');
+} = require('../../../controller/product/color/color.controller');
 const {
     validateColor,
     colorSearchValidation,

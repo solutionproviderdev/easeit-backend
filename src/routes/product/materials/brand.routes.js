@@ -7,7 +7,7 @@ const {
     deleteBrand,
     getAllBrands,
     getBrandById,
-} = require('../../../controller/product/materials/brandController');
+} = require('../../../controller/product/materials/brand.controller');
 const {
     validateBrand,
     brandSearchValidation,

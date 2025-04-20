@@ -7,7 +7,7 @@ const {
     deleteHardware,
     getAllHardware,
     getHardwareById,
-} = require('../../../controller/product/materials/hardwearController');
+} = require('../../../controller/product/materials/hardwear.controller');
 const {
     validateHardware,
     hardwareSearchValidation,

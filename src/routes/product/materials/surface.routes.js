@@ -7,7 +7,7 @@ const {
     deleteSurface,
     getAllSurfaces,
     getSurfaceById,
-} = require('../../../controller/product/materials/surfaceController');
+} = require('../../../controller/product/materials/surface.controller');
 const {
     validateSurface,
     surfaceSearchValidation,
