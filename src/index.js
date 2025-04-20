@@ -75,31 +75,36 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
 	cors({
-		origin: (origin, callback) => {
-			const allowedOrigins = [
-				'http://localhost:3000',
-				'http://localhost:5000',
-				'http://localhost:8080',
-				'http://localhost:5173',
-				'http://192.168.0.155:3000',
-				'http://192.168.0.155:5000',
-				'http://103.122.143.63:3000',
-				'https://easeit.vercel.app',
-				'https://crm.solutionprovider.com.bd',
-				'http://192.168.218.103:5173',
-				'http://192.168.68.123:5173',
-				'http://localhost:3000',
-				'http://localhost:5000',
-				'http://192.168.68.130:3000',
-				'http://192.168.68.130:5000',
-				'http://192.168.68.130',
-			];
-			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-				callback(null, true);
-			} else {
-				callback(new Error('Not allowed by CORS'));
-			}
-		},
+		// origin: (origin, callback) => {
+		// 	const allowedOrigins = [
+		// 		'http://localhost:8081',
+		// 		'http://192.168.177.134:3000',
+		// 		'http://192.168.56.1:3000',
+
+		// 		'http://localhost:3000',
+		// 		'http://localhost:5000',
+		// 		'http://localhost:8080',
+		// 		'http://localhost:5173',
+		// 		'http://192.168.0.155:3000',
+		// 		'http://192.168.0.155:5000',
+		// 		'http://103.122.143.63:3000',
+		// 		'https://easeit.vercel.app',
+		// 		'https://crm.solutionprovider.com.bd',
+		// 		'http://192.168.218.103:5173',
+		// 		'http://192.168.68.123:5173',
+		// 		'http://localhost:3000',
+		// 		'http://localhost:5000',
+		// 		'http://192.168.68.130:3000',
+		// 		'http://192.168.68.130:5000',
+		// 		'http://192.168.68.130',
+		// 	];
+		// 	if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+		// 		callback(null, true);
+		// 	} else {
+		// 		callback(new Error('Not allowed by CORS'));
+		// 	}
+		// },
+		origin: '*',
 		methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 		credentials: true,
 	})
@@ -229,6 +234,7 @@ app.use(notFoundHandler);
 
 // Default error handling
 app.use(errorHandler);
+console.log('🚀🚀🚀🚀🚀 Server started! Process ID:', process.pid);
 
 // Start the server
 if (require.main === module) {

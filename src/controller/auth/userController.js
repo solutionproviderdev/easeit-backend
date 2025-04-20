@@ -547,16 +547,18 @@ exports.loginUser = async (req, res) => {
 	try {
 		// Check if user exists
 		const user = await User.findOne({ email });
-		// console.log('user------------->', user);
+		console.log('user------------->', user); // Added console log for user
 		// here just user.mobiletoken will be enough
 		if (!user) {
+			console.log('user------------->', user); // Added console log for user
 			return res.status(400).json({ msg: 'No user found with this Email' });
 		}
-
+		
 		// Check password
 		const isMatch = await bcrypt.compare(password, user.password);
 		// console.log('password ', isMatch, '---', user);
 		if (!isMatch) {
+			console.log('user------------->', 'not matcht'); // Added console log for user
 			return res.status(400).json({ msg: 'Invalid credentials' });
 		}
 
