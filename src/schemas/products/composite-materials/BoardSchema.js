@@ -59,6 +59,17 @@ const BoardSchema = new Schema(
             maxLength: [1000, 'Description cannot exceed 1000 characters'],
             trim: true,
         },
+
+        stock: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        unit: {
+            type: String,
+            required: true,
+            default: 'sheet',
+        },
     },
     {
         id: true,

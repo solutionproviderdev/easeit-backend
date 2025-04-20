@@ -5,6 +5,10 @@ const vendorController = require('../../controller/inventory/vendor.controller')
 const { validateVendor } = require('../../validators/inventory/vendor.validator');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 const { checkAdmin } = require('../../middlewares/auth/checkAdmin');
+const purchaseRouter = require('./purchase.routes');
+
+// extrarnal routes
+vendorRouter.use('/purchase', purchaseRouter);
 
 // Basic CRUD routes
 vendorRouter.get('/', checkAuth, vendorController.getAllVendors);

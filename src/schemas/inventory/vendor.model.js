@@ -158,13 +158,11 @@ VendorSchema.index({ active: 1, lastPurchaseDate: -1 });
 
 // Population middleware
 VendorSchema.pre(/^find/, function (next) {
-    this.populate([
-        {
-            path: 'materials.material',
-            select: 'name description image -__v',
-            match: { 'materials.isActive': true },
-        },
-    ]);
+    this.populate({
+        path: 'materials.material',
+        refPath: 'materials.type',
+        select: 'name description image', // Removed -__v, only include what we need
+    });
     next();
 });
 

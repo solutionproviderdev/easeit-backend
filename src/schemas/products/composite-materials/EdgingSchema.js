@@ -21,6 +21,16 @@ const EdgingSchema = new Schema(
         image: {
             type: String,
         },
+        stock: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        unit: {
+            type: String,
+            required: true,
+            default: 'meter',
+        },
     },
     { id: true }
 );
