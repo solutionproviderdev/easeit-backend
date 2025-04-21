@@ -1,3 +1,4 @@
+/* eslint-disable default-param-last */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 const { getIO } = require('../../socket/socketService');
@@ -58,7 +59,10 @@ const sendNotificationToUser = async (
         // Retrieve the device tokens (an array) for the user.
         const tokens = await getTockenOfAnUser(userId);
         if (!tokens || tokens.length === 0) {
-            throw new Error('No FCM tokens available for this user');
+            return {
+                success: false,
+                message: 'No FCM tokens available for this user',
+            };
         }
 
         // Loop over each token and send notification individually.
@@ -88,26 +92,32 @@ const sendNotificationToUser = async (
             } catch (error) {
                 const errorCode = error?.errorInfo?.code;
                 if (errorsToRemoveToken.includes(errorCode)) {
+                    // Remove invalid token from user's deviceTokens
+                    await User.findByIdAndUpdate(userId, {
+                        $pull: { deviceTokens: token },
+                    });
                     responses.push({
                         token,
                         success: false,
-                        error: errorCode,
+                        error: 'Token removed due to invalidity',
                         remove: true,
                     });
-                    // Optionally: Remove token from DB here.
                 } else {
-                    console.log(`Error sending to token ${token}: ${errorCode}`);
                     responses.push({
                         token,
                         success: false,
-                        error: errorCode,
+                        error: 'Failed to send notification',
                         remove: false,
                     });
                 }
             }
         }
     } catch (pushError) {
-        console.error('Error sending push notifications:', pushError);
+        return {
+            success: false,
+            message: 'Failed to process push notifications',
+            error: pushError.message,
+        };
     }
 
     // Emit a socket event to notify the user, regardless of push notification results.

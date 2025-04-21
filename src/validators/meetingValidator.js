@@ -1,12 +1,13 @@
-const { check, validationResult } = require('express-validator');
+const { check } = require('express-validator');
+const { commonValidations, validateRequest } = require('../utils/validation');
 
 // Meeting Validation Rules
 exports.meetingValidationRules = [
     // Validate leadId (must be a valid MongoDB ObjectId)
-    check('leadId').isMongoId().withMessage('Lead ID must be a valid MongoDB ObjectId'),
+    check('leadId').custom(() => commonValidations.validateObjectId),
 
     // Validate date (must be a valid ISO date)
-    check('date').isISO8601().withMessage('Date must be a valid ISO8601 date'),
+    check('date').custom(() => commonValidations.validateDate),
 
     // Validate slot (must be one of the allowed slot values)
     check('slot')
@@ -62,27 +63,12 @@ exports.meetingValidationRules = [
     check('commentText').optional().isString().withMessage('Comment must be a string'),
 
     // Validate images (if provided)
-    check('images')
-        .optional()
-        .isArray()
-        .withMessage('Images must be an array of strings')
-        .bail()
-        .custom((images) => {
-            if (!images.every((img) => typeof img === 'string')) {
-                throw new Error('Each image must be a string');
-            }
-            return true;
-        }),
+    check('images').custom(() => commonValidations.validateImages),
+    validateRequest,
 ];
 
-// Middleware to check for validation errors
-exports.validateMeeting = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-};
+// Use centralized validation middleware
+exports.validateMeeting = validateRequest;
 
 // Postpone Meeting Validator
 exports.postponeMeetingValidationRules = [
@@ -92,17 +78,8 @@ exports.postponeMeetingValidationRules = [
     check('commentText').optional().isString().withMessage('Comment must be a string'),
 
     // Validate images (if provided)
-    check('images')
-        .optional()
-        .isArray()
-        .withMessage('Images must be an array of strings')
-        .bail()
-        .custom((images) => {
-            if (!images.every((img) => typeof img === 'string')) {
-                throw new Error('Each image must be a string');
-            }
-            return true;
-        }),
+    check('images').custom(() => commonValidations.validateImages),
+    validateRequest,
 ];
 
 // Reschedule Meeting Validator
@@ -142,17 +119,8 @@ exports.rescheduleMeetingValidationRules = [
     check('commentText').optional().isString().withMessage('Comment must be a string'),
 
     // Validate images (if provided)
-    check('images')
-        .optional()
-        .isArray()
-        .withMessage('Images must be an array of strings')
-        .bail()
-        .custom((images) => {
-            if (!images.every((img) => typeof img === 'string')) {
-                throw new Error('Each image must be a string');
-            }
-            return true;
-        }),
+    check('images').custom(() => commonValidations.validateImages),
+    validateRequest,
 ];
 
 // Cancel Meeting Validator
@@ -163,17 +131,8 @@ exports.cancelMeetingValidationRules = [
     check('commentText').optional().isString().withMessage('Comment must be a string'),
 
     // Validate images (if provided)
-    check('images')
-        .optional()
-        .isArray()
-        .withMessage('Images must be an array of strings')
-        .bail()
-        .custom((images) => {
-            if (!images.every((img) => typeof img === 'string')) {
-                throw new Error('Each image must be a string');
-            }
-            return true;
-        }),
+    check('images').custom(() => commonValidations.validateImages),
+    validateRequest,
 ];
 
 // validators/meetingValidator.js

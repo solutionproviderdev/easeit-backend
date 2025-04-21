@@ -1,6 +1,6 @@
-/* eslint-disable prefer-promise-reject-errors */
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const { default: mongoose } = require('mongoose');
+const { validateRequest, commonValidations } = require('../utils/validation');
 const User = require('../schemas/auth/UserSchema');
 const Department = require('../schemas/auth/DepartmentSchema');
 
@@ -10,37 +10,39 @@ const validateLeadCreation = [
     body('phone')
         .notEmpty()
         .withMessage('Phone number is required')
-        .isString()
-        .withMessage('Phone number should be a string')
-        .matches(/^[0-9]{10,15}$/) // Regex for basic phone number validation
-        .withMessage('Phone number must be between 10 to 15 digits'),
+        .custom((value) => {
+            if (!value.match(commonValidations.validatePhone.matches)) {
+                throw new Error(commonValidations.validatePhone.errorMessage);
+            }
+            return true;
+        }),
     body('source')
         .optional()
         .isIn(['Facebook', 'WhatsApp', 'Web', 'Phone'])
         .withMessage('Source must be one of the following: Facebook, WhatsApp, Web, Phone'),
-
-    // Middleware to handle validation result
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        next();
-    },
+    validateRequest,
 ];
 
 // Validation rules for adding a comment
 const validateComment = [
-    body('comment').notEmpty().withMessage('Comment is required'),
-    body('images').optional().isArray().withMessage('Images must be an array'),
-    body('images.*').optional().isURL().withMessage('Invalid image URL'),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+    body('comment').custom((value) => {
+        if (!value || typeof value !== 'string' || !value.trim()) {
+            throw new Error(commonValidations.validateCommentText.errorMessage);
         }
-        next();
-    },
+        return true;
+    }),
+    body('images').custom((value) => {
+        if (value) {
+            if (
+                !Array.isArray(value)
+                || !value.every((url) => typeof url === 'string' && url.trim())
+            ) {
+                throw new Error('Each image must be a valid URL string');
+            }
+        }
+        return true;
+    }),
+    validateRequest,
 ];
 
 // Validation rules for adding or updating requirements
@@ -48,15 +50,13 @@ const validateRequirements = [
     body('requirements')
         .isArray()
         .withMessage('Requirements must be an array of strings')
-        .custom((requirements) => requirements.every((req) => typeof req === 'string'))
-        .withMessage('Each requirement must be a string'),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        next();
-    },
+        .custom((requirements) => {
+            if (!requirements.every((req) => typeof req === 'string' && req.trim())) {
+                throw new Error('Each requirement must be a non-empty string');
+            }
+            return true;
+        }),
+    validateRequest,
 ];
 
 // Validator for phone number input
