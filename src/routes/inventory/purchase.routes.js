@@ -115,25 +115,25 @@ purchaseRouter.delete(
 
 // Reports and Analytics
 purchaseRouter.get(
-    '/statistics',
+    '/reports/statistics',
     checkAuth,
     validateQueryParams,
     purchaseController.getPurchaseStatistics
 );
 purchaseRouter.get(
-    '/vendor/:vendorId',
+    '/reports/vendor/:vendorId',
     checkAuth,
     validateVendorHistory,
     purchaseController.getVendorPurchaseHistory
 );
 purchaseRouter.get(
-    '/material/:materialId',
+    '/reports/material/:materialId',
     checkAuth,
     validateMaterialHistory,
     purchaseController.getMaterialPurchaseHistory
 );
 purchaseRouter.get(
-    '/payments/summary',
+    '/reports/payments/summary',
     checkAuth,
     validateQueryParams,
     purchaseController.getPaymentSummary

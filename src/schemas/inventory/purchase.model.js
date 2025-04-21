@@ -113,7 +113,7 @@ const PurchaseSchema = new Schema(
         notes: String,
         attachments: [
             {
-                _id: false, // Disable automatic _id for subdocuments
+                // _id: false, // Disable _id generation for custom attachment
                 name: {
                     type: String,
                     required: true,
