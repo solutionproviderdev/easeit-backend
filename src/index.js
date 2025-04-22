@@ -46,6 +46,7 @@ const productRouter = require('./routes/product/product.routes');
 const { swaggerUi } = require('../swagger');
 const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
 const vendorRouter = require('./routes/inventory/vendor.routes');
+const quotationrouter = require('./routes/quotation.routes');
 
 // Initialize app
 const app = express();
@@ -156,6 +157,7 @@ app.use('/notifications', notificationRouter);
 // product, vendor, router
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
+app.use('/quotations', quotationrouter);
 
 // seetings router
 app.use('/settings', settingsRouter);

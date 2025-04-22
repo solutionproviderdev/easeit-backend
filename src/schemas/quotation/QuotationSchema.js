@@ -3,105 +3,103 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 // Schema for contact person information
-const prodctSection = new Schema({
+const productSection = new Schema({
     name: {
         type: String,
         required: true,
         trim: true,
-        index: true,
     },
-    height: {
-        type: Number,
-        required: true,
-        trim: true,
-        index: true,
-    },
-    width: {
-        type: Number,
-        required: true,
-        trim: true,
-        index: true,
-    },
-    depth: {
-        type: Number,
-        required: true,
-        trim: true,
-        index: true,
+    dimensions: {
+        height: {
+            type: Number,
+            required: true,
+            min: [0, 'Height cannot be negative'],
+        },
+        width: {
+            type: Number,
+            required: true,
+            min: [0, 'Width cannot be negative'],
+        },
+        depth: {
+            type: Number,
+            required: true,
+            min: [0, 'Depth cannot be negative'],
+        },
     },
     sqft: {
         type: Number,
         required: true,
-        trim: true,
-        index: true,
+        min: [0, 'Square feet cannot be negative'],
+        validate: {
+            validator(v) {
+                const calculatedSqft = (this.dimensions.height * this.dimensions.width) / 144;
+                return Math.abs(calculatedSqft - v) < 0.01;
+            },
+            message: 'Square feet must match calculated dimensions',
+        },
     },
     type: [
         {
             type: String,
+            required: true,
         },
     ],
     surface: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Surface',
         required: true,
-        index: true,
     },
     color: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Color',
         required: true,
-        index: true,
     },
     price: {
         type: Number,
         required: true,
-        trim: true,
-        index: true,
+        min: [0, 'Price cannot be negative'],
     },
 });
 
-// Schema for materials supplied by the vendor
-const cartItem = new Schema({
+const quotationItem = new Schema({
     product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
         required: true,
-        index: true,
     },
-    serise: {
+    series: {
+        // Fixed typo from 'serise'
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'Series', // Add proper reference
         required: true,
-        trim: true,
-        index: true,
     },
-    sections: [prodctSection],
+    sections: [productSection],
     quantity: {
         type: Number,
         required: true,
-        trim: true,
-        index: true,
+        min: [1, 'Quantity must be at least 1'],
     },
     totalPrice: {
         type: Number,
         required: true,
-        trim: true,
-        index: true,
+        validate: {
+            validator(v) {
+                const sectionTotal = this.sections.reduce((sum, section) => sum + section.price, 0);
+                return sectionTotal * this.quantity === v;
+            },
+            message: 'Total price must match sum of section prices multiplied by quantity',
+        },
     },
 });
 
 // Main vendor schema
 const QuotationSchema = new Schema(
     {
-        items: [cartItem],
-        totalPrice: {
-            type: Number,
+        items: [quotationItem],
+        client: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Lead',
             required: true,
-            min: [0, 'Total price cannot be negative'],
-            validate: {
-                validator(v) {
-                    return this.items.reduce((sum, item) => sum + item.totalPrice, 0) === v;
-                },
-                message: 'Total price must match sum of item prices',
-            },
         },
         transportation: {
             type: Number, // Changed from String to Number
@@ -138,6 +136,7 @@ const QuotationSchema = new Schema(
             required: true,
             default: () => new Date(+new Date() + 7 * 24 * 60 * 60 * 1000), // 7 days validity
         },
+        notes: String,
     },
     {
         id: true,
