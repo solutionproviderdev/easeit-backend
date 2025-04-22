@@ -57,17 +57,6 @@ const prodctSection = new Schema({
         trim: true,
         index: true,
     },
-    status: {
-        type: String,
-        required: true,
-        enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
-        default: 'draft',
-    },
-    validUntil: {
-        type: Date,
-        required: true,
-        default: () => new Date(+new Date() + 7 * 24 * 60 * 60 * 1000), // 7 days validity
-    },
 });
 
 // Schema for materials supplied by the vendor
@@ -137,6 +126,17 @@ const QuotationSchema = new Schema(
                 },
                 message: 'Final price must match calculation',
             },
+        },
+        status: {
+            type: String,
+            required: true,
+            enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
+            default: 'draft',
+        },
+        validUntil: {
+            type: Date,
+            required: true,
+            default: () => new Date(+new Date() + 7 * 24 * 60 * 60 * 1000), // 7 days validity
         },
     },
     {
