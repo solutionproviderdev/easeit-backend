@@ -1,6 +1,7 @@
 const { default: mongoose } = require('mongoose');
 const Lead = require('../../schemas/LeadsSchema');
 const ProductAd = require('../../schemas/ProductAdSchema');
+const { formatDateRange } = require('../../helpers/firmatDateRange');
 
 // Get all product ads
 exports.getAllProductAds = async (req, res) => {
@@ -142,6 +143,83 @@ exports.getProductAdsForLead = async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         console.error('Error fetching product ads for lead:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getProductAdStats = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        // Format date range using the helper function
+        const { start, end } = formatDateRange(startDate, endDate);
+
+        // Aggregate pipeline to get stats with status breakdown
+        const stats = await Lead.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: start, $lte: end },
+                    productAds: { $exists: true, $ne: [] },
+                },
+            },
+            {
+                $unwind: '$productAds',
+            },
+            {
+                $group: {
+                    _id: {
+                        productAd: '$productAds',
+                        status: '$status',
+                    },
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $group: {
+                    _id: '$_id.productAd',
+                    totalLeads: { $sum: '$count' },
+                    statusBreakdown: {
+                        $push: {
+                            status: '$_id.status',
+                            count: '$count',
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    statusBreakdown: {
+                        $sortArray: {
+                            input: '$statusBreakdown',
+                            sortBy: { count: -1 },
+                        },
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'productads',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'adDetails',
+                },
+            },
+            {
+                $unwind: '$adDetails',
+            },
+            {
+                $project: {
+                    _id: 1,
+                    adName: '$adDetails.name',
+                    totalLeads: 1,
+                    statusBreakdown: 1,
+                },
+            },
+        ]);
+
+        res.status(200).json(stats);
+    } catch (error) {
+        console.error('Error fetching product ad stats:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

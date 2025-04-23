@@ -1,7 +1,7 @@
 const express = require('express');
 
 const quotationrouter = express.Router();
-const quotationController = require('../controllers/quotation.controller');
+const quotationController = require('../controller/quotation/quotation.controller');
 const { validateQuotation, validateQuotationStatus } = require('../validators/quotation.validator');
 const { checkAuth } = require('../middlewares/auth/checkAuth');
 const { checkAdmin } = require('../middlewares/auth/checkAdmin');
