@@ -6,6 +6,7 @@ const Notification = require('../../../schemas/Notification');
 
 const notifyDeletedMessagesToAdmin = async (lead) => {
     try {
+        console.log(lead.messages[0]);
         const deletedMessageIds = lead.messages
             .filter((message) => message.isDeleted)
             .map((message) => message._id);
