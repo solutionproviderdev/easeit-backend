@@ -91,6 +91,7 @@ app.use(
 				'http://192.168.68.130:3000',
 				'http://192.168.68.130:5000',
 				'http://192.168.68.130',
+				'http://localhost:5173',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
