@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const { default: mongoose } = require('mongoose');
 const { validateRequest, commonValidations } = require('../utils/validation');
 const User = require('../schemas/auth/UserSchema');

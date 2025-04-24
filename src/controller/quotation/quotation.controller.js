@@ -257,7 +257,7 @@ exports.getClientQuotations = async (req, res, next) => {
     try {
         const quotations = await Quotation.find({ client: req.params.clientId })
             .sort('-createdAt')
-            .populate('client', 'name email phone');
+            .populate('client');
 
         if (!quotations.length) {
             return next(new AppError('No quotations found for this client', 404));
@@ -329,5 +329,3 @@ exports.getQuotationStats = async (req, res, next) => {
         next(error);
     }
 };
-
-// ... existing code ...
