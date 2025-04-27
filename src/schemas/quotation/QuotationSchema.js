@@ -102,7 +102,7 @@ const QuotationSchema = new Schema(
             required: true,
         },
         transportation: {
-            type: Number, // Changed from String to Number
+            type: Number,
             required: true,
             min: [0, 'Transportation cost cannot be negative'],
         },
@@ -115,21 +115,6 @@ const QuotationSchema = new Schema(
         finalPrice: {
             type: Number,
             required: true,
-            min: [0, 'Final price cannot be negative'],
-            validate: {
-                validator(v) {
-                    const subtotal = this.totalPrice + this.transportation;
-                    const discountAmount = subtotal * (this.discount / 100);
-                    return Math.round(subtotal - discountAmount) === Math.round(v);
-                },
-                message: 'Final price must match calculation',
-            },
-        },
-        status: {
-            type: String,
-            required: true,
-            enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
-            default: 'draft',
         },
         validUntil: {
             type: Date,
@@ -148,7 +133,7 @@ const QuotationSchema = new Schema(
 // Add meaningful indexes
 QuotationSchema.index({ createdAt: -1 });
 QuotationSchema.index({ 'items.product': 1 });
-QuotationSchema.index({ 'items.serise': 1 });
+QuotationSchema.index({ 'items.series': 1 }); // Fixed from 'serise' to 'series'
 QuotationSchema.index({ finalPrice: 1 });
 
 // Population middleware
@@ -159,7 +144,7 @@ QuotationSchema.pre(/^find/, function (next) {
             select: 'name specifications thumbnail',
         },
         {
-            path: 'items.serise',
+            path: 'items.series', // Fixed from 'serise' to 'series'
             select: 'name description',
         },
         {

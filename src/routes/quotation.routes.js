@@ -2,7 +2,7 @@ const express = require('express');
 
 const quotationrouter = express.Router();
 const quotationController = require('../controller/quotation/quotation.controller');
-const { validateQuotation, validateQuotationStatus } = require('../validators/quotation.validator');
+const { validateQuotation } = require('../validators/quotation.validator');
 const { checkAuth } = require('../middlewares/auth/checkAuth');
 const { checkAdmin } = require('../middlewares/auth/checkAdmin');
 
@@ -14,25 +14,9 @@ quotationrouter.put('/:id', checkAuth, validateQuotation, quotationController.up
 quotationrouter.delete('/:id', checkAuth, quotationController.deleteQuotation);
 
 // Advanced query routes
-quotationrouter.get('/search', checkAuth, quotationController.searchQuotations);
-quotationrouter.get('/filter', checkAuth, quotationController.filterQuotations);
-quotationrouter.get('/stats', checkAuth, checkAdmin, quotationController.getQuotationStats);
-
-// Status management routes
-quotationrouter.patch(
-    '/:id/status',
-    checkAuth,
-    validateQuotationStatus,
-    quotationController.updateStatus
-);
-quotationrouter.post('/:id/approve', checkAuth, quotationController.approveQuotation);
-quotationrouter.post('/:id/reject', checkAuth, quotationController.rejectQuotation);
-quotationrouter.post(
-    '/:id/revise',
-    checkAuth,
-    validateQuotation,
-    quotationController.reviseQuotation
-);
+quotationrouter.get('/report/search', checkAuth, quotationController.searchQuotations);
+quotationrouter.get('/report/filter', checkAuth, quotationController.filterQuotations);
+quotationrouter.get('/report/stats', checkAuth, checkAdmin, quotationController.getQuotationStats);
 
 // Document generation routes
 quotationrouter.get('/:id/pdf', checkAuth, quotationController.generatePDF);

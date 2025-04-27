@@ -76,6 +76,15 @@ const formicaLaminated = new mongoose.Schema({
         required: true,
         min: [0, 'Price cannot be negative'],
     },
+    image: {
+        type: String,
+        validate: {
+            validator(v) {
+                return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+            },
+            message: 'Invalid image URL format',
+        },
+    },
 });
 
 const paint = new mongoose.Schema({
@@ -112,6 +121,15 @@ const paint = new mongoose.Schema({
             type: Number,
             required: true,
             min: [0, 'Price cannot be negative'],
+        },
+    },
+    image: {
+        type: String,
+        validate: {
+            validator(v) {
+                return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+            },
+            message: 'Invalid image URL format',
         },
     },
 });

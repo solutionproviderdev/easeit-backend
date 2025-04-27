@@ -47,12 +47,3 @@ exports.validateQuotation = [
     ...validateQuotationItem,
     validateRequest,
 ];
-
-// Status Update Validation
-exports.validateQuotationStatus = [
-    param('id').isMongoId().withMessage('Invalid quotation ID'),
-    check('status')
-        .isIn(['draft', 'sent', 'accepted', 'rejected', 'expired'])
-        .withMessage('Invalid status'),
-    validateRequest,
-];
