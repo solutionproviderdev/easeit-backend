@@ -3,9 +3,38 @@ const AppError = require('../../utils/appError');
 
 // Basic CRUD Operations
 exports.getAllQuotations = async (req, res, next) => {
+    const { search, sort, limit, page, fields } = req.query;
+
     try {
-        const quotations = await Quotation.find().sort('-createdAt');
-        res.json({ success: true, data: quotations });
+        const query = {};
+
+        if (search) {
+            query.$or = [
+                { 'items.product.name': { $regex: search, $options: 'i' } },
+                { 'client.name': { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const projection = fields ? fields.split(',').join(' ') : {};
+
+        const quotations = await Quotation.find(query)
+            .sort(sort || { createdAt: -1 })
+            .limit(parseInt(limit) || 10)
+            .skip(parseInt(page) ? (parseInt(page) - 1) * parseInt(limit || 10) : 0)
+            .select(projection)
+            .populate('client', 'name')
+            .populate('items.product', 'name specifications')
+            .populate('items.series', 'name');
+
+        const total = await Quotation.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            data: quotations,
+            total,
+            page: parseInt(page) || 1,
+            totalPages: Math.ceil(total / (parseInt(limit) || 10)),
+        });
     } catch (error) {
         next(error);
     }
@@ -53,58 +82,12 @@ exports.deleteQuotation = async (req, res, next) => {
     }
 };
 
-// Status Management
-exports.updateStatus = async (req, res, next) => {
-    try {
-        const quotation = await Quotation.findByIdAndUpdate(
-            req.params.id,
-            { status: req.body.status },
-            { new: true }
-        );
-        if (!quotation) return next(new AppError('Quotation not found', 404));
-        res.json({ success: true, data: quotation });
-    } catch (error) {
-        next(error);
-    }
-};
-
-exports.approveQuotation = async (req, res, next) => {
-    try {
-        const quotation = await Quotation.findByIdAndUpdate(
-            req.params.id,
-            { status: 'accepted' },
-            { new: true }
-        );
-        if (!quotation) return next(new AppError('Quotation not found', 404));
-        res.json({ success: true, data: quotation });
-    } catch (error) {
-        next(error);
-    }
-};
-
-exports.rejectQuotation = async (req, res, next) => {
-    try {
-        const quotation = await Quotation.findByIdAndUpdate(
-            req.params.id,
-            { status: 'rejected' },
-            { new: true }
-        );
-        if (!quotation) return next(new AppError('Quotation not found', 404));
-        res.json({ success: true, data: quotation });
-    } catch (error) {
-        next(error);
-    }
-};
-
 // Search and Filter
 exports.searchQuotations = async (req, res, next) => {
     try {
         const { query } = req.query;
         const quotations = await Quotation.find({
-            $or: [
-                { 'items.name': { $regex: query, $options: 'i' } },
-                { status: { $regex: query, $options: 'i' } },
-            ],
+            'items.name': { $regex: query, $options: 'i' },
         });
         res.json({ success: true, data: quotations });
     } catch (error) {
@@ -114,10 +97,9 @@ exports.searchQuotations = async (req, res, next) => {
 
 exports.filterQuotations = async (req, res, next) => {
     try {
-        const { status, minPrice, maxPrice, startDate, endDate } = req.query;
+        const { minPrice, maxPrice, startDate, endDate } = req.query;
         const filter = {};
 
-        if (status) filter.status = status;
         if (minPrice || maxPrice) {
             filter.finalPrice = {};
             if (minPrice) filter.finalPrice.$gte = minPrice;

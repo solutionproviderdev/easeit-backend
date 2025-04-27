@@ -13,6 +13,11 @@ const {
     reassignOrSwapMeeting,
     createLeadAndFixMeeting,
     deleteMeeting,
+    confirmMeeting,
+    leaveMeeting,
+    arriveMeeting,
+    startMeeting,
+    endMeeting,
 } = require('../../controller/meetingController');
 const timeSlotsRouter = require('./timeSlots');
 const {
@@ -27,6 +32,13 @@ const {
 const {
     getRandomFreeSalesExecutiveFromSlot,
 } = require('../../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
+const {
+    confirmMeetingValidationRules,
+    leaveMeetingValidationRules,
+    arriveMeetingValidationRules,
+    startMeetingValidationRules,
+    endMeetingValidationRules,
+} = require('../../validators/meetingFlowValidator');
 
 // Router Declaration
 const meetingsRouter = express.Router();
@@ -93,5 +105,42 @@ meetingsRouter.patch(
 
 // Delete a meeting
 meetingsRouter.delete('/:id', checkAuth, deleteMeeting);
+
+// meeting flow routes
+meetingsRouter.put(
+    '/:meetingId/flow/confirm',
+    checkAuth,
+    confirmMeetingValidationRules,
+    validateMeeting,
+    confirmMeeting
+);
+meetingsRouter.put(
+    '/:meetingId/flow/leave',
+    checkAuth,
+    leaveMeetingValidationRules,
+    validateMeeting,
+    leaveMeeting
+);
+meetingsRouter.put(
+    '/:meetingId/flow/arrive',
+    checkAuth,
+    arriveMeetingValidationRules,
+    validateMeeting,
+    arriveMeeting
+);
+meetingsRouter.put(
+    '/:meetingId/flow/start',
+    checkAuth,
+    startMeetingValidationRules,
+    validateMeeting,
+    startMeeting
+);
+meetingsRouter.put(
+    '/:meetingId/flow/end',
+    checkAuth,
+    // endMeetingValidationRules,
+    validateMeeting,
+    endMeeting
+);
 
 module.exports = meetingsRouter;

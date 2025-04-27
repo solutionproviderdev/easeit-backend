@@ -594,3 +594,179 @@ exports.deleteMeeting = async (req, res) => {
         res.status(500).json({ msg: 'Server error' });
     }
 };
+
+// Meeting flow controllers
+exports.confirmMeeting = async (req, res) => {
+    try {
+        const { meetingId } = req.params;
+        const { callLog } = req.body; // Optional call log data
+
+        // Validate meeting ID
+        if (!meetingId || !mongoose.Types.ObjectId.isValid(meetingId)) {
+            return res.status(400).json({ msg: 'Valid meeting ID is required' });
+        }
+
+        // Find the meeting and update its flow status
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ msg: 'Meeting not found' });
+        }
+
+        // If call log data is provided, add it to the lead
+        if (callLog) {
+            const lead = await Lead.findById(meeting.lead);
+            if (lead) {
+                lead.callLogs.push({
+                    recipientNumber: callLog.recipientNumber,
+                    callType: callLog.callType || 'Outgoing',
+                    status: callLog.status || 'Received',
+                    callDuration: callLog.callDuration,
+                    timestamp: callLog.timestamp || new Date(),
+                });
+                await lead.save();
+            }
+        }
+
+        // Update meeting flow status to confirmed
+        meeting.meetingFlowStatus = 'Confirmed';
+        meeting.auditFields.updatedBy = req.user._id;
+
+        await meeting.save();
+
+        res.status(200).json({
+            message: 'Meeting confirmed successfully',
+            meeting,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.leaveMeeting = async (req, res) => {
+    try {
+        const { meetingId } = req.params;
+        const { lan, lat, time } = req.body;
+
+        // Validate meeting ID
+        if (!meetingId || !mongoose.Types.ObjectId.isValid(meetingId)) {
+            return res.status(400).json({ msg: 'Valid meeting ID is required' });
+        }
+
+        // Find the meeting
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ msg: 'Meeting not found' });
+        }
+
+        // Update meeting flow status and location details
+        meeting.meetingFlowStatus = 'Leaved';
+        meeting.locations.leavingFrom = {
+            lan: lan || '',
+            lat: lat || '',
+            time: time || new Date(),
+        };
+        meeting.auditFields.updatedBy = req.user._id;
+
+        await meeting.save();
+
+        res.status(200).json({
+            message: 'Left for meeting successfully',
+            meeting,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.arriveMeeting = async (req, res) => {
+    try {
+        const { meetingId } = req.params;
+        const { lan, lat } = req.body;
+
+        // Find and update the meeting
+        const meeting = await Meeting.findById(meetingId);
+
+        if (!meeting) {
+            return res.status(404).json({ msg: 'Meeting not found' });
+        }
+
+        // Update meeting flow status and arrival location/time
+        meeting.meetingFlowStatus = 'Arrived';
+        meeting.locations.arrivedAt = {
+            lan,
+            lat,
+            time: new Date(),
+        };
+
+        // Save the updated meeting
+        await meeting.save();
+
+        // Update the lead's address location if it exists
+        const lead = await Lead.findById(meeting.lead);
+        if (lead && lead.address) {
+            lead.address.location = {
+                lan,
+                lat,
+            };
+            await lead.save();
+        }
+
+        res.status(200).json({
+            message: 'Arrived at meeting location successfully',
+            meeting,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.startMeeting = async (req, res) => {
+    try {
+        const { meetingId } = req.params;
+
+        // Validate meeting ID
+        if (!meetingId || !mongoose.Types.ObjectId.isValid(meetingId)) {
+            return res.status(400).json({ msg: 'Valid meeting ID is required' });
+        }
+
+        // Find the meeting and update its flow status
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ msg: 'Meeting not found' });
+        }
+
+        // Check if the meeting is in the correct state to start
+        if (meeting.meetingFlowStatus !== 'Arrived') {
+            return res.status(400).json({
+                msg: 'Meeting cannot be started. Sales executive must arrive at location first.',
+            });
+        }
+
+        // Update meeting flow status to Ongoing
+        meeting.meetingFlowStatus = 'Ongoing';
+        meeting.auditFields.updatedBy = req.user._id;
+
+        await meeting.save();
+
+        res.status(200).json({
+            message: 'Meeting started successfully',
+            meeting,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.endMeeting = async (req, res) => {
+    try {
+        // TODO: Implement meeting end logic
+        res.status(200).json({ message: 'Meeting ended successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};

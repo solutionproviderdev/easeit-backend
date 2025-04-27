@@ -37,6 +37,10 @@ const validateFormicaLaminated = [
     body('formicaLaminated.pricePerSqFt')
         .isFloat({ min: 0 })
         .withMessage('Price must be a positive number'),
+    body('formicaLaminated.image')
+        .optional()
+        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i)
+        .withMessage('Invalid image URL format'),
 ];
 
 const validatePaint = [
@@ -66,6 +70,10 @@ const validatePaint = [
     body('paint.pricePerSqFt.rePaint')
         .isFloat({ min: 0 })
         .withMessage('Re-paint price must be a positive number'),
+    body('paint.image')
+        .optional()
+        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i)
+        .withMessage('Invalid image URL format'),
 ];
 
 const validateColor = [
