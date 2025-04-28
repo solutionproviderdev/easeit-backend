@@ -10,6 +10,7 @@ const {
 } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const { notifyNewLeadAssignment } = require('../../helpers/notification/lead/leadTriggers');
 const { formatDateRange } = require('../../helpers/formatDateRange');
+const ProductAd = require('../../schemas/ProductAdSchema');
 
 // Utility function to add a comment to a lead and emit a Socket.io event
 const addCommentToLead = async (leadId, commentData, user, io) => {
@@ -103,6 +104,7 @@ exports.getAllLeads = async (req, res) => {
             endDate,
             assignedCre,
             salesExecutive,
+            productAd, // New query parameter for product ad filtering
         } = req.query;
 
         // Create a filter object
@@ -133,13 +135,19 @@ exports.getAllLeads = async (req, res) => {
             filter.salesExqName = salesExecutive;
         }
 
+        // Add product ad filter
+        if (productAd) {
+            filter.productAds = new mongoose.Types.ObjectId(productAd);
+        }
+
         // Fetch leads with pagination and filters
         const leads = await Lead.find(filter)
             .select('-messages -callLogs')
             .skip((page - 1) * limit)
             .limit(Number(limit))
             .populate('creName', 'nameAsPerNID nickname profilePicture')
-            .populate('salesExqName', 'nameAsPerNID nickname profilePicture');
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture')
+            .populate('productAds', 'name images '); // Add population for product ads
 
         const totalLeads = await Lead.countDocuments(filter);
 
@@ -168,10 +176,16 @@ exports.getAllLeads = async (req, res) => {
             await Promise.all(
                 allStatuses.map(async (status) => {
                     const count = await Lead.countDocuments({ ...filter, status });
-                    return count > 0 ? { status, count } : null; // Return null if count is zero
+                    return count > 0 ? { status, count } : null;
                 })
             )
-        ).filter((data) => data !== null); // Filter out null entries
+        ).filter((data) => data !== null);
+
+        // Get unique product ads
+        const uniqueProductAds = await Lead.distinct('productAds');
+        const productAds = await ProductAd.find({
+            _id: { $in: uniqueProductAds },
+        }).select('name images');
 
         // Extract unique CREs and Sales Executives
         const uniqueCRENames = [];
@@ -233,6 +247,7 @@ exports.getAllLeads = async (req, res) => {
                 sources: allSources,
                 creNames: activeCREs,
                 salesExecutives: uniqueSalesExecs,
+                productAds, // Add product ads to filters
             },
             leads,
         });
