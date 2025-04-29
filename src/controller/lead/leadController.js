@@ -282,7 +282,7 @@ exports.getLeadById = async (req, res) => {
 
 // Create a new Lead with an optional comment
 exports.createLead = async (req, res) => {
-    const { name, phone, source, status, comment, images, cre } = req.body;
+    const { name, phone, source, status, comment, images, cre, productAd } = req.body;
 
     // console.log(req.body);
 
@@ -312,6 +312,7 @@ exports.createLead = async (req, res) => {
             source: source || 'Phone',
             status: status || 'Number Collected',
             creName: cre,
+            productAds: productAd ? [productAd] : [],
         });
 
         // Save the new lead
