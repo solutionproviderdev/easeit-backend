@@ -6,6 +6,7 @@ const Meeting = require('../../schemas/MeetingSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const getCREPerformance = require('../../helpers/getCREPerformance');
+const { formatDateRange } = require('../../helpers/firmatDateRange');
 
 const getAllCREsPerformanceData = async (req, res) => {
     try {
@@ -16,26 +17,15 @@ const getAllCREsPerformanceData = async (req, res) => {
             return res.status(400).json({ message: 'Start date and end date are required' });
         }
 
-        // Parse and normalize start and end dates
-        let start = new Date(startDate);
-        let end = new Date(endDate);
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        // Validate date format
+        const tempStart = new Date(startDate);
+        const tempEnd = new Date(endDate);
+        if (isNaN(tempStart.getTime()) || isNaN(tempEnd.getTime())) {
             return res.status(400).json({ message: 'Invalid date format' });
         }
 
-        // console.log('Start Date:', start.toString());
-
-        // const date = '2023-02-28'; // your date string
-        // const start = momenttz.tz(date, 'Asia/Dhaka').startOf('day').utc();
-        // const end = momenttz.tz(date, 'Asia/Dhaka').endOf('day').utc();
-
-        // Normalize start and end times to cover the entire day
-        // start.setUTCHours(0, 0, 0, 0);
-        start = momenttz.tz(start, 'Asia/Dhaka').startOf('day').utc();
-        end = momenttz.tz(end, 'Asia/Dhaka').endOf('day').utc();
-        // end.setUTCHours(23, 59, 59, 999);
-
-        // console.log('End Date:', start.toString());
+        // Format date range using the helper function
+        const { start, end } = formatDateRange(startDate, endDate);
 
         // Find the department ID for "CRE" department
         const department = await Department.findOne({ departmentName: 'CRE' });
@@ -53,6 +43,7 @@ const getAllCREsPerformanceData = async (req, res) => {
         const creUsers = await User.find({
             departmentId: department._id,
             roleId: creRole._id,
+            status: 'Active',
         });
         if (creUsers.length === 0) {
             return res.status(404).json({ message: 'No CRE users found' });
