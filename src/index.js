@@ -47,6 +47,7 @@ const { swaggerUi } = require('../swagger');
 const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
 const vendorRouter = require('./routes/inventory/vendor.routes');
 const quotationrouter = require('./routes/quotation.routes');
+const discountRouter = require('./routes/discountRoutes/discountRoutes');
 
 // Initialize app
 const app = express();
@@ -155,10 +156,12 @@ app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
 
-// product, vendor, router
+// product, vendor, router,discount
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
 app.use('/quotations', quotationrouter);
+
+app.use('/discounts', discountRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
