@@ -120,11 +120,6 @@ exports.getProductAdsForLead = async (req, res) => {
             return res.status(404).json({ error: 'Lead not found' });
         }
 
-        const pageId = lead.pageInfo && lead.pageInfo.pageId;
-        if (!pageId) {
-            return res.status(400).json({ error: 'Lead does not have a pageId' });
-        }
-
         // Check if the lead has any product relation
         if (!lead.productAds || lead.productAds.length === 0) {
             return res.status(400).json({ message: 'This lead has no product relation' });
@@ -133,11 +128,15 @@ exports.getProductAdsForLead = async (req, res) => {
         // If productAds exist, fetch only the related product ads.
         const productAds = await ProductAd.find({ _id: { $in: lead.productAds } });
 
-        // Map each product ad to a simplified response object, filtering images by matching pageId.
+        // Get the pageId from lead info
+        const pageId = lead.pageInfo && lead.pageInfo.pageId;
+
+        // Map each product ad to a simplified response object
         const response = productAds.map((ad) => ({
             name: ad.name,
             description: ad.description,
-            images: ad.images.filter((img) => img.pageId === pageId),
+            // If pageId exists, filter images, otherwise return all images
+            images: pageId ? ad.images.filter((img) => img.pageId === pageId) : ad.images,
         }));
 
         res.status(200).json(response);
