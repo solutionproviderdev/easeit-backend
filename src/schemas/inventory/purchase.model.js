@@ -6,13 +6,11 @@ const { Schema } = mongoose;
 
 // Individual item in the purchase
 const PurchaseItemSchema = new Schema({
-    // Reference to vendor's material
     vendorMaterial: {
         type: Schema.Types.ObjectId,
         ref: 'Vendor.materials',
         required: true,
     },
-    // Actual material reference (Board/Edging/Surface/Hardware)
     material: {
         type: Schema.Types.ObjectId,
         refPath: 'materialType',
@@ -28,11 +26,6 @@ const PurchaseItemSchema = new Schema({
         required: true,
         min: 1,
     },
-    unit: {
-        type: String,
-        required: true,
-        trim: true,
-    },
     pricePerUnit: {
         type: Number,
         required: true,
@@ -42,16 +35,6 @@ const PurchaseItemSchema = new Schema({
         type: Number,
         required: true,
         min: 0,
-    },
-    receivedQuantity: {
-        type: Number,
-        default: 0,
-        min: 0,
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'partially_received', 'received', 'cancelled'],
-        default: 'pending',
     },
 });
 
@@ -75,7 +58,7 @@ const PurchaseSchema = new Schema(
         },
         status: {
             type: String,
-            enum: ['draft', 'ordered', 'partially_received', 'completed', 'cancelled'],
+            enum: ['draft', 'ordered', 'received', 'cancelled'],
             default: 'draft',
         },
         paymentStatus: {
@@ -93,6 +76,7 @@ const PurchaseSchema = new Schema(
                 paymentDate: {
                     type: Date,
                     required: true,
+                    default: Date.now,
                 },
                 paymentMethod: {
                     type: String,
@@ -103,17 +87,9 @@ const PurchaseSchema = new Schema(
                 notes: String,
             },
         ],
-        expectedDeliveryDate: {
-            type: Date,
-        },
-        deliveryAddress: {
-            type: String,
-            required: true,
-        },
         notes: String,
         attachments: [
             {
-                // _id: false, // Disable _id generation for custom attachment
                 name: {
                     type: String,
                     required: true,
@@ -125,6 +101,18 @@ const PurchaseSchema = new Schema(
                 type: {
                     type: String,
                     required: true,
+                },
+            },
+        ],
+        additionalCost: [
+            // new field for additional costs
+            {
+                name: {
+                    type: String,
+                },
+                amount: {
+                    type: Number,
+                    min: 0,
                 },
             },
         ],
@@ -161,33 +149,12 @@ PurchaseSchema.pre(/^find/, function (next) {
 PurchaseSchema.pre('save', function (next) {
     if (this.items.length === 0) {
         this.status = 'draft';
-    } else {
-        const allReceived = this.items.every((item) => item.quantity === item.receivedQuantity);
-        const someReceived = this.items.some((item) => item.receivedQuantity > 0);
-
-        if (allReceived) {
-            this.status = 'completed';
-        } else if (someReceived) {
-            this.status = 'partially_received';
-        }
+    } else if (this.receivedQuantity >= this.items.reduce((sum, item) => sum + item.quantity, 0)) {
+        this.status = 'received';
+    } else if (this.receivedQuantity > 0) {
+        this.status = 'partially_received';
     }
     next();
-});
-
-// Add after other middlewares
-PurchaseSchema.post('save', async (doc) => {
-    if (doc.status === 'completed' || doc.status === 'partially_received') {
-        for (const item of doc.items) {
-            if (item.receivedQuantity > 0) {
-                const MaterialModel = mongoose.model(item.materialType);
-                await MaterialModel.findByIdAndUpdate(
-                    item.material,
-                    { $inc: { stock: item.receivedQuantity } },
-                    { new: true }
-                );
-            }
-        }
-    }
 });
 
 const Purchase = mongoose.model('Purchase', PurchaseSchema);

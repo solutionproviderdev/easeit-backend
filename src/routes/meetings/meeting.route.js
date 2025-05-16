@@ -114,6 +114,7 @@ meetingsRouter.put(
     validateMeeting,
     confirmMeeting
 );
+
 meetingsRouter.put(
     '/:meetingId/flow/leave',
     checkAuth,

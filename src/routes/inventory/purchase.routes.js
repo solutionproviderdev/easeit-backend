@@ -8,12 +8,8 @@ const {
     validateQueryParams,
     validateObjectId,
     validateStatusUpdate,
-    validateItemReceptionWithIds,
     validatePaymentWithIds,
-    validateAttachment,
-    validateAttachmentDeletion,
-    validateVendorHistory,
-    validateMaterialHistory,
+    validateBulkPurchase,
 } = require('../../validators/inventory/purchase.validator');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 const { checkAdmin } = require('../../middlewares/auth/checkAdmin');
@@ -53,13 +49,6 @@ purchaseRouter.put(
     purchaseController.updateStatus
 );
 purchaseRouter.put(
-    '/:id/items/:itemId/receive',
-    checkAuth,
-    checkAdmin,
-    validateItemReceptionWithIds,
-    purchaseController.receiveItem
-);
-purchaseRouter.put(
     '/:id/cancel',
     checkAuth,
     checkAdmin,
@@ -97,46 +86,13 @@ purchaseRouter.get(
     purchaseController.getPaymentHistory
 );
 
-// Document Management
+// Bulk Purchase
 purchaseRouter.post(
-    '/:id/attachments',
+    '/bulk',
     checkAuth,
     checkAdmin,
-    validateAttachment,
-    purchaseController.addAttachment
-);
-purchaseRouter.delete(
-    '/:id/attachments/:attachmentId',
-    checkAuth,
-    checkAdmin,
-    validateAttachmentDeletion,
-    purchaseController.removeAttachment
-);
-
-// Reports and Analytics
-purchaseRouter.get(
-    '/reports/statistics',
-    checkAuth,
-    validateQueryParams,
-    purchaseController.getPurchaseStatistics
-);
-purchaseRouter.get(
-    '/reports/vendor/:vendorId',
-    checkAuth,
-    validateVendorHistory,
-    purchaseController.getVendorPurchaseHistory
-);
-purchaseRouter.get(
-    '/reports/material/:materialId',
-    checkAuth,
-    validateMaterialHistory,
-    purchaseController.getMaterialPurchaseHistory
-);
-purchaseRouter.get(
-    '/reports/payments/summary',
-    checkAuth,
-    validateQueryParams,
-    purchaseController.getPaymentSummary
+    validateBulkPurchase,
+    purchaseController.createBulkPurchase
 );
 
 module.exports = purchaseRouter;

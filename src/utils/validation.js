@@ -13,7 +13,7 @@ const validateRequest = (req, res, next) => {
 const commonValidations = {
     // Image validation
     validateImages: {
-        optional: true,
+        optional: true, // 0-9
         isArray: true,
         custom: (images) => {
             if (!Array.isArray(images)) {
