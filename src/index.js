@@ -48,6 +48,7 @@ const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAn
 const vendorRouter = require('./routes/inventory/vendor.routes');
 const quotationrouter = require('./routes/quotation.routes');
 const discountRouter = require('./routes/discountRoutes/discountRoutes');
+const calculatorRouter = require('./routes/calculator/calculator.route');
 
 // Initialize app
 const app = express();
@@ -160,6 +161,9 @@ app.use('/notifications', notificationRouter);
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
 app.use('/quotations', quotationrouter);
+
+// cabint calculator
+app.use('/calculate-cabinet', calculatorRouter);
 
 app.use('/discounts', discountRouter);
 

@@ -82,8 +82,8 @@ const validatePaymentWithIds = [
 
 // Validate bulk purchase
 const validateBulkPurchase = [
-    body('vendor').isMongoId().withMessage('Invalid vendor ID'),
     body('purchases').isArray({ min: 1 }).withMessage('At least one purchase is required'),
+    body('purchases.*.vendor').isMongoId().withMessage('Invalid vendor ID'),
     body('purchases.*.items').isArray({ min: 1 }).withMessage('At least one item is required'),
     body('purchases.*.items.*.vendorMaterial')
         .isMongoId()

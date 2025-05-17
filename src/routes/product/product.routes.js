@@ -26,6 +26,8 @@ const {
     validateProductId,
 } = require('../../validators/product_validators/productValidator');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
+const glassRouter = require('./materials/glass.routes');
+const hardwareItemRouter = require('./composite_materials/hardwareItems.routes');
 
 // Router Declaration
 const productRouter = express.Router();
@@ -41,6 +43,8 @@ productRouter.use('/surface-finishes', surfaceFinishRouter);
 // composit Materials
 productRouter.use('/edgings', edgingRouter);
 productRouter.use('/boards', boardRouter);
+productRouter.use('/glass', glassRouter);
+productRouter.use('/hardware-items', hardwareItemRouter);
 
 // color
 productRouter.use('/colors', colorRouter);
