@@ -6,7 +6,7 @@ const {
     deleteGlass,
     getAllGlass,
     getGlassById,
-} = require('../../../controller/product/materials/glass.controller');
+} = require('../../../controller/product/composite_materials/glass.controller');
 const {
     validateGlass,
     glassSearchValidation,

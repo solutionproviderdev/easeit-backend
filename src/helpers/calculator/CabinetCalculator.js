@@ -15,7 +15,7 @@ function calculateBoard1Area(components) {
 }
 
 const Board = require('../../schemas/products/composite-materials/BoardSchema');
-const Glass = require('../../schemas/products/materials/GlassSchema');
+const Glass = require('../../schemas/products/composite-materials/GlassSchema');
 
 async function calculateCabinetComponents(input) {
     const {

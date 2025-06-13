@@ -26,8 +26,9 @@ const {
     validateProductId,
 } = require('../../validators/product_validators/productValidator');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
-const glassRouter = require('./materials/glass.routes');
+
 const hardwareItemRouter = require('./composite_materials/hardwareItems.routes');
+const glassRouter = require('./composite_materials/glass.routes');
 
 // Router Declaration
 const productRouter = express.Router();
