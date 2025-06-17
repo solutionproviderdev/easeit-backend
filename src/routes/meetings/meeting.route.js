@@ -18,6 +18,7 @@ const {
     arriveMeeting,
     startMeeting,
     endMeeting,
+    getMeetingsReport,
 } = require('../../controller/meetingController');
 const timeSlotsRouter = require('./timeSlots');
 const {
@@ -81,6 +82,9 @@ meetingsRouter.patch(
 
 // Route to get all meetings with filtering options
 meetingsRouter.get('/', checkAuth, getAllMeetings);
+
+// Route to get meetings report
+meetingsRouter.get('/report', checkAuth, getMeetingsReport);
 
 // Route to get details of a specific meeting by ID
 meetingsRouter.get('/:id', checkAuth, getMeetingById);

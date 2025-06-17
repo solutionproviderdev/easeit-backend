@@ -49,6 +49,7 @@ const vendorRouter = require('./routes/inventory/vendor.routes');
 const quotationrouter = require('./routes/quotation.routes');
 const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
+const exportConversations = require('./bot/trainingData');
 
 // Initialize app
 const app = express();
@@ -224,6 +225,8 @@ reAssignOnNotSeen(io);
 findDuplicateLeads();
 
 getPerformanceBasedCRE();
+
+exportConversations();
 
 // 404 error handling
 app.use(notFoundHandler);
