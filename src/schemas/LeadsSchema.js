@@ -49,6 +49,31 @@ const commentSchema = new mongoose.Schema(
     { _id: true, timestamps: true }
 );
 
+// Define closureRequestSchema using mongoose.Schema directly
+const closureRequestSchema = new mongoose.Schema(
+    {
+        commentId: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: false, // Optional field
+        },
+        requestBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+        requestedAt: { type: Date, default: Date.now },
+        status: {
+            type: String,
+            enum: ['Pending', 'Approved', 'Declined'],
+            default: 'Pending',
+        },
+        decidedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        decidedAt: { type: Date },
+        isFollowUpClosed: { type: Boolean, default: false },
+    },
+    { _id: true }
+);
+
 // Reminder Schema
 const reminderSchema = new mongoose.Schema(
     {
@@ -62,6 +87,10 @@ const reminderSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             required: false, // Optional field
         },
+        // New field to connect closure requests with the reminder
+        closureRequests: [closureRequestSchema],
+        // New field: flag to lock follow-up when closed
+        isFollowUpClosed: { type: Boolean, default: false },
     },
     { _id: true }
 );
