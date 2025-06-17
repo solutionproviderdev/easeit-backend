@@ -49,6 +49,8 @@ const vendorRouter = require('./routes/inventory/vendor.routes');
 const quotationrouter = require('./routes/quotation.routes');
 const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
+const ProjectStagerouter = require('./routes/projectStage.routes');
+
 const exportConversations = require('./bot/trainingData');
 
 // Initialize app
@@ -170,6 +172,7 @@ app.use('/discounts', discountRouter);
 
 // seetings router
 app.use('/settings', settingsRouter);
+app.use('/project-stages', ProjectStagerouter);
 
 // Replace setInterval with node-cron
 cron.schedule('*/1 * * * * *', async () => { // Runs every second
