@@ -59,6 +59,8 @@ const meetingSchema = new mongoose.Schema(
                 'Follow-Up',
                 'Final Measurement',
                 'Handover & Review',
+                'Prospect',
+                'Quotation Sent',
             ],
 
             required: true,

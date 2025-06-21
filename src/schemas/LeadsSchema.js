@@ -158,6 +158,7 @@ const financeSchema = new mongoose.Schema({
     projectValue: Number,
     soldAmmount: Number,
     soldDate: Date, // Date of sale
+    nextPaymentDate: Date, // Date for the next payment
     totalPayment: Number, // Total amount paid
     totalDue: Number, // Total amount due
     payments: [payment],
@@ -165,106 +166,118 @@ const financeSchema = new mongoose.Schema({
 
 // Lead Schema
 const leadSchema = mongoose.Schema(
-    {
-        CID: String,
-        name: { type: String, required: true },
-        status: {
-            type: String,
-            enum: [
-                'New',
-                'No Response',
-                'Need Support',
-                'Message Rescheduled',
-                'Number Collected',
-                'Call Reschedule',
-                'Ongoing',
-                'Close',
-                'Follow Up',
-                'Meeting Fixed',
-                'Meeting Complete',
-                'Sold',
-                'Prospect',
-            ],
-            required: true,
-            default: 'unread',
-        },
-        address: addressSchema,
-        lastMsg: String,
-        meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
-        pageInfo: {
-            pageId: String,
-            pageName: String,
-            pageProfilePicture: String,
-            fbSenderID: { type: String, sparse: true },
-        },
-        source: {
-            type: String,
-            enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
-            required: true,
-        },
-        phone: [String], // Array to handle multiple phone numbers
-        comment: [commentSchema],
-        salesExqName: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-        },
-        creName: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-        },
-        projectStatus: {
-            status: {
-                type: String,
-                enum: ['Ongoing', 'Ready', 'Renovation'],
-            },
-            subStatus: {
-                type: String,
-                enum: [
-                    'Roof Casting',
-                    'Brick Wall',
-                    'Plaster',
-                    'Pudding',
-                    'Two Coat Paint',
-                    'Tiles Complete',
-                    'Final Paint Done',
-                    'Handed Over',
-                    'Staying in the Apartment',
-                    'Interior Work Complete',
-                ],
-            },
-        },
-        projectLocation: {
-            type: String,
-            enum: ['Inside', 'Outside'],
-        },
-        reminder: [reminderSchema],
-        callLogs: [callLogSchema], // Updated call log schema
-        messages: [messageSchema],
-        messagesSeen: { type: Boolean, default: false },
-        requirements: [String], // New simple array for requirements
-        botResponded: { type: Boolean, default: false },
+	{
+		CID: String,
+		name: { type: String, required: true },
+		status: {
+			type: String,
+			enum: [
+				'New',
+				'No Response',
+				'Need Support',
+				'Message Rescheduled',
+				'Number Collected',
+				'Call Reschedule',
+				'Ongoing',
+				'Close',
+				'Follow Up',
+				'Meeting Fixed',
+				'Meeting Complete',
+				'Quotation Sent',
+				'Sold',
+				'Prospect',
+				'Lost',
+				'Final Measurement',
+				'Handover & Review',
+			],
+			required: true,
+			default: 'unread',
+		},
+		address: addressSchema,
+		lastMsg: String,
+		meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
+		pageInfo: {
+			pageId: String,
+			pageName: String,
+			pageProfilePicture: String,
+			fbSenderID: { type: String, sparse: true },
+		},
+		source: {
+			type: String,
+			enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
+			required: true,
+		},
+		phone: [String], // Array to handle multiple phone numbers
+		comment: [commentSchema],
+		salesExqName: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'User',
+		},
+		creName: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'User',
+		},
+		projectStatus: {
+			status: {
+				type: String,
+				enum: ['Ongoing', 'Ready', 'Renovation'],
+			},
+			subStatus: {
+				type: String,
+				enum: [
+					'Roof Casting',
+					'Brick Wall',
+					'Plaster',
+					'Pudding',
+					'Two Coat Paint',
+					'Tiles Complete',
+					'Final Paint Done',
+					'Handed Over',
+					'Staying in the Apartment',
+					'Interior Work Complete',
+				],
+			},
+		},
+		projectLocation: {
+			type: String,
+			enum: ['Inside', 'Outside'],
+		},
+		reminder: [reminderSchema],
+		callLogs: [callLogSchema], // Updated call log schema
+		messages: [messageSchema],
+		messagesSeen: { type: Boolean, default: false },
+		requirements: [String], // New simple array for requirements
+		botResponded: { type: Boolean, default: false },
 
-        // firld to traack if the message is replied from system
-        repliedFromSystem: { type: Boolean, default: false },
+		// firld to traack if the message is replied from system
+		repliedFromSystem: { type: Boolean, default: false },
 
-        // field to track when the lead was last assigned
-        lastAssigned: { type: Date, default: Date.now },
+		// field to track when the lead was last assigned
+		lastAssigned: { type: Date, default: Date.now },
 
-        // field for product ad relations:
-        productAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ProductAd' }],
+		// field for product ad relations:
+		productAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ProductAd' }],
 
-        // new field for sales Follow Up.
-        salesFollowUp: [followUpSchema],
+		// new field for sales Follow Up.
+		salesFollowUp: [followUpSchema],
 
-        // new field for Finance
-        finance: financeSchema,
+		// new field for Finance
+		finance: financeSchema,
 
-        // new field to track auto message sent count
-        autoMessageSentCount: { type: Number, default: 0 },
-    },
-    {
-        timestamps: true,
-    }
+		attachments: [
+			{
+				fileUrl: String, // cloud storage URL or local path
+				uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+				uploadedAt: { type: Date, default: Date.now },
+			},
+		],
+
+		// new field to track auto message sent count
+		autoMessageSentCount: { type: Number, default: 0 },
+	},
+	{
+		timestamps: true,
+	}
 );
 
 // Compound and Single Field Indexes
