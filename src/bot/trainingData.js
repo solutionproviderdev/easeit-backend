@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 /* eslint-disable no-restricted-syntax */
 const fs = require('fs');
 const Lead = require('../schemas/LeadsSchema');

@@ -545,7 +545,10 @@ exports.loginUser = async (req, res) => {
 
         // Create JWT
         const payload = { userId: user._id };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+        // const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
+					expiresIn: process.env.JWT_EXPIRE,
+				});
 
         // Set cookie
         res.cookie('session_token', token, {

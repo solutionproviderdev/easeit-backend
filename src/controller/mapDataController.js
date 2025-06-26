@@ -1,3 +1,4 @@
+const Lead = require('../schemas/LeadsSchema');
 const MapData = require('../schemas/MapData');
 
 // Controller function to get all divisions
@@ -254,6 +255,107 @@ const addAreaToDistrict = async (req, res) => {
     }
 };
 
+const salesReport = async (req, res) => {
+    try {
+        const { level = 'all' } = req.query;
+
+        // Build dynamic group fields based on level
+        const groupFields = {
+            division: '$address.division',
+            status: '$status',
+        };
+
+        if (['district', 'area', 'all'].includes(level)) {
+            groupFields.district = '$address.district';
+        }
+
+        if (['area', 'all'].includes(level)) {
+            groupFields.area = '$address.area';
+        }
+
+        const pipeline = [
+            {
+                $match: {
+                    status: {
+                        $in: ['Meeting Fixed', 'Meeting Complete', 'Sold', 'Prospect'],
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: groupFields,
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        division: '$_id.division',
+                        district: '$_id.district' || null,
+                        area: '$_id.area' || null,
+                    },
+                    statusCounts: {
+                        $push: {
+                            status: '$_id.status',
+                            count: '$count',
+                        },
+                    },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    division: '$_id.division',
+                    district: '$_id.district',
+                    area: '$_id.area',
+                    data: {
+                        $arrayToObject: {
+                            $map: {
+                                input: '$statusCounts',
+                                as: 'sc',
+                                in: {
+                                    k: '$$sc.status',
+                                    v: '$$sc.count',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    label: {
+                        $concat: [
+                            '$division',
+                            {
+                                $cond: {
+                                    if: { $ifNull: ['$district', false] },
+                                    then: { $concat: [' > ', '$district'] },
+                                    else: '',
+                                },
+                            },
+                            {
+                                $cond: {
+                                    if: { $ifNull: ['$area', false] },
+                                    then: { $concat: [' > ', '$area'] },
+                                    else: '',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        ];
+
+        const report = await Lead.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, level, data: report });
+    } catch (error) {
+        console.error('Sales Report Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
     addMapData,
     getDivisions,
@@ -266,4 +368,5 @@ module.exports = {
     updateVisitCharge,
     addDistrictToDivision,
     addAreaToDistrict,
+    salesReport,
 };
