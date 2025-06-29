@@ -292,9 +292,8 @@ const updateExistingLead = async (
         // Update the lead's last message and assign the new CRE if applicable.
         lead.lastMsg = processedMessages[processedMessages.length - 1].content;
         lead.creName = newCreId;
-        lead.messagesSeen = false;
-        lead.repliedFromSystem = true;
         lead.messagesSeen = lastMessageSentFromUs;
+        lead.repliedFromSystem = true;
 
         // If a valid phone number was extracted, update the lead's phone numbers.
         if (phoneNumber?.number?.length === 14) {
