@@ -74,8 +74,8 @@ const runStartupTasks = (io) => {
     reAssignOnNotSeen(io);
     findDuplicateLeads();
     getPerformanceBasedCRE();
-    exportConversations();
-    analyzeLeadConversations();
+    // exportConversations();
+    // analyzeLeadConversations();
 };
 
 module.exports = {

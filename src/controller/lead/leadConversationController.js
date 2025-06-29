@@ -340,9 +340,6 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
     const { leadId } = req.params;
-    console.log('lead id =', leadId);
-
-    console.log(leadId);
 
     try {
         // Find the lead by ID
