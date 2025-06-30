@@ -531,7 +531,10 @@ exports.loginUser = async (req, res) => {
 
     try {
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).populate({
+            path: 'departmentId',
+            select: 'departmentName',
+        });
         if (!user) {
             return res.status(400).json({ msg: 'No user found with this Email' });
         }
@@ -557,6 +560,10 @@ exports.loginUser = async (req, res) => {
         // Remove sensitive information before sending response
         const userResponse = user.toObject();
         delete userResponse.password;
+
+        // Add department information for frontend use (routing)
+
+        // userResponse.departmentName = user.departmentId ? user.departmentId.departmentName : null;
 
         res.status(200).json({ user: userResponse, token });
     } catch (error) {

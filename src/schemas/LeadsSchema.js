@@ -264,13 +264,11 @@ const leadSchema = mongoose.Schema(
 		// new field for Finance
 		finance: financeSchema,
 
-		attachments: [
+		attachments: 
 			{
-				fileUrl: String, // cloud storage URL or local path
-				uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-				uploadedAt: { type: Date, default: Date.now },
+				type: [String],
 			},
-		],
+		
 
 		// new field to track auto message sent count
 		autoMessageSentCount: { type: Number, default: 0 },

@@ -615,7 +615,15 @@ const updateLeadStatusToQuotationSent = async (req, res) => {
 const updateLeadStatusToFinalMeasurement = async (req, res) => {
     try {
         const { leadId, meetingId } = req.params;
-        const { paymentAmount, paymentMethod, paymentNote, paymentDate, comment, nextPaymentDate, typeno } =            req.body;
+        const {
+            paymentAmount,
+            paymentMethod,
+            paymentNote,
+            paymentDate,
+            comment,
+            nextPaymentDate,
+            typeno,
+        } = req.body;
 
         // 1. Validate required payment fields
         if (
@@ -711,6 +719,98 @@ const updateLeadStatusToFinalMeasurement = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+const updateLeadStatusToHandoverAndReview = async (req, res) => {
+    try {
+        const { leadId, meetingId } = req.params;
+        const {
+            paymentAmount,
+            paymentMethod,
+            paymentNote,
+            paymentDate,
+            comment,
+            attachments, // Expecting an array of fileUrl strings
+        } = req.body;
+
+        // 1. Validate required payment fields
+        if (paymentAmount === undefined || !paymentMethod || !paymentDate) {
+            return res
+                .status(400)
+                .json({ message: 'Payment amount, method, and date are required.' });
+        }
+
+        // 2. Find the lead by ID
+        const lead = await Lead.findById(leadId);
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
+
+        // 3. Find the meeting by ID
+        const meeting = await Meeting.findById(meetingId);
+        if (!meeting) {
+            return res.status(404).json({ message: 'Meeting not found' });
+        }
+
+        // 4. Update meeting status to "Handover & Review"
+        meeting.status = 'Handover & Review';
+        await meeting.save();
+
+        // 5. Update lead status to "Handover & Review"
+        lead.status = 'Handover & Review';
+
+        // 6. Add payment to finance
+        if (!lead.finance) {
+            lead.finance = { payments: [] };
+        }
+        const newPayment = {
+            amount: paymentAmount,
+            paymentMethod,
+            paymentDate: new Date(paymentDate),
+            paymentStatus: 'Paid',
+            paymentNote: paymentNote || '',
+        };
+        lead.finance.payments.push(newPayment);
+
+        // Recalculate totalPayment
+        lead.finance.totalPayment = lead.finance.payments
+            .filter((p) => p.paymentStatus === 'Paid')
+            .reduce((sum, p) => sum + p.amount, 0);
+
+        // Recalculate totalDue
+        if (lead.finance.soldAmmount !== undefined && lead.finance.totalPayment !== undefined) {
+            lead.finance.totalDue = lead.finance.soldAmmount - lead.finance.totalPayment;
+        }
+
+        // 7. Add the comment if provided
+        if (comment) {
+            await addCommentToLead(leadId, { comment, images: [] }, req.user, req.io);
+        }
+
+        // 8. Add attachments if provided (array of fileUrl strings)
+        if (attachments && Array.isArray(attachments)) {
+            attachments.forEach((fileUrl) => {
+                if (typeof fileUrl === 'string' && fileUrl.trim() !== '') {
+                    lead.attachments.push(fileUrl);
+                }
+            });
+        }
+
+        // 9. Save the updated lead
+        await lead.save();
+
+        return res.status(200).json({
+            message:
+                'Lead and meeting status updated to Handover & Review, payment and attachments added.',
+            lead,
+            meeting,
+        });
+    } catch (error) {
+        console.error('Error updating lead status to Handover & Review:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 module.exports.updateLeadStatusToProspect = updateLeadStatusToProspect;
 module.exports.updateLeadStatusToQuotationSent = updateLeadStatusToQuotationSent;
 module.exports.updateLeadStatusToFinalMeasurement = updateLeadStatusToFinalMeasurement;
+module.exports.updateLeadStatusToHandoverAndReview = updateLeadStatusToHandoverAndReview;
