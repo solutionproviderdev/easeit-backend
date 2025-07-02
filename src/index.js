@@ -37,6 +37,7 @@ const quotationrouter = require('./routes/quotation.routes');
 const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
+const { timingMiddleware } = require('./config/winston');
 
 // Initialize app
 const app = express();
@@ -53,6 +54,9 @@ mongoose
 	.connect(process.env.MONGO_CONNECTION_STRING, {})
 	.then(() => console.log('🍀 Database connection successful'))
 	.catch((err) => console.log(err, 'Database connection Error'));
+
+// Set up logging for other parts of the app
+app.use(timingMiddleware); // Add this line to use the middleware
 
 // request process
 app.use(express.json());
