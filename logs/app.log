@@ -1,0 +1,15 @@
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:08:06.586Z"}
+{"level":"info","message":"Request made to /users/login from 127.0.0.1","timestamp":"2025-07-02T19:09:30.814Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:13:01.345Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:13:20.932Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:13:37.740Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:14:00.408Z"}
+{"level":"info","message":"Request to /users/login took 110ms","timestamp":"2025-07-02T19:14:13.044Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:17:58.360Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:18:07.904Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:18:52.021Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:18:58.610Z"}
+{"level":"info","message":"[2025-07-03 01:19:05] Request to /users/login took 106ms","timestamp":"2025-07-02T19:19:05.229Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:21:23.681Z"}
+{"level":"info","message":"[2025-07-03 01:21:33] Request to /users/login took 108ms","timestamp":"2025-07-02T19:21:33.384Z"}
+{"level":"info","message":"Logger is initialized","timestamp":"2025-07-02T19:22:33.778Z"}
