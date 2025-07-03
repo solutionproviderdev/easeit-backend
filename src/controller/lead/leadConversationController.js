@@ -435,7 +435,7 @@ exports.sendMetaMessage = async (req, res) => {
                 `https://graph.facebook.com/v17.0/${pageId}/messages`,
                 messagePayload
             );
-
+console.log('fb send message here !', fbResponse);
             if (fbResponse.data && fbResponse.data.message_id) {
                 const newMessage = this.createNewMessageObject(
                     fbResponse.data.message_id,
