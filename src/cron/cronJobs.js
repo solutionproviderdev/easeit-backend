@@ -14,6 +14,7 @@ const { reschedulePendingReminders } = require('../ongoing/reschedulePendingRemi
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const exportConversations = require('../bot/trainingData');
 const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
+const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
 
 const initializeCronJobs = (io) => {
     // Every second cron job
@@ -76,6 +77,7 @@ const runStartupTasks = (io) => {
     getPerformanceBasedCRE();
     // exportConversations();
     // analyzeLeadConversations();
+    rewriteUnadssigneLead();
 };
 
 module.exports = {
