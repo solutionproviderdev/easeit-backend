@@ -52,6 +52,7 @@ const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
 
 const exportConversations = require('./bot/trainingData');
+const exportConversationsToJsonl = require('./bot/trainingData');
 
 // Initialize app
 const app = express();
@@ -229,7 +230,8 @@ findDuplicateLeads();
 
 getPerformanceBasedCRE();
 
-exportConversations();
+// exportConversations();
+exportConversationsToJsonl()
 
 // 404 error handling
 app.use(notFoundHandler);
