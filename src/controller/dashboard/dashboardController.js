@@ -7,6 +7,9 @@ const Lead = require('../../schemas/LeadsSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const getCREPerformance = require('../../helpers/getCREPerformance');
 const { formatDateRange } = require('../../helpers/firmatDateRange');
+const {
+    getDateAndWeekdayWiseMeetingBarchartData,
+} = require('../../helpers/dateAndWeekdayWiseMeetingBarchartData');
 
 const getAllCREsPerformanceData = async (req, res) => {
     try {
@@ -298,6 +301,21 @@ const getMeetingsData = async (req, res) => {
     }
 };
 
+// Get date and weekday wise meeting barchart data
+const getMeetingBarchartData = async (req, res) => {
+    try {
+        const { dateRange } = req.query;
+
+        // Use default date range if not provided
+        const result = await getDateAndWeekdayWiseMeetingBarchartData(dateRange);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching meeting barchart data:', error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+};
+
 // Get notifications
 const getNotifications = async (req, res) => {
     try {
@@ -536,9 +554,10 @@ const getWeeklyLeadData = async (req, res) => {
     }
 };
 module.exports = {
-    getNotifications,
-    getMeetingsData,
-    getDateWiseLeadData,
     getAllCREsPerformanceData,
     getCREPerformanceDataById,
+    getMeetingsData,
+    getNotifications,
+    getDateWiseLeadData,
+    getMeetingBarchartData,
 };
