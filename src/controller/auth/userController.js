@@ -527,7 +527,6 @@ exports.deleteUser = async (req, res) => {
 // Login User
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
-    console.log('email,password,email,password-->', email, password);
 
     try {
         // Check if user exists
