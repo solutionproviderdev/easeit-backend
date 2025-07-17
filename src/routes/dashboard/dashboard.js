@@ -7,6 +7,7 @@ const {
     getMeetingsData,
     getNotifications,
     getDateWiseLeadData,
+    getMeetingBarchartData,
 } = require('../../controller/dashboard/dashboardController');
 
 // Router declaration
@@ -26,5 +27,8 @@ dashBoardRouter.get('/notifications', checkAuth, getNotifications);
 
 // Date wise lead data
 dashBoardRouter.get('/date-wise-lead-data', checkAuth, getDateWiseLeadData);
+
+// Date and weekday wise meeting barchart data
+dashBoardRouter.get('/meeting-barchart', checkAuth, getMeetingBarchartData);
 
 module.exports = dashBoardRouter;

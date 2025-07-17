@@ -12,6 +12,7 @@ const {
     searchLocation,
     addDistrictToDivision,
     addAreaToDistrict,
+    salesReport,
 } = require('../controller/mapDataController');
 const { checkAuth } = require('../middlewares/auth/checkAuth');
 
@@ -40,6 +41,9 @@ mapDataRouter.post('/:districtId/areas', checkAuth, addAreaToDistrict);
 
 // Update the visit charge for an area
 mapDataRouter.put('/update-visit-charge/:areaId', checkAuth, updateVisitCharge);
+
+// report stats
+mapDataRouter.get('/report/sale', salesReport);
 
 mapDataRouter.post('/', checkLogin, addMapData);
 mapDataRouter.put('/:id', checkLogin, updateMapData);
