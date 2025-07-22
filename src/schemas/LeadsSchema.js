@@ -218,6 +218,9 @@ const leadSchema = mongoose.Schema(
         // firld to traack if the message is replied from system
         repliedFromSystem: { type: Boolean, default: false },
 
+        // is ai bot replay on
+        aiBotReply: { type: Boolean, default: false },
+
         // field to track when the lead was last assigned
         lastAssigned: { type: Date, default: Date.now },
 

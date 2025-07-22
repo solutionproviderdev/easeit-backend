@@ -77,7 +77,7 @@ const runStartupTasks = (io) => {
     getPerformanceBasedCRE();
     // exportConversations();
     // analyzeLeadConversations();
-    rewriteUnadssigneLead();
+    // rewriteUnadssigneLead();
 };
 
 module.exports = {

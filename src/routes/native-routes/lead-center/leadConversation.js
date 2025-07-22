@@ -6,6 +6,7 @@ const {
     markMessagesAsSeen,
     sendMetaMessage,
     searchLeads,
+    toggleAIreplay,
 } = require('../../../controller/lead/leadConversationController');
 const { validateSendMetaMessage } = require('../../../validators/leadConversationValidators');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
@@ -26,5 +27,8 @@ leadConversationRouter.post('/:leadId/messages', validateSendMetaMessage, sendMe
 
 // New route for marking messages as seen
 leadConversationRouter.put('/:id/mark-messages-seen', markMessagesAsSeen);
+
+// New route for toggle AI Bot Reply
+leadConversationRouter.put('/:id/toggle-ai-bot-reply', toggleAIreplay);
 
 module.exports = leadConversationRouter;

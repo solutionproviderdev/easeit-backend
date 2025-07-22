@@ -385,6 +385,31 @@ exports.markMessagesAsSeen = async (req, res) => {
     }
 };
 
+exports.toggleAIreplay = async (req, res) => {
+    const { id } = req.params; // Lead ID
+    const { aiBotReply } = req.body;
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Update the messagesSeen field
+        lead.aiBotReply = aiBotReply;
+
+        // Save the updated lead
+        await lead.save();
+
+        res.status(200).json({ msg: 'AI Bot Reply updated' });
+    } catch (error) {
+        console.error(`Error updating AI Bot Reply for lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
 exports.sendMetaMessage = async (req, res) => {
     const { leadId } = req.params;
     const { messageType, content } = req.body;
@@ -435,7 +460,7 @@ exports.sendMetaMessage = async (req, res) => {
                 `https://graph.facebook.com/v17.0/${pageId}/messages`,
                 messagePayload
             );
-console.log('fb send message here !', fbResponse);
+            console.log('fb send message here !', fbResponse);
             if (fbResponse.data && fbResponse.data.message_id) {
                 const newMessage = this.createNewMessageObject(
                     fbResponse.data.message_id,
