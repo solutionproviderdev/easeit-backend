@@ -1076,7 +1076,6 @@ const nameBasedLeadAssign = async () => {
         if (bulkOperations.length > 0) {
             await Lead.bulkWrite(bulkOperations);
         }
-        console.log('name based lead assign Completed with', updatedLeads, 'leads updated');
     } catch (error) {
         console.error('Error in nameBasedLeadAssign:', error.message);
     }
@@ -1349,8 +1348,6 @@ const findDuplicateLeads = async () => {
             const result = await Lead.deleteMany({ _id: { $in: idsToDelete } });
             totalDeleted += result.deletedCount || 0;
         }
-
-        console.log(`Deleted ${totalDeleted} duplicate leads.`);
     } catch (error) {
         console.error('Error finding duplicate leads:', error);
     }
@@ -1382,8 +1379,6 @@ const assignToRightSalesExecutive = async () => {
                 // Continue with the next meeting
             }
         }
-
-        console.log(`Total leads updated: ${totalUpdatedLeads}`);
     } catch (error) {
         console.error('Error assigning leads to sales executive:', error);
     }

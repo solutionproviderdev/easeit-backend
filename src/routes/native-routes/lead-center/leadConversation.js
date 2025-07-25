@@ -7,6 +7,7 @@ const {
     sendMetaMessage,
     searchLeads,
     toggleAIreplay,
+    getAllLeeadConversionOfFolowUp,
 } = require('../../../controller/lead/leadConversationController');
 const { validateSendMetaMessage } = require('../../../validators/leadConversationValidators');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
@@ -15,6 +16,9 @@ const leadConversationRouter = express.Router();
 
 // Existing endpoint to get all lead conversations
 leadConversationRouter.get('/', checkAuth, getAllLeadConversationUpdated);
+
+// New endpoint to get all lead conversations Followup
+leadConversationRouter.get('/followup', checkAuth, getAllLeeadConversionOfFolowUp);
 
 // search endpoint for name and phone number
 leadConversationRouter.get('/search/:pharams', searchLeads);
