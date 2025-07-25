@@ -527,11 +527,13 @@ exports.deleteUser = async (req, res) => {
 // Login User
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
-    console.log('email,password,email,password-->', email, password);
 
     try {
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).populate({
+            path: 'departmentId',
+            select: 'departmentName',
+        });
         if (!user) {
             return res.status(400).json({ msg: 'No user found with this Email' });
         }
@@ -547,8 +549,8 @@ exports.loginUser = async (req, res) => {
         const payload = { userId: user._id };
         // const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
         const token = jwt.sign(payload, process.env.JWT_SECRET, {
-					expiresIn: process.env.JWT_EXPIRE,
-				});
+            expiresIn: process.env.JWT_EXPIRE,
+        });
 
         // Set cookie
         res.cookie('session_token', token, {

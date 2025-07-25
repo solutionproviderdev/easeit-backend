@@ -14,9 +14,9 @@ const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../helpers/isAutomatedMessage');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
-const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
 const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
 const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
+const { SholutionBot } = require('../SolutionBot/SolutionBot');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -269,11 +269,18 @@ const updateExistingLead = async (
     let newCreId = lead.creName;
     // let isNewMessagesFromUs = false;
 
+    let newMessage;
+
     // Loop through each processed message.
     for (const message of processedMessages) {
         // If the message is not already in the lead's messages array.
         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
             lead.messages.push(message);
+            newMessage = message.content;
+
+            if (lead.aiBotReply && !lastMessageSentFromUs) {
+                SholutionBot(lead._id, io, newMessage);
+            }
             // // Determine if the message is from a user (not from the Facebook page).
             // Set messagesSeen based on whether the message is from us.
             // Check if the message content includes any known CRE names to update assignment.

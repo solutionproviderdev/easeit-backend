@@ -24,7 +24,7 @@ const reAssignOnNotReplied = async (io) => {
 
         // If reassign on not replied is disabled, do nothing.
         if (!reAssignOnReplied) {
-            console.log('Reassign on not replied is disabled');
+            // console.log('Reassign on not replied is disabled');
             console.timeEnd('reAssignOnNotReplied');
             return;
         }
@@ -68,7 +68,7 @@ const reAssignOnNotReplied = async (io) => {
             lastAssigned: { $lte: threshold },
         });
 
-        console.log(`Found ${leads.length} leads for reassignment.`);
+        // console.log(`Found ${leads.length} leads for reassignment.`);
 
         let reAssignedCount = 0;
 
@@ -120,14 +120,14 @@ const reAssignOnNotReplied = async (io) => {
                     // Emit socket events for the new assignment.
                     emitSocketEventsForNewMessage(io, savedLead, savedLead.pageInfo);
 
-                    console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
+                    // console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
                 }
             } catch (leadError) {
                 console.error(`Error processing lead ${lead._id}:`, leadError.message);
                 continue;
             }
         }
-        console.log(`Total leads reassigned: ${reAssignedCount}`);
+        // console.log(`Total leads reassigned: ${reAssignedCount}`);
     } catch (error) {
         console.error('Error in reAssignOnNotReplied:', error.message);
         throw error;

@@ -14,6 +14,7 @@ const { reschedulePendingReminders } = require('../ongoing/reschedulePendingRemi
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const exportConversations = require('../bot/trainingData');
 const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
+const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
 
 const initializeCronJobs = (io) => {
     // Every second cron job
@@ -54,7 +55,6 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotReplied(io);
                 await reAssignOnNotSeen(io);
                 await sendAutoMessage(io);
-                console.log('Re-Assign executed successfully.');
             } catch (error) {
                 console.error('Error in reAssignOnNotReplied cron job:', error);
             }
@@ -76,6 +76,7 @@ const runStartupTasks = (io) => {
     getPerformanceBasedCRE();
     // exportConversations();
     // analyzeLeadConversations();
+    // rewriteUnadssigneLead();
 };
 
 module.exports = {

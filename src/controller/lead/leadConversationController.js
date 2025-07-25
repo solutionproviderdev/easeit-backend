@@ -69,107 +69,6 @@ exports.emitNewMessage = (req, leadId, newMessage) => {
     req.io.emit(`fbMessage${leadId}`, newMessage);
 };
 
-exports.getAllLeadConversations = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 10;
-        const skip = (page - 1) * limit;
-
-        const leadsWithLastMessage = await Lead.aggregate([
-            {
-                $addFields: {
-                    lastMessage: { $last: '$messages.content' },
-                    lastMessageTime: { $last: '$messages.date' },
-                    sentByMe: { $last: '$messages.sentByMe' },
-                    status: '$status',
-                    pageInfo: {
-                        pageId: '$pageInfo.pageId',
-                        pageName: '$pageInfo.pageName',
-                        pageProfilePicture: '$pageInfo.pageProfilePicture',
-                    },
-                    messagesSeen: '$messagesSeen',
-                },
-            },
-            {
-                $project: {
-                    name: 1,
-                    lastMessage: 1,
-                    lastMessageTime: 1,
-                    sentByMe: 1,
-                    createdAt: 1,
-                    status: 1,
-                    pageInfo: 1, // Include full pageInfo object
-                    creName: 1,
-                    messagesSeen: 1,
-                    _id: 1,
-                },
-            },
-        ])
-            .sort({ lastMessageTime: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalLeads = await Lead.countDocuments();
-
-        // Extract unique statuses
-        const uniqueStatuses = [...new Set(leadsWithLastMessage.map((lead) => lead.status))];
-        // const uniqueCRENAME = [...new Set(leadsWithLastMessage.map((lead) => lead.creName))];
-
-        // Extract unique pageInfo objects
-        const uniquePagesMap = new Map();
-        leadsWithLastMessage.forEach((lead) => {
-            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
-            if (!uniquePagesMap.has(pageId)) {
-                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
-            }
-        });
-        const uniquePages = Array.from(uniquePagesMap.values());
-
-        // Extract unique creNames
-        const uniqueCRENames = [];
-        const creNamesSet = new Set();
-
-        leadsWithLastMessage.forEach((lead) => {
-            const creNameStr = lead?.creName?.toString(); // Convert ObjectId to string
-            if (!creNamesSet.has(creNameStr)) {
-                creNamesSet.add(creNameStr);
-                uniqueCRENames.push(lead.creName); // Push original ObjectId to the result
-            }
-        });
-
-        // Respond with paginated leads and the conversation objects formatted as required
-        res.status(200).json({
-            totalLeads,
-            totalPages: Math.ceil(totalLeads / limit),
-            currentPage: page,
-            filters: {
-                statuses: uniqueStatuses,
-                pages: uniquePages,
-                creNames: uniqueCRENames, // Unique CRE names
-            },
-            leads: leadsWithLastMessage.map((lead) => ({
-                name: lead.name,
-                lastMessage: lead.lastMessage,
-                lastMessageTime: lead.lastMessageTime,
-                sentByMe: lead.sentByMe,
-                createdAt: lead.createdAt,
-                creName: lead.creName,
-                status: lead.status,
-                _id: lead._id,
-                messagesSeen: lead.messagesSeen,
-                pageInfo: {
-                    pageId: lead.pageInfo.pageId,
-                    pageName: lead.pageInfo.pageName,
-                    pageProfilePicture: lead.pageInfo.pageProfilePicture,
-                },
-            })),
-        });
-    } catch (error) {
-        console.error('Error getting leads with last message:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-};
-
 exports.getAllLeadConversationUpdated = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
@@ -306,33 +205,139 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                 pages: uniquePages,
                 creNames: uniqueCRENames,
             },
-            leads: leadsPopulated.map((lead) => ({
-                name: lead.name,
-                lastMessage: lead.lastMessage,
-                lastMessageTime: lead.lastMessageTime,
-                lastCustomerMessageTime: lead.lastCustomerMessageTime, // new field
-                sentByMe: lead.sentByMe,
-                createdAt: lead.createdAt,
-                creName: lead.creName
-                    ? {
-                          _id: lead.creName._id,
-                          name: lead.creName.nameAsPerNID,
-                          nickname: lead.creName.nickname,
-                          profilePicture: lead.creName.profilePicture,
-                      }
-                    : null,
-                status: lead.status,
-                _id: lead._id,
-                messagesSeen: lead.messagesSeen,
-                pageInfo: {
-                    pageId: lead.pageInfo.pageId,
-                    pageName: lead.pageInfo.pageName,
-                    pageProfilePicture: lead.pageInfo.pageProfilePicture,
-                },
-            })),
+            leads: leadsPopulated,
         });
     } catch (error) {
         console.error('Error getting leads with last message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+        const { creId } = req.query;
+        const { _id: userId, roleId: userRoleId } = req.user;
+
+        /* ---------- build match ---------- */
+        const matchConditions = {
+            source: 'Facebook',
+            'reminder.status': { $in: ['Pending', 'Missed'] },
+            'reminder.time': { $lte: new Date() },
+        };
+
+        if (creId) matchConditions.creName = new mongoose.Types.ObjectId(creId);
+
+        const creDept = await Department.findOne({ departmentName: 'CRE' });
+        const creRoleId = creDept?.roles.find((r) => r.roleName === 'CRE')?._id;
+        const isCRE = userRoleId?.toString() === creRoleId?.toString();
+        if (isCRE) matchConditions.creName = userId;
+
+        /* ---------- aggregation ---------- */
+        const leads = await Lead.aggregate([
+            { $match: matchConditions },
+            /* keep only pending/missed reminders till now */
+            {
+                $addFields: {
+                    activeReminders: {
+                        $filter: {
+                            input: '$reminder',
+                            as: 'r',
+                            cond: {
+                                $and: [
+                                    { $in: ['$$r.status', ['Pending', 'Missed']] },
+                                    { $lte: ['$$r.time', new Date()] },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+            /* latest reminder fields */
+            {
+                $addFields: {
+                    lastReminderTime: { $max: '$activeReminders.time' },
+                    lastReminderStatus: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: '$activeReminders',
+                                    cond: {
+                                        $eq: ['$$this.time', { $max: '$activeReminders.time' }],
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    lastReminderStatus: '$lastReminderStatus.status',
+                    lastReminderComment: '$lastReminderStatus.commentId',
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMsg: 1,
+                    lastMessageTime: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    activeReminders: 1,
+                    lastReminderTime: 1,
+                    lastReminderStatus: 1,
+                    lastReminderComment: 1,
+                },
+            },
+            { $sort: { lastReminderTime: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            /* populate CRE */
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                    pipeline: [{ $project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 } }],
+                },
+            },
+            { $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
+        ]);
+
+        /* ---------- counts & filters ---------- */
+        const totalLeads = await Lead.countDocuments(matchConditions);
+
+        const statuses = [...new Set(leads.map((l) => l.status))];
+        const pagesMap = new Map();
+        const creMap = new Map();
+
+        leads.forEach((l) => {
+            if (l.pageInfo) pagesMap.set(l.pageInfo.pageId, l.pageInfo);
+            if (l.creName) creMap.set(l.creName._id.toString(), l.creName);
+        });
+
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses,
+                pages: Array.from(pagesMap.values()),
+                creNames: Array.from(creMap.values()),
+            },
+            leads,
+        });
+    } catch (error) {
+        console.error('Error getting reminder follow-up leads:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -381,6 +386,31 @@ exports.markMessagesAsSeen = async (req, res) => {
         res.status(200).json({ msg: 'Messages marked as seen' });
     } catch (error) {
         console.error(`Error marking messages as seen for lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.toggleAIreplay = async (req, res) => {
+    const { id } = req.params; // Lead ID
+    const { aiBotReply } = req.body;
+
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
+
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Update the messagesSeen field
+        lead.aiBotReply = aiBotReply;
+
+        // Save the updated lead
+        await lead.save();
+
+        res.status(200).json({ msg: 'AI Bot Reply updated' });
+    } catch (error) {
+        console.error(`Error updating AI Bot Reply for lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -435,7 +465,7 @@ exports.sendMetaMessage = async (req, res) => {
                 `https://graph.facebook.com/v17.0/${pageId}/messages`,
                 messagePayload
             );
-console.log('fb send message here !', fbResponse);
+            console.log('fb send message here !', fbResponse);
             if (fbResponse.data && fbResponse.data.message_id) {
                 const newMessage = this.createNewMessageObject(
                     fbResponse.data.message_id,

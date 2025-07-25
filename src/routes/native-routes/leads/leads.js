@@ -16,6 +16,7 @@ const {
     addCallLog,
     addPhoneNumberToLead,
     getAllLeadsWithReminders,
+    batchAssignLeadToCRE,
 } = require('../../../controller/lead/leadController');
 const {
     validateLeadCreation,
@@ -89,5 +90,8 @@ leadRouter.post('/:id/call-logs', validateCallLog, addCallLog);
 
 // New route for assigned cre [Need Update]
 leadRouter.put('/:id/assign-cre', validateCreAssignment, assignCreToLead);
+
+// batch Assign lead to a CRE
+leadRouter.put('/assign-cre/batch', batchAssignLeadToCRE);
 
 module.exports = leadRouter;

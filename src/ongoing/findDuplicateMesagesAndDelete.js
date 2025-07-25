@@ -45,7 +45,7 @@ const findDuplicateMessagesAndDelete = async () => {
             }
         }
 
-        console.log(`Total duplicate messages removed: ${totalDuplicatesRemoved}`);
+        // console.log(`Total duplicate messages removed: ${totalDuplicatesRemoved}`);
         return { success: true, totalDuplicatesRemoved };
     } catch (error) {
         console.error('Error removing duplicate messages:', error);

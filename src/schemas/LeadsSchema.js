@@ -147,6 +147,7 @@ const leadSchema = mongoose.Schema(
                 'Need Support',
                 'Message Rescheduled',
                 'Number Collected',
+                'Number Provided',
                 'Call Reschedule',
                 'Ongoing',
                 'Close',
@@ -217,6 +218,13 @@ const leadSchema = mongoose.Schema(
 
         // firld to traack if the message is replied from system
         repliedFromSystem: { type: Boolean, default: false },
+
+        // is ai bot replay on
+        aiBotReply: { type: Boolean, default: false },
+        aiBotConfig: {
+            assistantId: String,
+            threadId: String,
+        },
 
         // field to track when the lead was last assigned
         lastAssigned: { type: Date, default: Date.now },
