@@ -164,8 +164,8 @@ app.use('/settings', settingsRouter);
 app.use('/project-stages', ProjectStagerouter);
 
 // Replace them with these two lines:
-// initializeCronJobs(io);
-// runStartupTasks(io);
+initializeCronJobs(io);
+runStartupTasks(io);
 
 // 404 error handling
 app.use(notFoundHandler);
