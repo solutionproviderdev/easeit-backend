@@ -92,6 +92,6 @@ leadRouter.post('/:id/call-logs', validateCallLog, addCallLog);
 leadRouter.put('/:id/assign-cre', validateCreAssignment, assignCreToLead);
 
 // batch Assign lead to a CRE
-leadRouter.put('/assign-cre/batch', validateCreAssignment, batchAssignLeadToCRE);
+leadRouter.put('/assign-cre/batch', batchAssignLeadToCRE);
 
 module.exports = leadRouter;
