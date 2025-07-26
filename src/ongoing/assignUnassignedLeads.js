@@ -41,7 +41,6 @@ const assignUnassignedLeads = async (io) => {
         ]);
 
         if (invalidLeads.length === 0) {
-            console.log('No unassigned or invalid leads found.');
             return;
         }
 
@@ -74,14 +73,14 @@ const assignUnassignedLeads = async (io) => {
                     continue;
                 }
 
-                console.log(`Assigned lead ${lead._id} to CRE ${creId} (${creInfo.nameAsPerNID}).`);
+                // console.log(`Assigned lead ${lead._id} to CRE ${creId} (${creInfo.nameAsPerNID}).`);
 
                 // Fetch the updated lead
                 const updatedLead = await Lead.findById(lead._id)
                     .populate('creName', 'nameAsPerNID profilePicture')
                     .lean();
 
-                console.log('CRE', updatedLead.creName);
+                // console.log('CRE', updatedLead.creName);
 
                 // Emit a socket event for the assigned lead
                 if (updatedLead) {
@@ -114,7 +113,7 @@ const assignUnassignedLeads = async (io) => {
         // Step 3: Perform bulk update to improve efficiency
         if (leadsToUpdate.length > 0) {
             await Lead.bulkWrite(leadsToUpdate);
-            console.log(`Updated ${leadsToUpdate.length} leads.`);
+            // console.log(`Updated ${leadsToUpdate.length} leads.`);
         }
     } catch (error) {
         console.error('Error assigning unassigned or invalid leads:', error);

@@ -10,6 +10,7 @@ const { formatDateRange } = require('../../helpers/firmatDateRange');
 const {
     getDateAndWeekdayWiseMeetingBarchartData,
 } = require('../../helpers/dateAndWeekdayWiseMeetingBarchartData');
+const getCREFollowUpPerformance = require('../../helpers/calculateFollowUpPerformance');
 
 const getAllCREsPerformanceData = async (req, res) => {
     try {
@@ -229,7 +230,7 @@ const getCREPerformanceDataById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-// data
+
 // Controller function to get monthly/weekly meetings
 const getMeetingsData = async (req, res) => {
     try {
@@ -278,8 +279,8 @@ const getMeetingsData = async (req, res) => {
         meetings.forEach((meeting) => {
             const dayLabel =
                 timeLength === 'week'
-                    ? moment(meeting.date).format('ddd') // Day of the week (e.g., "Mon")
-                    : moment(meeting.date).format('D'); // Day of the month as a number
+                    ? moment(meeting.date).format('ddd') // July of the week (e.g., "Mon")
+                    : moment(meeting.date).format('D'); // July of the month as a number
 
             groupedMeetings[dayLabel] += 1;
         });
@@ -304,12 +305,44 @@ const getMeetingsData = async (req, res) => {
 // Get date and weekday wise meeting barchart data
 const getMeetingBarchartData = async (req, res) => {
     try {
-        const { dateRange } = req.query;
+        const { startDate, endDate } = req.query;
+        const start = moment(startDate);
+        const end = moment(endDate);
 
-        // Use default date range if not provided
-        const result = await getDateAndWeekdayWiseMeetingBarchartData(dateRange);
+        // Query to find meetings within the date range
+        const meetings = await Meeting.find({
+            date: { $gte: start, $lte: end },
+        }).sort({ date: 1 }); // Sort by date
 
-        res.status(200).json(result);
+        // Initialize chart data structure
+        const chartData = Array.from({ length: end.diff(start, 'days') + 1 }, () => ({
+            scheduled: 0,
+            completed: 0,
+        }));
+
+        console.log('meetings', meetings.length);
+
+        // Populate chart data
+        meetings.forEach((meeting) => {
+            const date = moment(meeting.date);
+            const dayIndex = date.diff(start, 'days');
+            chartData[dayIndex] = {
+                scheduled: chartData[dayIndex].scheduled + 1,
+                completed: chartData[dayIndex].completed + (meeting.status === 'Complete' ? 1 : 0),
+            };
+        });
+
+        // Format the data to match the expected output
+        const formattedData = chartData.map((dayData, index) => {
+            const date = start.clone().add(index, 'days');
+            return {
+                name: date.format('MMMM d'),
+                scheduled: dayData.scheduled,
+                completed: dayData.completed,
+            };
+        });
+
+        res.status(200).json(formattedData);
     } catch (error) {
         console.error('Error fetching meeting barchart data:', error);
         res.status(500).json({ message: 'Internal Server Error', error: error.message });
@@ -553,6 +586,390 @@ const getWeeklyLeadData = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
+const getLeadOverview = async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const { start, end } = formatDateRange(startDate, endDate);
+
+        const creID = req.user._id.toString();
+
+        // get total Lead count
+        const totalLeads = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            creName: creID,
+        });
+
+        // get lead count that has phone number in the phone array
+        const leadsWithPhone = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            phone: { $ne: [] },
+            creName: creID,
+        });
+
+        // get all the count that has status "Number Provided"
+        const leadsWithNumberProvided = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Number Provided',
+            creName: creID,
+        });
+
+        // get lead count that has no phone number in the phone array
+        const leadsWithoutPhone = totalLeads - leadsWithPhone;
+
+        // get lead count with "No Response" status
+        const leadsNoResponse = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'No Response',
+            creName: creID,
+        });
+
+        // get lead count with "Call Reschedule" status
+        const leadsCallReschedule = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Call Reschedule',
+            creName: creID,
+        });
+
+        // get lead count with "Meeting Set" status
+        const leadsMeetingSet = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Meeting Set', 'Meeting Complete'],
+            creName: creID,
+        });
+
+        // get lead count with "Meeting Complete" status
+        const leadsMeetingComplete = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Meeting Complete', 'Sold'],
+            creName: creID,
+        });
+
+        // get lead count with "Meeting Canceled" status
+        const leadsMeetingCanceled = leadsMeetingSet - leadsMeetingComplete;
+
+        // get lead count with "Sold" status
+        const leadsSold = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Sold',
+            creName: creID,
+        });
+
+        // get lead count with "Close" status
+        const leadsClose = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Close',
+            creName: creID,
+        });
+
+        const finalResponse = [
+            {
+                name: 'Total Assigned',
+                value: totalLeads,
+            },
+            {
+                name: 'Number Collect',
+                value: leadsWithPhone,
+            },
+            {
+                name: 'Number Collection Failed',
+                value: leadsWithoutPhone,
+            },
+            {
+                name: 'Number Provided',
+                value: leadsWithNumberProvided,
+            },
+            {
+                name: 'No Response',
+                value: leadsNoResponse,
+            },
+            {
+                name: 'Call Reschedule',
+                value: leadsCallReschedule,
+            },
+            {
+                name: 'Meeting Set',
+                value: leadsMeetingSet,
+            },
+            {
+                name: 'Meeting Complete',
+                value: leadsMeetingComplete,
+            },
+            {
+                name: 'Meeting Canceled',
+                value: leadsMeetingCanceled,
+            },
+            {
+                name: 'Sold',
+                value: leadsSold,
+            },
+            {
+                name: 'Close',
+                value: leadsClose,
+            },
+        ];
+
+        res.status(200).json(finalResponse);
+    } catch (error) {
+        console.error('Error fetching lead overview:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const getFollowUpStats = async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const { start, end } = formatDateRange(startDate, endDate);
+
+        const creID = req.user._id.toString();
+
+        // get cre followUp performance
+        const creFollowUpPerformance = await getCREFollowUpPerformance(creID, start, end);
+
+        // get lead count with status "Message Rescheduled"
+        const leadsMessageRescheduledCount = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Message Rescheduled',
+            creName: creID,
+        });
+
+        // get lead count with status "Call Rescheduled"
+        const leadsCallRescheduledCount = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Call Reschedule',
+            creName: creID,
+        });
+
+        // get lead count with status "Ongoing"
+        const leadsOngoingCount = await Lead.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: 'Ongoing',
+            creName: creID,
+        });
+
+        const followUpStats = [
+            {
+                title: 'Reschedule',
+                value: leadsMessageRescheduledCount,
+            },
+            {
+                title: 'Call Reschedule',
+                value: leadsCallRescheduledCount,
+            },
+            {
+                title: 'Ongoing',
+                value: leadsOngoingCount,
+            },
+        ];
+
+        res.status(200).json({
+            followUpStats,
+            creFollowUpPerformance,
+        });
+    } catch (error) {
+        console.error('Error fetching follow up stats:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const getMonthlyMeetingData = async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const { start, end } = formatDateRange(startDate, endDate);
+
+        const creID = req.user._id.toString();
+
+        // get meetingcount with the status of Postponed
+        const meetingCount = await Meeting.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Postponed'],
+            'lead.creName': creID,
+        });
+
+        // get meetingcount with the status of Canceled
+        const meetingCountCanceled = await Meeting.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Canceled'],
+            'lead.creName': creID,
+        });
+
+        // get meetingcount with the status of Reschedule
+        const meetingCountReschedule = await Meeting.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Rescheduled'],
+            'lead.creName': creID,
+        });
+
+        // get all the meeting with Visit Charge 0 or none
+        const meetingCountVisitCharge0 = await Meeting.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            visitCharge: { $in: [0, null] }, // Free Meeting
+            'lead.creName': creID,
+        });
+
+        // get all the meeting with status "Online Meeting"
+        const meetingCountOnlineMeeting = await Meeting.countDocuments({
+            createdAt: {
+                $gte: start,
+                $lte: end,
+            },
+            status: ['Online Meeting'],
+            'lead.creName': creID,
+        });
+
+        const stats = [
+            {
+                title: 'Postponed',
+                value: meetingCount,
+            },
+            {
+                title: 'Canceled',
+                value: meetingCountCanceled,
+            },
+            {
+                title: 'Reschedule',
+                value: meetingCountReschedule,
+            },
+            {
+                title: 'Free Meeting',
+                value: meetingCountVisitCharge0,
+            },
+            {
+                title: 'Online Meeting',
+                value: meetingCountOnlineMeeting,
+            },
+        ];
+
+        res.status(200).json(stats);
+    } catch (error) {
+        console.error('Error fetching follow up stats:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const getCREIncentiveById = async (creID, startDate, endDate) => {
+    const { start, end } = formatDateRange(startDate, endDate);
+
+    // get all the lead with status "Sold"
+    const leadsSold = await Lead.countDocuments({
+        createdAt: {
+            $gte: start,
+            $lte: end,
+        },
+        status: 'Sold',
+        creName: creID,
+    });
+
+    // get all the lead with status "Sold" and has soldAmmount
+    const leadsSoldTotalCollectionAmountAfterHandover = await Lead.find({
+        createdAt: {
+            $gte: start,
+            $lte: end,
+        },
+        status: 'Sold',
+        creName: creID,
+        'finance.soldAmmount': { $ne: null },
+    }).select('finance.soldAmmount');
+
+    const incentiveValueMap = [
+        {
+            totalCollectionAmountAfterHandoverMinimum: 10000, // 1k
+            totalCollectionAmountAfterHandoverMaximum: 99999, // 99k
+            eligibleIncentive: 300, // 300/-
+        },
+        {
+            totalCollectionAmountAfterHandoverMinimum: 100000, // 100k
+            totalCollectionAmountAfterHandoverMaximum: 500000, // 500k
+            eligibleIncentive: 1000, // 1000/-
+        },
+        {
+            totalCollectionAmountAfterHandoverMinimum: 500000, // 500k
+            totalCollectionAmountAfterHandoverMaximum: 100000, // 1000k
+            eligibleIncentive: 2000, // 2000/-
+        },
+        {
+            totalCollectionAmountAfterHandoverMinimum: 10000, // 1000k+
+            eligibleIncentive: 5000, // 5000/-
+        },
+    ];
+
+    // calculate incentive for each sold
+    let totalIncentive = 0;
+    leadsSoldTotalCollectionAmountAfterHandover.forEach((lead) => {
+        const { soldAmmount } = lead.finance;
+        incentiveValueMap.forEach((incentive) => {
+            if (
+                soldAmmount >= incentive.totalCollectionAmountAfterHandoverMinimum &&
+                soldAmmount <= incentive.totalCollectionAmountAfterHandoverMaximum
+            ) {
+                totalIncentive += incentive.eligibleIncentive;
+            }
+        });
+    });
+
+    return totalIncentive;
+};
+
+const getCREIncentive = async (req, res) => {
+    const { startDate, endDate } = req.query;
+    const { creId } = req.params;
+    try {
+        const creIncentive = await getCREIncentiveById(creId, startDate, endDate);
+        res.status(200).json({ incentive: creIncentive, creId });
+    } catch (error) {
+        console.error('Error fetching CRE incentive:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
     getAllCREsPerformanceData,
     getCREPerformanceDataById,
@@ -560,4 +977,8 @@ module.exports = {
     getNotifications,
     getDateWiseLeadData,
     getMeetingBarchartData,
+    getLeadOverview,
+    getFollowUpStats,
+    getMonthlyMeetingData,
+    getCREIncentive,
 };

@@ -7,6 +7,7 @@ let ioInstance = null;
  */
 const setIO = (io) => {
     ioInstance = io;
+    console.log('Socket.io instance set');
 };
 
 /**

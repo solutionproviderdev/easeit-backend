@@ -1,18 +1,55 @@
-// endpoints/assistants.js
-
 const express = require('express');
 
 const assistantRouter = express.Router();
 const { OpenAI } = require('openai');
+const Assistant = require('../../../schemas/settings/Assistant.Schema');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// 1. List all assistants
+/**
+ * GET /assistants
+ * 1. Fetch from OpenAI
+ * 2. Upsert into MongoDB
+ * 3. Return the DB snapshot
+ */
 assistantRouter.get('/', async (req, res) => {
-    console.log('get all list of the assistants------>');
     try {
-        const list = await openai.beta.assistants.list();
-        res.json(list.data); // Returns array of assistants
+        // 1. Fresh list from OpenAI
+        const { data: openaiList } = await openai.beta.assistants.list();
+
+        // 2. Upsert each assistant
+        const bulkOps = openaiList.map((ast) => ({
+            updateOne: {
+                filter: { id: ast.id }, // unique key
+                update: { $set: ast }, // replace whole doc
+                upsert: true,
+            },
+        }));
+
+        await Assistant.bulkWrite(bulkOps, { ordered: false });
+
+        // 3. Return what is now in the DB
+        const dbList = await Assistant.find().lean();
+        res.json(dbList);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// route for toggle active assistant
+assistantRouter.put('/:id/toggle-active', async (req, res) => {
+    const { id } = req.params;
+    const { active } = req.body;
+    try {
+        const assistant = await Assistant.findById(id);
+        if (!assistant) {
+            return res.status(404).json({ error: 'Assistant not found' });
+        }
+
+        assistant.active = active;
+        await assistant.save();
+
+        res.json(assistant);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -80,12 +117,7 @@ assistantRouter.post('/:id/playground', async (req, res) => {
     try {
         const { message } = req.body;
         const assistantId = req.params.id;
-        console.log(
-            'message ishere -------------------------------->',
-            message,
-            'assistantId',
-            assistantId
-        );
+
         // 1. Create a thread (this is per chat session)
         const thread = await openai.beta.threads.create();
 
