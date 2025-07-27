@@ -30,3 +30,6 @@
 .vercel
 
 /.yarn
+
+# log files
+/logs
