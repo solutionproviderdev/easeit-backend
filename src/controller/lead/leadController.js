@@ -105,6 +105,7 @@ exports.getAllLeads = async (req, res) => {
             assignedCre,
             salesExecutive,
             productAd, // New query parameter for product ad filtering
+            search
         } = req.query;
 
         // Create a filter object
@@ -138,6 +139,13 @@ exports.getAllLeads = async (req, res) => {
         // Add product ad filter
         if (productAd) {
             filter.productAds = new mongoose.Types.ObjectId(productAd);
+        }
+
+        if (search){
+            filter.$or =[
+                {name: { $regex: search, $options: 'i' }},
+                {phone: { $regex: search, $options: 'i' }},
+            ];
         }
 
         // Fetch leads with pagination and filters
