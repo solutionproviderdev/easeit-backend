@@ -221,11 +221,22 @@ exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
         const { creId } = req.query;
         const { _id: userId, roleId: userRoleId } = req.user;
 
+        const now = new Date();
+				const endOfToday = new Date(
+					now.getFullYear(),
+					now.getMonth(),
+					now.getDate(),
+					23,
+					59,
+					59,
+					999
+				);
+
         /* ---------- build match ---------- */
         const matchConditions = {
             source: 'Facebook',
             'reminder.status': { $in: ['Pending', 'Missed'] },
-            'reminder.time': { $lte: new Date() },
+            'reminder.time': { $lte: endOfToday },
         };
 
         if (creId) matchConditions.creName = new mongoose.Types.ObjectId(creId);
@@ -560,170 +571,152 @@ exports.sendMetaMessage = async (req, res) => {
         return res.status(500).json({ error: error.toString() });
     }
 };
+// console.time('Search Leads Execution Time');
 
 exports.searchLeads = async (req, res) => {
-    const searchParam = req.params.pharams;
-    // Read creName from query parameters instead of req.body
-    const { creName } = req.query;
-    try {
-        // --- Search by lead name ---
-        const pipelineForNameMatches = [
-            {
-                $match: { name: { $regex: searchParam, $options: 'i' } },
-            },
-            // If creName is provided, filter leads that belong to that CRE.
-            ...(creName
-                ? [
-                      {
-                          $match: { creName: new mongoose.Types.ObjectId(creName) },
-                      },
-                  ]
-                : []),
-            {
-                $addFields: {
-                    lastMessage: { $last: '$messages.content' },
-                    lastMessageTime: { $last: '$messages.date' },
-                    sentByMe: { $last: '$messages.sentByMe' },
-                    status: '$status',
-                    pageInfo: {
-                        pageId: '$pageInfo.pageId',
-                        pageName: '$pageInfo.pageName',
-                        pageProfilePicture: '$pageInfo.pageProfilePicture',
-                    },
-                    messagesSeen: '$messagesSeen',
-                },
-            },
-            // Populate creName details from the User collection
-            {
-                $lookup: {
-                    from: 'users', // collection name for User
-                    localField: 'creName',
-                    foreignField: '_id',
-                    as: 'creName',
-                },
-            },
-            {
-                $unwind: {
-                    path: '$creName',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $project: {
-                    name: 1,
-                    lastMessage: 1,
-                    lastMessageTime: 1,
-                    sentByMe: 1,
-                    createdAt: 1,
-                    status: 1,
-                    pageInfo: 1,
-                    messagesSeen: 1,
-                    _id: 1,
-                    creName: {
-                        _id: '$creName._id',
-                        name: '$creName.nameAsPerNID',
-                        profilePicture: '$creName.profilePicture',
-                    },
-                },
-            },
-            { $sort: { lastMessageTime: -1 } },
-        ];
+	const { pharams } = req.params;
+	const { creName } = req.query;
 
-        const nameMatches = await Lead.aggregate(pipelineForNameMatches);
+	console.time('Search Leads Execution Time');
+	// Build a case‑insensitive regex once
+	const searchRegex = new RegExp(pharams, 'i');
 
-        // --- Search by phone number ---
-        const pipelineForPhoneMatches = [
-            {
-                // Find leads where at least one phone number matches the search parameter
-                $match: {
-                    phone: { $elemMatch: { $regex: searchParam, $options: 'i' } },
-                },
-            },
-            // If creName is provided, filter leads that belong to that CRE.
-            ...(creName
-                ? [
-                      {
-                          $match: { creName: new mongoose.Types.ObjectId(creName) },
-                      },
-                  ]
-                : []),
-            {
-                $addFields: {
-                    matchingPhone: {
-                        $arrayElemAt: [
-                            {
-                                $filter: {
-                                    input: '$phone',
-                                    as: 'p',
-                                    cond: {
-                                        $regexMatch: {
-                                            input: '$$p',
-                                            regex: searchParam,
-                                            options: 'i',
-                                        },
-                                    },
-                                },
-                            },
-                            0,
-                        ],
-                    },
-                    // Include additional fields for sorting and display
-                    lastMessageTime: { $last: '$messages.date' },
-                    sentByMe: { $last: '$messages.sentByMe' },
-                    status: '$status',
-                    pageInfo: {
-                        pageId: '$pageInfo.pageId',
-                        pageName: '$pageInfo.pageName',
-                        pageProfilePicture: '$pageInfo.pageProfilePicture',
-                    },
-                    messagesSeen: '$messagesSeen',
-                },
-            },
-            // Populate creName details from the User collection
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'creName',
-                    foreignField: '_id',
-                    as: 'creName',
-                },
-            },
-            {
-                $unwind: {
-                    path: '$creName',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                // Instead of "lastMessage", we return the matching phone number in a field called "phone"
-                $project: {
-                    name: 1,
-                    phone: '$matchingPhone',
-                    lastMessageTime: 1,
-                    sentByMe: 1,
-                    createdAt: 1,
-                    status: 1,
-                    pageInfo: 1,
-                    messagesSeen: 1,
-                    _id: 1,
-                    creName: {
-                        _id: '$creName._id',
-                        name: '$creName.nameAsPerNID',
-                        profilePicture: '$creName.profilePicture',
-                    },
-                },
-            },
-            { $sort: { lastMessageTime: -1 } },
-        ];
+	// Optional CRE filter
+	const creFilter = creName
+		? { creName: new mongoose.Types.ObjectId(creName) }
+		: {};
 
-        const phoneMatches = await Lead.aggregate(pipelineForPhoneMatches);
+	// Combined filter: CRE + (name matches OR phone array contains a match)
+	const matchFilter = {
+		...creFilter,
+		$or: [
+			{ name: { $regex: searchRegex } },
+			{ phone: { $elemMatch: { $regex: searchRegex } } },
+		],
+	};
 
-        return res.status(200).json({
-            matchedNames: nameMatches,
-            matchPhoneNumber: phoneMatches,
-        });
-    } catch (error) {
-        console.error('Error searching leads:', error);
-        return res.status(500).json({ error: 'Internal server error' });
-    }
+	try {
+		const leads = await Lead.aggregate([
+			{ $match: matchFilter },
+
+			// Keep only the fields we need; grab the last message element
+			{
+				$project: {
+					name: 1,
+					phone: {
+						// if phone matched, we return only the matching numbers, else full array
+						$cond: [
+							{
+								$regexMatch: {
+									input: { $arrayElemAt: ['$phone', 0] },
+									regex: searchRegex,
+								},
+							},
+							{
+								$filter: {
+									input: '$phone',
+									as: 'p',
+									cond: { $regexMatch: { input: '$$p', regex: searchRegex } },
+								},
+							},
+							'$phone',
+						],
+					},
+					status: 1,
+					pageInfo: 1,
+					creName: 1,
+					createdAt: 1,
+					messages: { $slice: ['$messages', -1] },
+					messagesSeen: 1,
+				},
+			},
+
+			// Unwrap that single-element messages array
+			{
+				$addFields: {
+					lastMessage: { $arrayElemAt: ['$messages.content', 0] },
+					lastMessageTime: { $arrayElemAt: ['$messages.date', 0] },
+					sentByMe: { $arrayElemAt: ['$messages.sentByMe', 0] },
+				},
+			},
+			{ $unset: 'messages' },
+
+			// Join minimal CRE user info
+			{
+				$lookup: {
+					from: 'users',
+					let: { creId: '$creName' },
+					pipeline: [
+						{ $match: { $expr: { $eq: ['$_id', '$$creId'] } } },
+						{ $project: { nameAsPerNID: 1, profilePicture: 1 } },
+					],
+					as: 'creUser',
+				},
+			},
+			{ $unwind: { path: '$creUser', preserveNullAndEmptyArrays: true } },
+			{
+				$addFields: {
+					creName: {
+						_id: '$creUser._id',
+						name: '$creUser.nameAsPerNID',
+						profilePicture: '$creUser.profilePicture',
+					},
+				},
+			},
+			{ $unset: 'creUser' },
+
+			// Final sort by most recent message time
+			{ $sort: { lastMessageTime: -1 } },
+		]);
+
+		return res.status(200).json({
+			total: leads.length,
+			leads,
+		});
+	} catch (error) {
+		console.error('Error searching leads:', error);
+
+        console.timeEnd('Search Leads Execution Time');
+		return res.status(500).json({ error: 'Internal server error' });
+	}
 };
+
+exports.conversationStat = async (req, res) => {
+    try {
+      // 1) Tag each doc with its last message's sentByMe flag
+      const [stats] = await Lead.aggregate([
+				{
+					$addFields: {
+						lastMessageSentByMe: { $last: '$messages.sentByMe' },
+					},
+				},
+				{
+					$facet: {
+						unread: [
+							{
+								$match: {
+									lastMessageSentByMe: false,
+									messagesSeen: false,
+								},
+							},
+							{ $count: 'count' },
+						],
+						numberProvided: [
+							{
+								$match: { status: 'Number Provided' },
+							},
+							{ $count: 'count' },
+						],
+					},
+				},
+			]);
+  
+      const unreadCount            = stats.unread[0]?.count            || 0;
+      const numberProvidedCount   = stats.numberProvided[0]?.count   || 0;
+  
+      return res.json({ unreadCount, numberProvidedCount });
+    } catch (err) {
+      console.error('Error fetching lead stats:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+}
