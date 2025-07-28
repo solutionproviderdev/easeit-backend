@@ -248,81 +248,92 @@ exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
 
         /* ---------- aggregation ---------- */
         const leads = await Lead.aggregate([
-            { $match: matchConditions },
-            /* keep only pending/missed reminders till now */
-            {
-                $addFields: {
-                    activeReminders: {
-                        $filter: {
-                            input: '$reminder',
-                            as: 'r',
-                            cond: {
-                                $and: [
-                                    { $in: ['$$r.status', ['Pending', 'Missed']] },
-                                    { $lte: ['$$r.time', new Date()] },
-                                ],
-                            },
-                        },
-                    },
-                },
-            },
-            /* latest reminder fields */
-            {
-                $addFields: {
-                    lastReminderTime: { $max: '$activeReminders.time' },
-                    lastReminderStatus: {
-                        $arrayElemAt: [
-                            {
-                                $filter: {
-                                    input: '$activeReminders',
-                                    cond: {
-                                        $eq: ['$$this.time', { $max: '$activeReminders.time' }],
-                                    },
-                                },
-                            },
-                            0,
-                        ],
-                    },
-                },
-            },
-            {
-                $addFields: {
-                    lastReminderStatus: '$lastReminderStatus.status',
-                    lastReminderComment: '$lastReminderStatus.commentId',
-                },
-            },
-            {
-                $project: {
-                    name: 1,
-                    lastMsg: 1,
-                    lastMessageTime: 1,
-                    createdAt: 1,
-                    status: 1,
-                    pageInfo: 1,
-                    creName: 1,
-                    messagesSeen: 1,
-                    _id: 1,
-                    activeReminders: 1,
-                    lastReminderTime: 1,
-                    lastReminderStatus: 1,
-                    lastReminderComment: 1,
-                },
-            },
-            { $sort: { lastReminderTime: -1 } },
-            { $skip: skip },
-            { $limit: limit },
-            /* populate CRE */
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'creName',
-                    foreignField: '_id',
-                    as: 'creName',
-                    pipeline: [{ $project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 } }],
-                },
-            },
-            { $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
-        ]);
+					{ $match: matchConditions },
+					/* keep only pending/missed reminders till now */
+					{
+						$addFields: {
+							activeReminders: {
+								$filter: {
+									input: '$reminder',
+									as: 'r',
+									cond: {
+										$and: [
+											{ $in: ['$$r.status', ['Pending', 'Missed']] },
+											{ $lte: ['$$r.time', endOfToday] },
+										],
+									},
+								},
+							},
+						},
+					},
+
+					// drop any docs that now have no activeReminders
+					{
+						$match: {
+							'activeReminders.0': { $exists: true },
+						},
+					},
+					/* latest reminder fields */
+					{
+						$addFields: {
+							lastReminderTime: { $max: '$activeReminders.time' },
+							lastReminderStatus: {
+								$arrayElemAt: [
+									{
+										$filter: {
+											input: '$activeReminders',
+											cond: {
+												$eq: ['$$this.time', { $max: '$activeReminders.time' }],
+											},
+										},
+									},
+									0,
+								],
+							},
+						},
+					},
+					{
+						$addFields: {
+							lastReminderStatus: '$lastReminderStatus.status',
+							lastReminderComment: '$lastReminderStatus.commentId',
+						},
+					},
+					{
+						$project: {
+							name: 1,
+							lastMsg: 1,
+							lastMessageTime: 1,
+							createdAt: 1,
+							status: 1,
+							pageInfo: 1,
+							creName: 1,
+							messagesSeen: 1,
+							_id: 1,
+							activeReminders: 1,
+							lastReminderTime: 1,
+							lastReminderStatus: 1,
+							lastReminderComment: 1,
+						},
+					},
+					{ $sort: { lastReminderTime: -1 } },
+					{ $skip: skip },
+					{ $limit: limit },
+					/* populate CRE */
+					{
+						$lookup: {
+							from: 'users',
+							localField: 'creName',
+							foreignField: '_id',
+							as: 'creName',
+							pipeline: [
+								{
+									$project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 },
+								},
+							],
+						},
+					},
+					{ $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
+				]);
 
         /* ---------- counts & filters ---------- */
         const totalLeads = await Lead.countDocuments(matchConditions);
