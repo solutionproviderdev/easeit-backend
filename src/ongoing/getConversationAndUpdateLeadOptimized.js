@@ -313,7 +313,7 @@ const updateExistingLead = async (
         // If lead status is not "New", update status to
         //  "Number Collected" if a phone was collected.
         if (phoneNumber?.number?.length === 14 && lead.status === 'New') {
-            lead.status = 'Number Collected';
+            lead.status = 'Number Provided';
         }
 
         const savedLead = await lead.save();
