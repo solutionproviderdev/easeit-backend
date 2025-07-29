@@ -166,91 +166,95 @@ const financeSchema = new mongoose.Schema({
 
 // Lead Schema
 const leadSchema = mongoose.Schema(
-	{
-		CID: String,
-		name: { type: String, required: true },
-		status: {
-			type: String,
-			enum: [
-				'New',
-				'No Response',
-				'Need Support',
-				'Message Rescheduled',
-				'Number Collected',
-				'Call Reschedule',
-				'Ongoing',
-				'Close',
-				'Follow Up',
-				'Meeting Fixed',
-				'Meeting Complete',
-				'Quotation Sent',
-				'Sold',
-				'Prospect',
-				'Lost',
-				'Final Measurement',
-				'Handover & Review',
-			],
-			required: true,
-			default: 'unread',
-		},
-		address: addressSchema,
-		lastMsg: String,
-		meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
-		pageInfo: {
-			pageId: String,
-			pageName: String,
-			pageProfilePicture: String,
-			fbSenderID: { type: String, sparse: true },
-		},
-		source: {
-			type: String,
-			enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
-			required: true,
-		},
-		phone: [String], // Array to handle multiple phone numbers
-		comment: [commentSchema],
-		salesExqName: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'User',
-		},
-		creName: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'User',
-		},
-		projectStatus: {
-			status: {
-				type: String,
-				enum: ['Ongoing', 'Ready', 'Renovation'],
-			},
-			subStatus: {
-				type: String,
-				enum: [
-					'Roof Casting',
-					'Brick Wall',
-					'Plaster',
-					'Pudding',
-					'Two Coat Paint',
-					'Tiles Complete',
-					'Final Paint Done',
-					'Handed Over',
-					'Staying in the Apartment',
-					'Interior Work Complete',
-				],
-			},
-		},
-		projectLocation: {
-			type: String,
-			enum: ['Inside', 'Outside'],
-		},
-		reminder: [reminderSchema],
-		callLogs: [callLogSchema], // Updated call log schema
-		messages: [messageSchema],
-		messagesSeen: { type: Boolean, default: false },
-		requirements: [String], // New simple array for requirements
-		botResponded: { type: Boolean, default: false },
+    {
+        CID: String,
+        name: { type: String, required: true },
+        status: {
+            type: String,
+            enum: [
+                'New',
+                'No Response',
+                'Need Support',
+                'Message Rescheduled',
+                'Number Collected',
+                'Number Provided',
+                'Call Reschedule',
+                'Ongoing',
+                'Close',
+                'Follow Up',
+                'Meeting Fixed',
+                'Meeting Complete',
+                'Sold',
+                'Prospect',
+            ],
+            required: true,
+            default: 'unread',
+        },
+        address: addressSchema,
+        lastMsg: String,
+        meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
+        pageInfo: {
+            pageId: String,
+            pageName: String,
+            pageProfilePicture: String,
+            fbSenderID: { type: String, sparse: true },
+        },
+        source: {
+            type: String,
+            enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
+            required: true,
+        },
+        phone: [String], // Array to handle multiple phone numbers
+        comment: [commentSchema],
+        salesExqName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        creName: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        projectStatus: {
+            status: {
+                type: String,
+                enum: ['Ongoing', 'Ready', 'Renovation'],
+            },
+            subStatus: {
+                type: String,
+                enum: [
+                    'Roof Casting',
+                    'Brick Wall',
+                    'Plaster',
+                    'Pudding',
+                    'Two Coat Paint',
+                    'Tiles Complete',
+                    'Final Paint Done',
+                    'Handed Over',
+                    'Staying in the Apartment',
+                    'Interior Work Complete',
+                ],
+            },
+        },
+        projectLocation: {
+            type: String,
+            enum: ['Inside', 'Outside'],
+        },
+        reminder: [reminderSchema],
+        callLogs: [callLogSchema], // Updated call log schema
+        messages: [messageSchema],
+        messagesSeen: { type: Boolean, default: false },
+        requirements: [String], // New simple array for requirements
+        botResponded: { type: Boolean, default: false },
 
-		// firld to traack if the message is replied from system
-		repliedFromSystem: { type: Boolean, default: false },
+        // firld to traack if the message is replied from system
+        repliedFromSystem: { type: Boolean, default: false },
+
+        // is ai bot replay on
+        aiBotReply: { type: Boolean, default: false },
+        aiBotConfig: {
+            assistantId: String,
+            threadId: String,
+        },
 
 		// field to track when the lead was last assigned
 		lastAssigned: { type: Date, default: Date.now },
@@ -336,5 +340,6 @@ leadSchema.index({ updatedAt: -1 });
 leadSchema.index({ lastAssigned: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);
+
 
 module.exports = Lead;

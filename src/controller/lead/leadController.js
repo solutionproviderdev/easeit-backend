@@ -105,6 +105,7 @@ exports.getAllLeads = async (req, res) => {
             assignedCre,
             salesExecutive,
             productAd, // New query parameter for product ad filtering
+            search
         } = req.query;
 
         // Create a filter object
@@ -138,6 +139,13 @@ exports.getAllLeads = async (req, res) => {
         // Add product ad filter
         if (productAd) {
             filter.productAds = new mongoose.Types.ObjectId(productAd);
+        }
+
+        if (search){
+            filter.$or =[
+                {name: { $regex: search, $options: 'i' }},
+                {phone: { $regex: search, $options: 'i' }},
+            ];
         }
 
         // Fetch leads with pagination and filters
@@ -869,6 +877,39 @@ exports.getAllLeadsWithReminders = async (req, res) => {
                 salesNames: await getSalesUsers(),
             },
         });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.batchAssignLeadToCRE = async (req, res) => {
+    const { leadIds, creId } = req.body;
+
+    try {
+        // Find the leads by IDs
+        const leads = await Lead.find({ _id: { $in: leadIds } });
+
+        if (leads.length !== leadIds.length) {
+            return res.status(404).json({ msg: 'Some leads not found' });
+        }
+
+        // Update the property and mark it as modified
+        leads.forEach((lead) => {
+            lead.creName = creId;
+        });
+
+        // Save the updated leads
+        await Lead.bulkWrite(
+            leads.map((lead) => ({
+                updateOne: {
+                    filter: { _id: lead._id },
+                    update: { $set: { creName: creId } },
+                },
+            }))
+        );
+
+        res.status(200).json({ msg: 'CRE assigned successfully', leads });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });

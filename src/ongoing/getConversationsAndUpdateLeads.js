@@ -145,7 +145,7 @@ const getConversationsAndUpdateLeads = async (io) => {
 									if (!lead.phone.includes(formattedPhoneNumber)) {
 										lead.phone.push(formattedPhoneNumber);
 									}
-									lead.status = 'Number Collected';
+									lead.status = 'Number Provided';
 								}
 
 								const savedLead = await lead.save();

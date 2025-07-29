@@ -13,6 +13,7 @@ const { Server } = require('socket.io');
 const swaggerSpec = require('../swagger_output.json');
 
 // internal imports
+const { initializeCronJobs, runStartupTasks } = require('./cron/cronJobs');
 const {
 	notFoundHandler,
 	errorHandler,
@@ -22,35 +23,21 @@ const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const mapDataRouter = require('./routes/mapDataRouters');
 const meetingsRouter = require('./routes/meetings/meeting.route');
-const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
-const fetchAndStoreDarazData = require('./ongoing/fetchAndStoreDarazData');
-const {
-	nameBasedLeadAssign,
-	findDuplicateLeads,
-} = require('../populateDatabase');
-const { assignUnassignedLeads } = require('./ongoing/assignUnassignedLeads');
-const { checkAndUpdateMissedReminders } = require('./ongoing/checkAndUpdateMissedReminders');
-const { reschedulePendingReminders } = require('./ongoing/reschedulePendingReminders');
-const webhookRouter = require('./routes/webhook');
-const productAdRouter = require('./routes/ad/productAd');
-const checkProductAdForLeadMessages = require('./ongoing/checkProductAdForLeadMessages');
-const { reAssignOnNotReplied } = require('./helpers/reAssignOnNotReplied');
-const { reAssignOnNotSeen } = require('./helpers/reAssignOnNotSeen');
-const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
+
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
-const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
-const productRouter = require('./routes/product/product.routes');
 const { swaggerUi } = require('../swagger');
-const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
+const productRouter = require('./routes/product/product.routes');
+const webhookRouter = require('./routes/webhook');
+const productAdRouter = require('./routes/ad/productAd');
 const vendorRouter = require('./routes/inventory/vendor.routes');
 const quotationrouter = require('./routes/quotation.routes');
 const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
-
+const { timingMiddleware } = require('./config/winston');
 
 // Initialize app
 const app = express();
@@ -67,6 +54,9 @@ mongoose
 	.connect(process.env.MONGO_CONNECTION_STRING, {})
 	.then(() => console.log('🍀 Database connection successful'))
 	.catch((err) => console.log(err, 'Database connection Error'));
+
+// Set up logging for other parts of the app
+app.use(timingMiddleware); // Add this line to use the middleware
 
 // request process
 app.use(express.json());
@@ -173,60 +163,9 @@ app.use('/discounts', discountRouter);
 app.use('/settings', settingsRouter);
 app.use('/project-stages', ProjectStagerouter);
 
-// Replace setInterval with node-cron
-cron.schedule('*/1 * * * * *', async () => { // Runs every second
-    const now = new Date();
-    if (now.getSeconds() % 20 === 0) { // Check if the current second is a multiple of 20
-		findDuplicateLeads();
-		nameBasedLeadAssign();
-        getConversationsAndUpdateLeadsUpdated(io);
-    }
-}, {
-	timezone: 'Asia/Dhaka' // Set your timezone here
-});
-
-// Schedule the task to run every 10 minutes
-cron.schedule('*/10 * * * *', async () => {
-	await assignUnassignedLeads(io);
-	await checkAndUpdateMissedReminders(io);
-	findDuplicateMessagesAndDelete();
-}, {
-	timezone: 'Asia/Dhaka' // Set your timezone here
-});
-
-checkAndUpdateMissedReminders(io);
-findDuplicateMessagesAndDelete();
-
-// Schedule the task to run every 1 minutes
-cron.schedule(
-	'* * * * *',
-	async () => {
-		try {
-			await checkProductAdForLeadMessages();
-			await reAssignOnNotReplied(io);
-			await reAssignOnNotSeen(io);
-			await sendAutoMessage(io);
-			console.log('Re-Assign executed successfully.');
-		} catch (error) {
-			console.error('Error in reAssignOnNotReplied cron job:', error);
-		}
-	},
-	{
-		timezone: 'Asia/Dhaka', // Adjust timezone as needed
-	}
-);
-
-// assignUnassignedLeads(io);
-
-// some corn jobs eatch time server starts
-reschedulePendingReminders();
-nameBasedLeadAssign();
-checkProductAdForLeadMessages();
-reAssignOnNotReplied(io);
-reAssignOnNotSeen(io);
-findDuplicateLeads();
-
-getPerformanceBasedCRE();
+// Replace them with these two lines:
+initializeCronJobs(io);
+runStartupTasks(io);
 
 // 404 error handling
 app.use(notFoundHandler);

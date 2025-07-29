@@ -1,6 +1,7 @@
 const { default: mongoose } = require('mongoose');
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
+const User = require('../schemas/auth/UserSchema');
 const {
     getRandomFreeSalesExecutiveFromSlot,
 } = require('../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
@@ -768,5 +769,121 @@ exports.endMeeting = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Get meetings report with simple output
+exports.getMeetingsReport = async (req, res) => {
+    try {
+        const { status, dateRange, salesExecutiveId, creId } = req.query;
+        const filter = {};
+
+        // Filter by status if provided
+        if (status) filter.status = status;
+
+        // Handle date range filtering
+        if (dateRange) {
+            const [startDate, endDate] = dateRange.split('_');
+
+            if (startDate === endDate) {
+                // Specific day: set time range for that day
+                const startOfDay = new Date(startDate);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(endDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                filter.date = { $gte: startOfDay, $lte: endOfDay };
+            } else {
+                // Date range
+                filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+            }
+        }
+
+        // Filter by sales executive ID if provided
+        if (salesExecutiveId) filter.salesExecutive = salesExecutiveId;
+
+        // Filter by CRE ID if provided
+        if (creId) {
+            // Find leads that belong to the given creId
+            const leadsMatching = await Lead.find({ creName: creId }).select('_id');
+            const leadIds = leadsMatching.map((lead) => lead._id);
+            // If no leads match, ensure no meetings are returned.
+            filter.lead = { $in: leadIds.length > 0 ? leadIds : [null] };
+        }
+
+        // Fetch meetings with applied filters and populate necessary fields
+        const meetings = await Meeting.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: 'leads',
+                    localField: 'lead',
+                    foreignField: '_id',
+                    as: 'lead',
+                },
+            },
+            { $unwind: '$lead' },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'lead.creName',
+                    foreignField: '_id',
+                    as: 'creInfo',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'salesExecutive',
+                    foreignField: '_id',
+                    as: 'salesInfo',
+                },
+            },
+            { $unwind: { path: '$creInfo', preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: '$salesInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    leadName: '$lead.name',
+                    phone: '$lead.phone',
+                    address: '$lead.address.address',
+                    meetingDate: '$date',
+                    meetingSlot: '$slot',
+                    projectValue: '$lead.finance.projectValue',
+                    soldValue: '$lead.finance.soldAmmount',
+                    creName: {
+                        $cond: {
+                            if: '$creInfo',
+                            then: { $ifNull: ['$creInfo.nameAsPerNID', '$creInfo.nickname'] },
+                            else: 'N/A',
+                        },
+                    },
+                    salesName: {
+                        $cond: {
+                            if: '$salesInfo',
+                            then: { $ifNull: ['$salesInfo.nameAsPerNID', '$salesInfo.nickname'] },
+                            else: 'N/A',
+                        },
+                    },
+                    status: 1,
+                },
+            },
+        ]);
+
+        // Format dates in the results
+        const formattedMeetings = meetings.map((meeting) => ({
+            ...meeting,
+            meetingDate: new Date(meeting.meetingDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            }),
+            phone: Array.isArray(meeting.phone) ? meeting.phone.join(', ') : 'N/A',
+            projectValue: meeting.projectValue || 0,
+            soldValue: meeting.soldValue || 0,
+        }));
+
+        res.status(200).json(formattedMeetings);
+    } catch (error) {
+        console.error('Error generating meetings report:', error);
+        res.status(500).json({ msg: 'Server error', error });
     }
 };

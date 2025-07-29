@@ -14,9 +14,9 @@ const People = require('../schemas/PeopleSchema');
 const { isAutomatedMessage } = require('../helpers/isAutomatedMessage');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
-const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
 const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
 const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
+const { SholutionBot } = require('../SolutionBot/SolutionBot');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -69,6 +69,10 @@ const extractValidPhoneNumber = (content, countryCode = 'BD') => {
  */
 const processMessages = (messages) => {
     let phoneNumber = '';
+
+    const lastMessage = messages[messages.length - 1];
+    const lastMessageSentFromUs = lastMessage.from.name === 'Solution Provider';
+
     // Map each message to a standardized format.
     const processedMessages = messages.map((msg) => {
         let fileUrl = [];
@@ -117,7 +121,7 @@ const processMessages = (messages) => {
         };
     });
 
-    return { processedMessages, phoneNumber };
+    return { processedMessages, phoneNumber, lastMessageSentFromUs };
 };
 
 /**
@@ -200,7 +204,7 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         );
         const fbSenderID = otherParticipant.id;
         // Process the messages from the conversation.
-        const { processedMessages, phoneNumber } = processMessages(
+        const { processedMessages, phoneNumber, lastMessageSentFromUs } = processMessages(
             [...(conversation?.messages?.data ?? [])].reverse()
         );
         // Try to find an existing lead using the Facebook sender ID.
@@ -217,11 +221,18 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 phoneNumber,
                 nameToCreId,
                 io,
-                pageInfo
+                pageInfo,
+                lastMessageSentFromUs
             );
         } else {
             // If no lead exists, create a new lead.
-            lead = await createNewLead(otherParticipant, processedMessages, pageInfo, io);
+            lead = await createNewLead(
+                otherParticipant,
+                processedMessages,
+                pageInfo,
+                io,
+                lastMessageSentFromUs
+            );
         }
 
         // Optionally, trigger the SholutionBot for specific leads.
@@ -251,21 +262,27 @@ const updateExistingLead = async (
     phoneNumber,
     nameToCreId,
     io,
-    pageInfo
+    pageInfo,
+    lastMessageSentFromUs
 ) => {
     let isNewMessageAdded = false;
     let newCreId = lead.creName;
     // let isNewMessagesFromUs = false;
+
+    let newMessage;
 
     // Loop through each processed message.
     for (const message of processedMessages) {
         // If the message is not already in the lead's messages array.
         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
             lead.messages.push(message);
+            newMessage = message.content;
+
+            if (lead.aiBotReply && !lastMessageSentFromUs) {
+                SholutionBot(lead._id, io, newMessage);
+            }
             // // Determine if the message is from a user (not from the Facebook page).
-            // isNewMessagesFromUs = message?.senderId !== pageInfo.fbSenderID;
-            // // Set messagesSeen based on whether the message is from us.
-            // lead.messagesSeen = isNewMessagesFromUs;
+            // Set messagesSeen based on whether the message is from us.
             // Check if the message content includes any known CRE names to update assignment.
             Object.entries(nameToCreId).forEach(([name, id]) => {
                 if (message.content.includes(name)) {
@@ -282,7 +299,7 @@ const updateExistingLead = async (
         // Update the lead's last message and assign the new CRE if applicable.
         lead.lastMsg = processedMessages[processedMessages.length - 1].content;
         lead.creName = newCreId;
-        lead.messagesSeen = false;
+        lead.messagesSeen = lastMessageSentFromUs;
         lead.repliedFromSystem = true;
 
         // If a valid phone number was extracted, update the lead's phone numbers.
@@ -296,7 +313,7 @@ const updateExistingLead = async (
         // If lead status is not "New", update status to
         //  "Number Collected" if a phone was collected.
         if (phoneNumber?.number?.length === 14 && lead.status === 'New') {
-            lead.status = 'Number Collected';
+            lead.status = 'Number Provided';
         }
 
         const savedLead = await lead.save();
@@ -313,7 +330,13 @@ const updateExistingLead = async (
  * @param {Object} io - Socket.io instance.
  * @returns {Object} - The newly created lead document.
  */
-const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) => {
+const createNewLead = async (
+    otherParticipant,
+    processedMessages,
+    pageInfo,
+    io,
+    lastMessageSentFromUs
+) => {
     // Get the best-performing CRE for assignment.
     const cre = await getPerformanceBasedCRE();
     // Use the date of the first message as the createdAt time.
@@ -334,7 +357,7 @@ const createNewLead = async (otherParticipant, processedMessages, pageInfo, io) 
         source: 'Facebook',
         creName: cre,
         createdAt: new Date(firstMessageTime),
-        messagesSeen: false,
+        messagesSeen: lastMessageSentFromUs,
         lastAssigned: new Date(),
     });
 
