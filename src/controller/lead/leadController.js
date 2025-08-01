@@ -105,7 +105,7 @@ exports.getAllLeads = async (req, res) => {
             assignedCre,
             salesExecutive,
             productAd, // New query parameter for product ad filtering
-            search
+            search,
         } = req.query;
 
         // Create a filter object
@@ -141,10 +141,10 @@ exports.getAllLeads = async (req, res) => {
             filter.productAds = new mongoose.Types.ObjectId(productAd);
         }
 
-        if (search){
-            filter.$or =[
-                {name: { $regex: search, $options: 'i' }},
-                {phone: { $regex: search, $options: 'i' }},
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
             ];
         }
 
@@ -531,7 +531,18 @@ exports.addReminder = async (req, res) => {
                 .slice(-1)[0];
 
             if (lastIncompleteReminder) {
+                // 1️⃣ Mark it complete
                 lastIncompleteReminder.status = 'Complete';
+
+                // 2️⃣ Emit the socket event so clients can remove it immediately
+                if (req.io) {
+                    req.io.emit('followUpStatusUpdated', {
+                        leadId: lead._id.toString(),
+                        reminderId: lastIncompleteReminder._id.toString(),
+                        newStatus: 'Complete',
+                    });
+                }
+
                 // Save the lead after marking the last reminder as Complete
                 await lead.save();
             }
