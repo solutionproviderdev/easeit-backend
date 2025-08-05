@@ -5,17 +5,18 @@ const {
     deleteActivityLog,
     getActivityLogsByUserId,
 } = require('../../controller/activityLogController');
+const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
 // Router Declaration
 const activityLogRouter = express.Router();
 
 // Get All Activity Logs
-activityLogRouter.get('/', checkLogin, getAllActivityLogs);
+activityLogRouter.get('/', checkAuth, getAllActivityLogs);
 
 // Delete an Activity Log
-activityLogRouter.delete('/:id', checkLogin, deleteActivityLog);
+activityLogRouter.delete('/:id', checkAuth, deleteActivityLog);
 
 // Get Activity Logs by User ID
-activityLogRouter.get('/user/:userId', checkLogin, getActivityLogsByUserId);
+activityLogRouter.get('/user/:userId', checkAuth, getActivityLogsByUserId);
 
 module.exports = activityLogRouter;
