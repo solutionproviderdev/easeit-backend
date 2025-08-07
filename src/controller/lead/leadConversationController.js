@@ -7,6 +7,10 @@ const Lead = require('../../schemas/LeadsSchema');
 const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // reused Functions for only this files.
 exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
     const newMessage = {
@@ -222,15 +226,15 @@ exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
         const { _id: userId, roleId: userRoleId } = req.user;
 
         const now = new Date();
-				const endOfToday = new Date(
-					now.getFullYear(),
-					now.getMonth(),
-					now.getDate(),
-					23,
-					59,
-					59,
-					999
-				);
+        const endOfToday = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            23,
+            59,
+            59,
+            999
+        );
 
         /* ---------- build match ---------- */
         const matchConditions = {
@@ -248,92 +252,92 @@ exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
 
         /* ---------- aggregation ---------- */
         const leads = await Lead.aggregate([
-					{ $match: matchConditions },
-					/* keep only pending/missed reminders till now */
-					{
-						$addFields: {
-							activeReminders: {
-								$filter: {
-									input: '$reminder',
-									as: 'r',
-									cond: {
-										$and: [
-											{ $in: ['$$r.status', ['Pending', 'Missed']] },
-											{ $lte: ['$$r.time', endOfToday] },
-										],
-									},
-								},
-							},
-						},
-					},
+            { $match: matchConditions },
+            /* keep only pending/missed reminders till now */
+            {
+                $addFields: {
+                    activeReminders: {
+                        $filter: {
+                            input: '$reminder',
+                            as: 'r',
+                            cond: {
+                                $and: [
+                                    { $in: ['$$r.status', ['Pending', 'Missed']] },
+                                    { $lte: ['$$r.time', endOfToday] },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
 
-					// drop any docs that now have no activeReminders
-					{
-						$match: {
-							'activeReminders.0': { $exists: true },
-						},
-					},
-					/* latest reminder fields */
-					{
-						$addFields: {
-							lastReminderTime: { $max: '$activeReminders.time' },
-							lastReminderStatus: {
-								$arrayElemAt: [
-									{
-										$filter: {
-											input: '$activeReminders',
-											cond: {
-												$eq: ['$$this.time', { $max: '$activeReminders.time' }],
-											},
-										},
-									},
-									0,
-								],
-							},
-						},
-					},
-					{
-						$addFields: {
-							lastReminderStatus: '$lastReminderStatus.status',
-							lastReminderComment: '$lastReminderStatus.commentId',
-						},
-					},
-					{
-						$project: {
-							name: 1,
-							lastMsg: 1,
-							lastMessageTime: 1,
-							createdAt: 1,
-							status: 1,
-							pageInfo: 1,
-							creName: 1,
-							messagesSeen: 1,
-							_id: 1,
-							activeReminders: 1,
-							lastReminderTime: 1,
-							lastReminderStatus: 1,
-							lastReminderComment: 1,
-						},
-					},
-					{ $sort: { lastReminderTime: -1 } },
-					{ $skip: skip },
-					{ $limit: limit },
-					/* populate CRE */
-					{
-						$lookup: {
-							from: 'users',
-							localField: 'creName',
-							foreignField: '_id',
-							as: 'creName',
-							pipeline: [
-								{
-									$project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 },
-								},
-							],
-						},
-					},
-					{ $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
-				]);
+            // drop any docs that now have no activeReminders
+            {
+                $match: {
+                    'activeReminders.0': { $exists: true },
+                },
+            },
+            /* latest reminder fields */
+            {
+                $addFields: {
+                    lastReminderTime: { $max: '$activeReminders.time' },
+                    lastReminderStatus: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: '$activeReminders',
+                                    cond: {
+                                        $eq: ['$$this.time', { $max: '$activeReminders.time' }],
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    lastReminderStatus: '$lastReminderStatus.status',
+                    lastReminderComment: '$lastReminderStatus.commentId',
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMsg: 1,
+                    lastMessageTime: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    activeReminders: 1,
+                    lastReminderTime: 1,
+                    lastReminderStatus: 1,
+                    lastReminderComment: 1,
+                },
+            },
+            { $sort: { lastReminderTime: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            /* populate CRE */
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                    pipeline: [
+                        {
+                            $project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 },
+                        },
+                    ],
+                },
+            },
+            { $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
+        ]);
 
         /* ---------- counts & filters ---------- */
         const totalLeads = await Lead.countDocuments(matchConditions);
@@ -585,149 +589,154 @@ exports.sendMetaMessage = async (req, res) => {
 // console.time('Search Leads Execution Time');
 
 exports.searchLeads = async (req, res) => {
-	const { pharams } = req.params;
-	const { creName } = req.query;
+    const { pharams } = req.params;
+    const { creName } = req.query;
 
-	console.time('Search Leads Execution Time');
-	// Build a case‑insensitive regex once
-	const searchRegex = new RegExp(pharams, 'i');
+    console.time('Search Leads Execution Time');
+    let searchRegex;
+    try {
+        const cleanedPharams = pharams.replace(/\s+/g, '');
+        const safePharams = escapeRegex(cleanedPharams);
+        searchRegex = new RegExp(safePharams, 'i');
+    } catch (err) {
+        console.error('Invalid search parameter for regex:', err);
+        console.timeEnd('Search Leads Execution Time');
+        return res.status(400).json({ error: 'Invalid search parameter.' });
+    }
 
-	// Optional CRE filter
-	const creFilter = creName
-		? { creName: new mongoose.Types.ObjectId(creName) }
-		: {};
+    const creFilter = creName ? { creName: new mongoose.Types.ObjectId(creName) } : {};
 
-	// Combined filter: CRE + (name matches OR phone array contains a match)
-	const matchFilter = {
-		...creFilter,
-		$or: [
-			{ name: { $regex: searchRegex } },
-			{ phone: { $elemMatch: { $regex: searchRegex } } },
-		],
-	};
+    // Improved $match: remove spaces from phone numbers before matching
+    const matchFilter = {
+        ...creFilter,
+        $or: [
+            { name: { $regex: searchRegex } },
+            {
+                $expr: {
+                    $gt: [
+                        {
+                            $size: {
+                                $filter: {
+                                    input: '$phone',
+                                    as: 'p',
+                                    cond: {
+                                        $regexMatch: {
+                                            input: {
+                                                $replaceAll: {
+                                                    input: '$$p',
+                                                    find: ' ',
+                                                    replacement: '',
+                                                },
+                                            },
+                                            regex: searchRegex,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        0,
+                    ],
+                },
+            },
+        ],
+    };
 
-	try {
-		const leads = await Lead.aggregate([
-			{ $match: matchFilter },
-
-			// Keep only the fields we need; grab the last message element
-			{
-				$project: {
-					name: 1,
-					phone: {
-						// if phone matched, we return only the matching numbers, else full array
-						$cond: [
-							{
-								$regexMatch: {
-									input: { $arrayElemAt: ['$phone', 0] },
-									regex: searchRegex,
-								},
-							},
-							{
-								$filter: {
-									input: '$phone',
-									as: 'p',
-									cond: { $regexMatch: { input: '$$p', regex: searchRegex } },
-								},
-							},
-							'$phone',
-						],
-					},
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					createdAt: 1,
-					messages: { $slice: ['$messages', -1] },
-					messagesSeen: 1,
-				},
-			},
-
-			// Unwrap that single-element messages array
-			{
-				$addFields: {
-					lastMessage: { $arrayElemAt: ['$messages.content', 0] },
-					lastMessageTime: { $arrayElemAt: ['$messages.date', 0] },
-					sentByMe: { $arrayElemAt: ['$messages.sentByMe', 0] },
-				},
-			},
-			{ $unset: 'messages' },
-
-			// Join minimal CRE user info
-			{
-				$lookup: {
-					from: 'users',
-					let: { creId: '$creName' },
-					pipeline: [
-						{ $match: { $expr: { $eq: ['$_id', '$$creId'] } } },
-						{ $project: { nameAsPerNID: 1, profilePicture: 1 } },
-					],
-					as: 'creUser',
-				},
-			},
-			{ $unwind: { path: '$creUser', preserveNullAndEmptyArrays: true } },
-			{
-				$addFields: {
-					creName: {
-						_id: '$creUser._id',
-						name: '$creUser.nameAsPerNID',
-						profilePicture: '$creUser.profilePicture',
-					},
-				},
-			},
-			{ $unset: 'creUser' },
-
-			// Final sort by most recent message time
-			{ $sort: { lastMessageTime: -1 } },
-		]);
-
-		return res.status(200).json({
-			total: leads.length,
-			leads,
-		});
-	} catch (error) {
-		console.error('Error searching leads:', error);
+    try {
+        const leads = await Lead.aggregate([
+            { $match: matchFilter },
+            {
+                $project: {
+                    name: 1,
+                    phone: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    createdAt: 1,
+                    messages: { $slice: ['$messages', -1] },
+                    messagesSeen: 1,
+                },
+            },
+            {
+                $addFields: {
+                    lastMessage: { $arrayElemAt: ['$messages.content', 0] },
+                    lastMessageTime: { $arrayElemAt: ['$messages.date', 0] },
+                    sentByMe: { $arrayElemAt: ['$messages.sentByMe', 0] },
+                },
+            },
+            { $unset: 'messages' },
+            {
+                $lookup: {
+                    from: 'users',
+                    let: { creId: '$creName' },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ['$_id', '$$creId'] } } },
+                        { $project: { nameAsPerNID: 1, profilePicture: 1 } },
+                    ],
+                    as: 'creUser',
+                },
+            },
+            { $unwind: { path: '$creUser', preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    creName: {
+                        _id: '$creUser._id',
+                        name: '$creUser.nameAsPerNID',
+                        profilePicture: '$creUser.profilePicture',
+                    },
+                },
+            },
+            { $unset: 'creUser' },
+            { $sort: { lastMessageTime: -1 } },
+        ]);
 
         console.timeEnd('Search Leads Execution Time');
-		return res.status(500).json({ error: 'Internal server error' });
-	}
+        return res.status(200).json({
+            total: leads.length,
+            leads,
+        });
+    } catch (error) {
+        console.error('Error searching leads:', error);
+        console.timeEnd('Search Leads Execution Time');
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 exports.conversationStat = async (req, res) => {
     try {
-      // 1) Tag each doc with its last message's sentByMe flag
-      const [stats] = await Lead.aggregate([
-				{
-					$addFields: {
-						lastMessageSentByMe: { $last: '$messages.sentByMe' },
-					},
-				},
-				{
-					$facet: {
-						unread: [
-							{
-								$match: {
-									lastMessageSentByMe: false,
-									messagesSeen: false,
-								},
-							},
-							{ $count: 'count' },
-						],
-						numberProvided: [
-							{
-								$match: { status: 'Number Provided' },
-							},
-							{ $count: 'count' },
-						],
-					},
-				},
-			]);
-  
-      const unreadCount            = stats.unread[0]?.count            || 0;
-      const numberProvidedCount   = stats.numberProvided[0]?.count   || 0;
-  
-      return res.json({ unreadCount, numberProvidedCount });
+        // 1) Tag each doc with its last message's sentByMe flag
+        const [stats] = await Lead.aggregate([
+            {
+                $addFields: {
+                    lastMessageSentByMe: { $last: '$messages.sentByMe' },
+                },
+            },
+            {
+                $facet: {
+                    unread: [
+                        {
+                            $match: {
+                                lastMessageSentByMe: false,
+                                messagesSeen: false,
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                    numberProvided: [
+                        {
+                            $match: { status: 'Number Provided' },
+                        },
+                        { $count: 'count' },
+                    ],
+                },
+            },
+        ]);
+
+        const unreadCount = stats.unread[0]?.count || 0;
+        const numberProvidedCount = stats.numberProvided[0]?.count || 0;
+
+        return res.json({ unreadCount, numberProvidedCount });
     } catch (err) {
-      console.error('Error fetching lead stats:', err);
-      return res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching lead stats:', err);
+        return res.status(500).json({ error: 'Internal server error' });
     }
-}
+};
