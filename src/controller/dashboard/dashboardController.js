@@ -648,10 +648,10 @@ const getLeadOverview = async (req, res) => {
 			createdAt: { $gte: start, $lte: end },
 			status: 'No Response',
 		});
-		const leadsCallReschedule = await Lead.countDocuments({
+		const leadsFollowup = await Lead.countDocuments({
 			creName: creID,
 			createdAt: { $gte: start, $lte: end },
-			status: 'Call Reschedule',
+			status: { $in: ['Call Reschedule', 'Ongoing', 'Message Rescheduled'] },
 		});
 		const leadsSold = await Lead.countDocuments({
 			creName: creID,
@@ -696,21 +696,21 @@ const getLeadOverview = async (req, res) => {
 			status: { $in: ['Canceled', 'Postponed'] },
 		});
 
-		// 4) log them so you can verify
-		console.log({
-			totalLeads,
-			leadsWithPhone,
-			leadsWithoutPhone,
-			leadsWithNumberProvided,
-			leadsNoResponse,
-			leadsCallReschedule,
-			leadsSold,
-			leadsClose,
-			leadsMeetingSet,
-			leadsMeetingComplete,
+		// // 4) log them so you can verify
+		// console.log({
+		// 	totalLeads,
+		// 	leadsWithPhone,
+		// 	leadsWithoutPhone,
+		// 	leadsWithNumberProvided,
+		// 	leadsNoResponse,
+		// 	leadsFollowup,
+		// 	leadsSold,
+		// 	leadsClose,
+		// 	leadsMeetingSet,
+		// 	leadsMeetingComplete,
 			
-			leadsMeetingCanceled,
-		});
+		// 	leadsMeetingCanceled,
+		// });
 
 		// 5) return _all_ of them
 		const finalResponse = [
@@ -719,7 +719,7 @@ const getLeadOverview = async (req, res) => {
 			{ name: 'Number Collection Failed', value: leadsWithoutPhone },
 			{ name: 'Number Provided', value: leadsWithNumberProvided },
 			{ name: 'No Response', value: leadsNoResponse },
-			{ name: 'Call Reschedule', value: leadsCallReschedule },
+			{ name: 'Follow Up', value: leadsFollowup },
 			{ name: 'Meeting Set', value: leadsMeetingSet },
 			{ name: 'Meeting Complete', value: leadsMeetingComplete },
 			{
@@ -813,54 +813,46 @@ const getMonthlyMeetingData = async (req, res) => {
 
 		const creID = req.user._id.toString();
 
+		// 1) which leads belong to this CRE in the window?
+		const assignedLeadIds = await Lead.find({
+			creName: creID,
+			createdAt: { $gte: start, $lte: end },
+		}).distinct('_id');
+
 		// get meetingcount with the status of Postponed
 		const meetingCount = await Meeting.countDocuments({
-			createdAt: {
-				$gte: start,
-				$lte: end,
-			},
-			status: ['Postponed'],
-			'lead.creName': creID,
+			lead: { $in: assignedLeadIds },
+			date: { $gte: start, $lte: end },
+			status: 'Postponed',
 		});
 
 		// get meetingcount with the status of Canceled
 		const meetingCountCanceled = await Meeting.countDocuments({
-			createdAt: {
-				$gte: start,
-				$lte: end,
-			},
-			status: ['Canceled'],
-			'lead.creName': creID,
+			lead: { $in: assignedLeadIds },
+			date: { $gte: start, $lte: end },
+			status: 'Canceled',
 		});
 
 		// get meetingcount with the status of Reschedule
 		const meetingCountReschedule = await Meeting.countDocuments({
-			createdAt: {
-				$gte: start,
-				$lte: end,
-			},
-			status: ['Rescheduled'],
-			'lead.creName': creID,
+			lead: { $in: assignedLeadIds },
+			date: { $gte: start, $lte: end },
+			status: 'Rescheduled',
 		});
 
 		// get all the meeting with Visit Charge 0 or none
 		const meetingCountVisitCharge0 = await Meeting.countDocuments({
-			createdAt: {
-				$gte: start,
-				$lte: end,
-			},
+			lead: { $in: assignedLeadIds },
+			date: { $gte: start, $lte: end },
 			visitCharge: { $in: [0, null] }, // Free Meeting
-			'lead.creName': creID,
+			
 		});
 
 		// get all the meeting with status "Online Meeting"
 		const meetingCountOnlineMeeting = await Meeting.countDocuments({
-			createdAt: {
-				$gte: start,
-				$lte: end,
-			},
-			status: ['Online Meeting'],
-			'lead.creName': creID,
+			lead: { $in: assignedLeadIds },
+			date: { $gte: start, $lte: end },
+			status: 'Online Meeting',
 		});
 
 		const stats = [
