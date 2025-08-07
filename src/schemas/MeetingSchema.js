@@ -127,6 +127,8 @@ meetingSchema.index({ date: 1, status: 1 });
 // Index for sales executive queries with date
 meetingSchema.index({ salesExecutive: 1, date: 1 });
 
+meetingSchema.index({ visitCharge: 1 });
+
 // Index for lead-based queries
 meetingSchema.index({ lead: 1 });
 

@@ -12,6 +12,7 @@ const {
     getFollowUpStats,
     getMonthlyMeetingData,
     getCREIncentive,
+    
 } = require('../../controller/dashboard/dashboardController');
 
 // Router declaration
@@ -46,5 +47,6 @@ dashBoardRouter.get('/monthly-meeting-data', checkAuth, getMonthlyMeetingData);
 
 // get incentive of an cre
 dashBoardRouter.get('/:creId/cre-incentive', checkAuth, getCREIncentive);
+
 
 module.exports = dashBoardRouter;
