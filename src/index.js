@@ -38,9 +38,12 @@ const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
 const { timingMiddleware } = require('./config/winston');
+const metaRouter = require('./routes/meta/metaRoute');
 
 // Initialize app
 const app = express();
+// for vite proxy
+app.set('trust proxy', 1); // helps pick x-forwarded-host/proto via Vite proxy
 const server = createServer(app);
 dotenv.config();
 const io = new Server(server, {
@@ -48,6 +51,7 @@ const io = new Server(server, {
 		origin: '*',
 	},
 });
+
 
 // Database connection
 mongoose
@@ -63,6 +67,7 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+ 
 app.use(
 	cors({
 		origin: (origin, callback) => {
@@ -86,6 +91,8 @@ app.use(
 				'http://192.168.68.130:5000',
 				'http://192.168.68.130',
 				'http://localhost:5173',
+				// ngrok tunneling for meta facebook login
+				'https://2ae8dac3e9a7.ngrok-free.app'
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
@@ -97,6 +104,8 @@ app.use(
 		credentials: true,
 	})
 );
+app.options('*', cors()); // preflight
+
 
 // set up EJS
 app.set('view engine', 'ejs');
@@ -138,6 +147,10 @@ app.use((req, res, next) => {
 	next();
 });
 
+// meta routes---->continued !
+app.use('/auth', metaRouter);
+
+
 // routing setup
 app.use('/users', userRouter);
 app.use('/upload', uploadRouter);
@@ -149,7 +162,7 @@ app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
 
-// product, vendor, router,discount
+// product, vendor, router, discount
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
 app.use('/quotations', quotationrouter);

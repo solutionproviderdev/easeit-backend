@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../../schemas/auth/UserSchema');
 
 const checkAuth = async (req, res, next) => {
+    console.log('checkAuth middleware called');
     try {
         // Check for token in Authorization header (Bearer token)
         const authHeader = req.headers?.authorization;

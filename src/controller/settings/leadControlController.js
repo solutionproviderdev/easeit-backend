@@ -289,10 +289,11 @@ exports.deleteManualOverride = async (req, res) => {
  *   }
  * }
  */
+
 exports.updateAutoMessage = async (req, res) => {
     try {
         const { autoMessage } = req.body;
-
+        console.log('ai autoMessage----->', autoMessage);
         // Validate the input: ensure enabled is boolean, message is a non-empty string,
         // and delayHours is a number between 1 and 23.
         if (

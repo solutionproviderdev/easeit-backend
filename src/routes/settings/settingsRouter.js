@@ -13,7 +13,7 @@ settingsRouter.use('/lead', leadControlRouter);
 settingsRouter.use('/assistants', assistantRouter);
 
 settingsRouter.get('/', (req, res) => {
-	res.send('Settings Page');
+    res.send('Settings Page');
 });
 
 module.exports = settingsRouter;
