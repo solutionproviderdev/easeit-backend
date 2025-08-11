@@ -167,6 +167,7 @@ exports.getAllLeads = async (req, res) => {
 			'New',
 			'No Response',
 			'Need Support',
+			'Number Provided',
 			'Message Rescheduled',
 			'Number Collected',
 			'Call Reschedule',
