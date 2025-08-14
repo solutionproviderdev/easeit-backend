@@ -17,6 +17,10 @@ const User = require('../schemas/auth/UserSchema');
 const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
 const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
 const { SholutionBot } = require('../SolutionBot/SolutionBot');
+const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema');
+const SavedMessage = require('../schemas/settings/SavedMessage.Schema');
+const Assistant = require('../schemas/settings/Assistant.Schema');
+const { sendMessageToLead } = require('../helpers/sendMessageToLead');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -76,7 +80,9 @@ const processMessages = (messages) => {
     // Map each message to a standardized format.
     const processedMessages = messages.map((msg) => {
         let fileUrl = [];
-
+        /* Added to handle file types */
+        let fileType = null;
+        // ______________________________
         // If the sender is not "Solution Provider", try to extract a phone number.
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
@@ -94,6 +100,13 @@ const processMessages = (messages) => {
                 msg?.attachments?.data[0]?.video_data ||
                 msg?.attachments?.data[0]?.file_url)
         ) {
+            // Determine the file type based on the attachment data.
+            const att = msg.attachments.data[0];
+            if (att.image_data) fileType = 'image';
+            else if (att.video_data) fileType = 'video';
+            else if (att.file_url && att.mime_type && att.mime_type.startsWith('audio')) fileType = 'audio';
+            // _____________________________________________________________
+
             fileUrl = msg?.attachments?.data?.map((att) => {
                 if (att.image_data) {
                     return att.image_data.url;
@@ -118,6 +131,7 @@ const processMessages = (messages) => {
             sentByMe: msg.from.name === 'Solution Provider',
             date: moment(msg.created_time).format('LLL'),
             fileUrl,
+            fileType,
         };
     });
 
@@ -277,6 +291,58 @@ const updateExistingLead = async (
         if (!lead.messages.find((m) => m.messageId === message.messageId)) {
             lead.messages.push(message);
             newMessage = message.content;
+
+            /** *    What  I have added here to action the media type Reply */
+
+            // --- Media auto-reply trigger ---
+            if (message.fileType && !message.sentByMe) {
+                // Log the file detection for debugging purposes.
+                console.log('[AUTO-REPLY TRIGGER] File detected:', {
+                    fileType: message.fileType,
+                    fileUrl: message.fileUrl,
+                    leadId: lead._id,
+                    senderName: message.senderName,
+                    messageId: message.messageId,
+                });
+                // 1. Get the lead owner (or org/user as needed)
+
+                // 2. Fetch media reply settings
+                const settings = await MediaReplySettings.findOne({})
+                    .populate(`${message.fileType}.savedId`)
+                    .populate(`${message.fileType}.aiModel`)
+                    .lean();
+                console.log('[AUTO-REPLY] Settings found:', settings);
+                if (settings && settings[message.fileType]?.enabled) {
+                    console.log(`[AUTO-REPLY] ${message.fileType} reply enabled`);
+
+                    let replyText = null;
+
+                    if (
+                        settings[message.fileType].aiEnabled &&
+                        settings[message.fileType].aiModel
+                    ) {
+                        console.log('[AUTO-REPLY] AI enabled, generating reply...');
+                        replyText = await getAIResponse(
+                            settings[message.fileType].aiModel,
+                            message
+                        );
+                    } else if (
+                        settings[message.fileType].savedMessageEnabled &&
+                        settings[message.fileType].savedId
+                    ) {
+                        console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
+                        replyText = settings[message.fileType].savedId.message;
+                    }
+
+                    console.log('[AUTO-REPLY] Reply text:', replyText);
+
+                    if (replyText) {
+                        console.log('[AUTO-REPLY] Sending reply...');
+                        await sendMessageToLead(lead._id, replyText, io);
+                    }
+                }
+            }
+            // --- end media type auto-reply trigger ---
 
             if (lead.aiBotReply && !lastMessageSentFromUs) {
                 SholutionBot(lead._id, io, newMessage);
@@ -462,6 +528,19 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     }
     console.timeEnd('getConversationsAndUpdateLeadsUpdated');
 };
+
+/**
+ * Generates an AI response based on the provided model and message.
+ * @param {string} aiModel - The AI model to use for generating the response.
+ * @param {Object} message - The message object containing content and other details.
+ * @returns {string} - The generated AI response.
+ */
+async function getAIResponse(aiModel, message) {
+    // Call your AI assistant logic here, passing the model and message context
+    // Return the generated text
+    // Example: return await Assistant.generate(aiModel, message);
+    return 'This is an AI-generated reply.'; // Placeholder
+}
 
 module.exports = {
     getConversationsAndUpdateLeadsUpdated,

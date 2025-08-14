@@ -4,6 +4,7 @@ const facebookRouter = require('./endpoints/facebook');
 const leadControlRouter = require('./endpoints/leadControl');
 const assistantRouter = require('./endpoints/assistantsRouter');
 const savedMessageRouter = require('./endpoints/savedMessageRouter');
+const MediaReplyRouter = require('./endpoints/mediaReplyRouter');
 
 // declear router
 const settingsRouter = express.Router();
@@ -13,6 +14,7 @@ settingsRouter.use('/facebook', facebookRouter);
 settingsRouter.use('/lead', leadControlRouter);
 settingsRouter.use('/assistants', assistantRouter);
 settingsRouter.use('/saved-messages', savedMessageRouter);
+settingsRouter.use('/media-reply', MediaReplyRouter);
 
 settingsRouter.get('/', (req, res) => {
 	res.send('Settings Page');
