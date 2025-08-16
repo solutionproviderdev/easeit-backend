@@ -179,7 +179,7 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
         );
         return response.data.data;
     } catch (error) {
-        logError(`Error fetching data for page ${pageId}`, error);
+        // logError(`Error fetching data for page ${pageId}`, error);
         return [];
     }
 };
@@ -435,7 +435,7 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
  * @param {Object} io - Socket.io instance.
  */
 const getConversationsAndUpdateLeadsUpdated = async (io) => {
-    console.time('getConversationsAndUpdateLeadsUpdated');
+    // console.time('getConversationsAndUpdateLeadsUpdated');
     try {
         const pages = await fetchFacebookSettings();
         const nameToCreId = await getCREMapping();
@@ -460,7 +460,7 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     } catch (error) {
         logError('Error fetching or processing data', error);
     }
-    console.timeEnd('getConversationsAndUpdateLeadsUpdated');
+    // console.timeEnd('getConversationsAndUpdateLeadsUpdated');
 };
 
 module.exports = {

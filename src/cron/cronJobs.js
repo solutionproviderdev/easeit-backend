@@ -56,7 +56,8 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotSeen(io);
                 await sendAutoMessage(io);
             } catch (error) {
-                console.error('Error in reAssignOnNotReplied cron job:', error);
+                res.json({ error: error.message });
+                // console.error('Error in reAssignOnNotReplied cron job:', error);
             }
         },
         {
