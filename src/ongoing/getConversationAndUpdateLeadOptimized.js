@@ -315,11 +315,11 @@ const updateExistingLead = async (
                     .populate(`${fileType}.savedId`)
                     .populate(`${fileType}.aiModel`)
                     .lean();
-                console.log('[AUTO-REPLY] Settings found:', settings);
+                // console.log('[AUTO-REPLY] Settings found:', settings);
 
                 console.log('Enabled value:', settings[fileType]?.enabled);
                 if (settings && settings[fileType]?.enabled) {
-                    console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
+                    // console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
 
                     let replyText = null;
 
@@ -327,7 +327,7 @@ const updateExistingLead = async (
                         settings[fileType].aiEnabled &&
                         settings[fileType].aiModel
                     ) {
-                        console.log('[AUTO-REPLY] AI enabled, generating reply...');
+                        // console.log('[AUTO-REPLY] AI enabled, generating reply...');
                         try{
                              replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
                         }
@@ -348,7 +348,7 @@ const updateExistingLead = async (
                     if (replyText) {
                         console.log('[AUTO-REPLY] Sending reply...');
                         console.log(replyText);
-                        // await sendMessageToLead(lead._id, replyText, io);
+                      await sendMessageToLead(lead._id, replyText, io);
                     }
                 }
             }
@@ -545,12 +545,12 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
  * @param {Object} message - The message object containing content and other details.
  * @returns {string} - The generated AI response.
  */
-async function getAIResponse(aiModel, message) {
-    // Call your AI assistant logic here, passing the model and message context
-    // Return the generated text
-    // Example: return await Assistant.generate(aiModel, message);
-    return 'This is an AI-generated reply.'; // Placeholder
-}
+// async function getAIResponse(aiModel, message) {
+//     // Call your AI assistant logic here, passing the model and message context
+//     // Return the generated text
+//     // Example: return await Assistant.generate(aiModel, message);
+//     return 'This is an AI-generated reply.'; // Placeholder
+// }
 
 module.exports = {
     getConversationsAndUpdateLeadsUpdated,
