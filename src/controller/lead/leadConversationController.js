@@ -617,13 +617,25 @@ exports.searchLeads = async (req, res) => {
                         {
                             $size: {
                                 $filter: {
-                                    input: '$phone',
+                                    input: {
+                                        $cond: [
+                                            {$isArray:'$phone'},
+                                            '$phone',
+                                            {
+                                                $cond: [
+                                                    {$ifNull: ['$phone',false]},
+                                                    [{$toString: '$phone'}],
+                                                    [],
+                                                ],
+                                            },
+                                        ],
+                                    },
                                     as: 'p',
                                     cond: {
                                         $regexMatch: {
                                             input: {
                                                 $replaceAll: {
-                                                    input: '$$p',
+                                                    input: {$ifNull: ['$$p','']},
                                                     find: ' ',
                                                     replacement: '',
                                                 },
