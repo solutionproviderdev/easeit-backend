@@ -21,6 +21,7 @@ const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema
 const SavedMessage = require('../schemas/settings/SavedMessage.Schema');
 const Assistant = require('../schemas/settings/Assistant.Schema');
 const { sendMessageToLead } = require('../helpers/sendMessageToLead');
+const { MediaBot } = require('../MediaBot/MediaBot');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -81,7 +82,7 @@ const processMessages = (messages) => {
     const processedMessages = messages.map((msg) => {
         let fileUrl = [];
         /* Added to handle file types */
-        let fileType = null;
+        const fileTypes = [];
         // ______________________________
         // If the sender is not "Solution Provider", try to extract a phone number.
         if (msg.from.name !== 'Solution Provider') {
@@ -102,9 +103,9 @@ const processMessages = (messages) => {
         ) {
             // Determine the file type based on the attachment data.
             const att = msg.attachments.data[0];
-            if (att.image_data) fileType = 'image';
-            else if (att.video_data) fileType = 'video';
-            else if (att.file_url && att.mime_type && att.mime_type.startsWith('audio')) fileType = 'audio';
+            if (att.image_data) fileTypes.push('image');
+            else if (att.video_data) fileTypes.push('video');
+            else if (att.file_url && att.mime_type && att.mime_type.startsWith('audio')) fileTypes.push('audio');
             // _____________________________________________________________
 
             fileUrl = msg?.attachments?.data?.map((att) => {
@@ -131,7 +132,7 @@ const processMessages = (messages) => {
             sentByMe: msg.from.name === 'Solution Provider',
             date: moment(msg.created_time).format('LLL'),
             fileUrl,
-            fileType,
+            fileTypes, // array of types
         };
     });
 
@@ -295,10 +296,13 @@ const updateExistingLead = async (
             /** *    What  I have added here to action the media type Reply */
 
             // --- Media auto-reply trigger ---
-            if (message.fileType && !message.sentByMe) {
+            if (message.fileTypes && message.fileTypes.length > 0 && !message.sentByMe) {
+                // Only trigger reply for the first file type
+                const fileType = message.fileTypes[0];
+
                 // Log the file detection for debugging purposes.
                 console.log('[AUTO-REPLY TRIGGER] File detected:', {
-                    fileType: message.fileType,
+                    fileType,
                     fileUrl: message.fileUrl,
                     leadId: lead._id,
                     senderName: message.senderName,
@@ -308,36 +312,42 @@ const updateExistingLead = async (
 
                 // 2. Fetch media reply settings
                 const settings = await MediaReplySettings.findOne({})
-                    .populate(`${message.fileType}.savedId`)
-                    .populate(`${message.fileType}.aiModel`)
+                    .populate(`${fileType}.savedId`)
+                    .populate(`${fileType}.aiModel`)
                     .lean();
                 console.log('[AUTO-REPLY] Settings found:', settings);
-                if (settings && settings[message.fileType]?.enabled) {
-                    console.log(`[AUTO-REPLY] ${message.fileType} reply enabled`);
+
+                console.log('Enabled value:', settings[fileType]?.enabled);
+                if (settings && settings[fileType]?.enabled) {
+                    console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
 
                     let replyText = null;
 
                     if (
-                        settings[message.fileType].aiEnabled &&
-                        settings[message.fileType].aiModel
+                        settings[fileType].aiEnabled &&
+                        settings[fileType].aiModel
                     ) {
                         console.log('[AUTO-REPLY] AI enabled, generating reply...');
-                        replyText = await getAIResponse(
-                            settings[message.fileType].aiModel,
-                            message
-                        );
+                        try{
+                             replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
+                        }
+                        catch (error) {
+                            console.error('[AUTO-REPLY] Error generating AI reply:', error);
+                        }
+                       
                     } else if (
-                        settings[message.fileType].savedMessageEnabled &&
-                        settings[message.fileType].savedId
+                        settings[fileType].savedMessageEnabled &&
+                        settings[fileType].savedId
                     ) {
                         console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
-                        replyText = settings[message.fileType].savedId.message;
+                        replyText = settings[fileType].savedId.message;
                     }
 
                     console.log('[AUTO-REPLY] Reply text:', replyText);
 
                     if (replyText) {
                         console.log('[AUTO-REPLY] Sending reply...');
+                        console.log(replyText);
                         // await sendMessageToLead(lead._id, replyText, io);
                     }
                 }
