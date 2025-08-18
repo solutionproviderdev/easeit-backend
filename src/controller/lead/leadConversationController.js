@@ -4,896 +4,871 @@ const { default: axios } = require('axios');
 const { default: mongoose } = require('mongoose');
 const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
-const {
-	getCreInfo,
-} = require('../../ongoing/getConversationAndUpdateLeadOptimized');
+const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
 function escapeRegex(str) {
-	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // reused Functions for only this files.
-exports.createNewMessageObject = (
-	messageId,
-	content,
-	senderId,
-	sentByMe,
-	fileUrl = null
-) => {
-	const newMessage = {
-		messageId,
-		content,
-		senderId,
-		sentByMe,
-		date: new Date(),
-	};
+exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUrl = null) => {
+    const newMessage = {
+        messageId,
+        content,
+        senderId,
+        sentByMe,
+        date: new Date(),
+    };
 
-	if (fileUrl) {
-		newMessage.fileUrl = [fileUrl];
-	}
+    if (fileUrl) {
+        newMessage.fileUrl = [fileUrl];
+    }
 
-	return newMessage;
+    return newMessage;
 };
 
 // Emit Socket.io events for new messages or leads
 const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
-	// get cre information
-	const cre = await getCreInfo(savedLead.creName);
+    // get cre information
+    const cre = await getCreInfo(savedLead.creName);
 
-	// make crename as object if it is not null
-	let creName = null;
-	if (cre) {
-		creName = {
-			_id: cre._id,
-			name: cre.name,
-			profilePicture: cre.profilePicture,
-			nickName: cre.nickName,
-		};
-	}
+    // make crename as object if it is not null
+    let creName = null;
+    if (cre) {
+        creName = {
+            _id: cre._id,
+            name: cre.name,
+            profilePicture: cre.profilePicture,
+            nickName: cre.nickName,
+        };
+    }
 
-	const custommersMessages = savedLead.messages.filter(
-		message => message.sentByMe === false
-	);
-	const lastCustomerMessageTime =
-		custommersMessages[custommersMessages.length - 1]?.date;
+    const custommersMessages = savedLead.messages.filter((message) => message.sentByMe === false);
+    const lastCustomerMessageTime = custommersMessages[custommersMessages.length - 1]?.date;
 
-	const socketPayload = {
-		name: savedLead.name,
-		lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
-		lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
-		lastCustomerMessageTime,
-		sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
-		createdAt: savedLead.createdAt,
-		creName,
-		pageInfo: {
-			pageName: pageInfo.pageName,
-			pageId: pageInfo.pageId,
-			pageProfilePicture: pageInfo.pageProfilePicture,
-		},
-		status: savedLead.status,
-		_id: savedLead._id,
-		messagesSeen: savedLead.messagesSeen,
-	};
+    const socketPayload = {
+        name: savedLead.name,
+        lastMessage: savedLead.messages[savedLead.messages.length - 1].content,
+        lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
+        lastCustomerMessageTime,
+        sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
+        createdAt: savedLead.createdAt,
+        creName,
+        pageInfo: {
+            pageName: pageInfo.pageName,
+            pageId: pageInfo.pageId,
+            pageProfilePicture: pageInfo.pageProfilePicture,
+        },
+        status: savedLead.status,
+        _id: savedLead._id,
+        messagesSeen: savedLead.messagesSeen,
+    };
 
-	io.emit('conversation', socketPayload);
-	io.emit('newLead', { newLead: socketPayload });
+    io.emit('conversation', socketPayload);
+    io.emit('newLead', { newLead: socketPayload });
 };
 
 exports.emitNewMessage = (req, leadId, newMessage) => {
-	req.io.emit(`fbMessage${leadId}`, newMessage);
+    req.io.emit(`fbMessage${leadId}`, newMessage);
 };
 
 exports.getAllLeadConversationUpdated = async (req, res) => {
-	try {
-		const page = parseInt(req.query.page, 10) || 1;
-		const limit = parseInt(req.query.limit, 10) || 10;
-		const skip = (page - 1) * limit;
-		const { creId } = req.query;
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+        const { creId } = req.query;
 
-		const { _id: userId, roleId: userRoleId } = req.user;
+        const { _id: userId, roleId: userRoleId } = req.user;
 
-		// Build match conditions for aggregation
-		const matchConditions = { source: 'Facebook' };
-		// If a CRE id is provided, add it to the match filter
-		// (assuming creName is stored as ObjectId)
-		if (creId) {
-			matchConditions.creName = new mongoose.Types.ObjectId(creId);
-		}
+        // Build match conditions for aggregation
+        const matchConditions = { source: 'Facebook' };
+        // If a CRE id is provided, add it to the match filter
+        // (assuming creName is stored as ObjectId)
+        if (creId) {
+            matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        }
 
-		// check if the user is a CRE
-		// 1. get the cre Department
-		const creDepartment = await Department.findOne({
-			departmentName: 'CRE',
-		});
+        // check if the user is a CRE
+        // 1. get the cre Department
+        const creDepartment = await Department.findOne({
+            departmentName: 'CRE',
+        });
 
-		// 2. get the cre Role ID
-		const creRoleId = creDepartment.roles.find(
-			role => role.roleName === 'CRE'
-		)._id;
+        // 2. get the cre Role ID
+        const creRoleId = creDepartment.roles.find((role) => role.roleName === 'CRE')._id;
 
-		// 3. check if the user is a CRE
-		const isCRE = userRoleId.toString() === creRoleId.toString();
+        // 3. check if the user is a CRE
+        const isCRE = userRoleId.toString() === creRoleId.toString();
 
-		// If the user is a CRE, add the creName field to the match filter
-		if (isCRE) {
-			matchConditions.creName = userId;
-		}
+        // If the user is a CRE, add the creName field to the match filter
+        if (isCRE) {
+            matchConditions.creName = userId;
+        }
 
-		const leadsWithLastMessage = await Lead.aggregate([
-			{
-				$match: matchConditions,
-			},
-			// Add a field "customerMessages" that contains only messages where sentByMe is false
-			{
-				$addFields: {
-					customerMessages: {
-						$filter: {
-							input: '$messages',
-							as: 'msg',
-							cond: { $eq: ['$$msg.sentByMe', false] },
-						},
-					},
-				},
-			},
-			// Add the lastCustomerMessageTime field based on the filtered messages
-			{
-				$addFields: {
-					lastCustomerMessageTime: { $last: '$customerMessages.date' },
-					// Optionally keep other fields from messages if needed:
-					lastMessage: { $last: '$messages.content' },
-					lastMessageTime: { $last: '$messages.date' },
-					sentByMe: { $last: '$messages.sentByMe' },
-				},
-			},
-			{
-				$project: {
-					name: 1,
-					lastMessage: 1,
-					lastMessageTime: 1,
-					lastCustomerMessageTime: 1,
-					sentByMe: 1,
-					createdAt: 1,
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					messagesSeen: 1,
-					_id: 1,
-				},
-			},
-		])
-			.sort({ lastMessageTime: -1 })
-			.skip(skip)
-			.limit(limit);
+        const leadsWithLastMessage = await Lead.aggregate([
+            {
+                $match: matchConditions,
+            },
+            // Add a field "customerMessages" that contains only messages where sentByMe is false
+            {
+                $addFields: {
+                    customerMessages: {
+                        $filter: {
+                            input: '$messages',
+                            as: 'msg',
+                            cond: { $eq: ['$$msg.sentByMe', false] },
+                        },
+                    },
+                },
+            },
+            // Add the lastCustomerMessageTime field based on the filtered messages
+            {
+                $addFields: {
+                    lastCustomerMessageTime: { $last: '$customerMessages.date' },
+                    // Optionally keep other fields from messages if needed:
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    lastCustomerMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                },
+            },
+        ])
+            .sort({ lastMessageTime: -1 })
+            .skip(skip)
+            .limit(limit);
 
-		// Populate creName with details from the User model
-		const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
-			path: 'creName',
-			select: 'nameAsPerNID nickname profilePicture',
-			model: 'User',
-		});
+        // Populate creName with details from the User model
+        const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
+            path: 'creName',
+            select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
+        });
 
-		// Count total leads using the same match conditions
-		const totalLeads = await Lead.countDocuments(matchConditions);
+        // Count total leads using the same match conditions
+        const totalLeads = await Lead.countDocuments(matchConditions);
 
-		// Extract unique statuses from the leads
-		const uniqueStatuses = [
-			...new Set(leadsPopulated.map(lead => lead.status)),
-		];
+        // Extract unique statuses from the leads
+        const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
 
-		// Extract unique pageInfo objects
-		const uniquePagesMap = new Map();
-		leadsPopulated.forEach(lead => {
-			if (!lead.pageInfo) {
-				console.log('Lead with missing pageInfo:', lead.name);
-				return;
-			}
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsPopulated.forEach((lead) => {
+            if (!lead.pageInfo) {
+                console.log('Lead with missing pageInfo:', lead.name);
+                return;
+            }
 
-			// Extract pageInfo details
-			const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            // Extract pageInfo details
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
 
-			if (!uniquePagesMap.has(pageId)) {
-				uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
-			}
-		});
-		const uniquePages = Array.from(uniquePagesMap.values());
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
 
-		// Extract unique CRE names with details
-		const uniqueCRENames = [];
-		const creNamesSet = new Set();
-		leadsPopulated.forEach(lead => {
-			const creDetails = lead.creName;
-			if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
-				creNamesSet.add(creDetails._id.toString());
-				uniqueCRENames.push({
-					_id: creDetails._id,
-					name: creDetails.nameAsPerNID,
-					nickname: creDetails.nickname,
-					profilePicture: creDetails.profilePicture,
-				});
-			}
-		});
+        // Extract unique CRE names with details
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+        leadsPopulated.forEach((lead) => {
+            const creDetails = lead.creName;
+            if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
+                creNamesSet.add(creDetails._id.toString());
+                uniqueCRENames.push({
+                    _id: creDetails._id,
+                    name: creDetails.nameAsPerNID,
+                    nickname: creDetails.nickname,
+                    profilePicture: creDetails.profilePicture,
+                });
+            }
+        });
 
-		// Respond with paginated leads and formatted conversation objects
-		res.status(200).json({
-			totalLeads,
-			totalPages: Math.ceil(totalLeads / limit),
-			currentPage: page,
-			filters: {
-				statuses: uniqueStatuses,
-				pages: uniquePages,
-				creNames: uniqueCRENames,
-			},
-			leads: leadsPopulated,
-		});
-	} catch (error) {
-		console.error('Error getting leads with last message:', error);
-		res.status(500).json({ error: 'Internal server error' });
-	}
+        // Respond with paginated leads and formatted conversation objects
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames,
+            },
+            leads: leadsPopulated,
+        });
+    } catch (error) {
+        console.error('Error getting leads with last message:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 exports.getAllLeeadConversionOfFolowUp = async (req, res) => {
-	try {
-		const page = parseInt(req.query.page, 10) || 1;
-		const limit = parseInt(req.query.limit, 10) || 10;
-		const skip = (page - 1) * limit;
-		const { creId } = req.query;
-		const { _id: userId, roleId: userRoleId } = req.user;
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+        const { creId } = req.query;
+        const { _id: userId, roleId: userRoleId } = req.user;
 
-		const now = new Date();
-		const endOfToday = new Date(
-			now.getFullYear(),
-			now.getMonth(),
-			now.getDate(),
-			23,
-			59,
-			59,
-			999
-		);
+        const now = new Date();
+        const endOfToday = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            23,
+            59,
+            59,
+            999
+        );
 
-		/* ---------- build match ---------- */
-		const matchConditions = {
-			source: 'Facebook',
-			'reminder.status': { $in: ['Pending', 'Missed'] },
-			'reminder.time': { $lte: endOfToday },
-		};
+        /* ---------- build match ---------- */
+        const matchConditions = {
+            source: 'Facebook',
+            'reminder.status': { $in: ['Pending', 'Missed'] },
+            'reminder.time': { $lte: endOfToday },
+        };
 
-		if (creId) matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        if (creId) matchConditions.creName = new mongoose.Types.ObjectId(creId);
 
-		const creDept = await Department.findOne({ departmentName: 'CRE' });
-		const creRoleId = creDept?.roles.find(r => r.roleName === 'CRE')?._id;
-		const isCRE = userRoleId?.toString() === creRoleId?.toString();
-		if (isCRE) matchConditions.creName = userId;
+        const creDept = await Department.findOne({ departmentName: 'CRE' });
+        const creRoleId = creDept?.roles.find((r) => r.roleName === 'CRE')?._id;
+        const isCRE = userRoleId?.toString() === creRoleId?.toString();
+        if (isCRE) matchConditions.creName = userId;
 
-		/* ---------- aggregation ---------- */
-		const leads = await Lead.aggregate([
-			{ $match: matchConditions },
-			/* keep only pending/missed reminders till now */
-			{
-				$addFields: {
-					activeReminders: {
-						$filter: {
-							input: '$reminder',
-							as: 'r',
-							cond: {
-								$and: [
-									{ $in: ['$$r.status', ['Pending', 'Missed']] },
-									{ $lte: ['$$r.time', endOfToday] },
-								],
-							},
-						},
-					},
-				},
-			},
+        /* ---------- aggregation ---------- */
+        const leads = await Lead.aggregate([
+            { $match: matchConditions },
+            /* keep only pending/missed reminders till now */
+            {
+                $addFields: {
+                    activeReminders: {
+                        $filter: {
+                            input: '$reminder',
+                            as: 'r',
+                            cond: {
+                                $and: [
+                                    { $in: ['$$r.status', ['Pending', 'Missed']] },
+                                    { $lte: ['$$r.time', endOfToday] },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
 
-			// drop any docs that now have no activeReminders
-			{
-				$match: {
-					'activeReminders.0': { $exists: true },
-				},
-			},
-			/* latest reminder fields */
-			{
-				$addFields: {
-					lastReminderTime: { $max: '$activeReminders.time' },
-					lastReminderStatus: {
-						$arrayElemAt: [
-							{
-								$filter: {
-									input: '$activeReminders',
-									cond: {
-										$eq: ['$$this.time', { $max: '$activeReminders.time' }],
-									},
-								},
-							},
-							0,
-						],
-					},
-				},
-			},
-			{
-				$addFields: {
-					lastReminderStatus: '$lastReminderStatus.status',
-					lastReminderComment: '$lastReminderStatus.commentId',
-				},
-			},
-			{
-				$project: {
-					name: 1,
-					lastMsg: 1,
-					lastMessageTime: 1,
-					createdAt: 1,
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					messagesSeen: 1,
-					_id: 1,
-					activeReminders: 1,
-					lastReminderTime: 1,
-					lastReminderStatus: 1,
-					lastReminderComment: 1,
-				},
-			},
-			{ $sort: { lastReminderTime: -1 } },
-			{ $skip: skip },
-			{ $limit: limit },
-			/* populate CRE */
-			{
-				$lookup: {
-					from: 'users',
-					localField: 'creName',
-					foreignField: '_id',
-					as: 'creName',
-					pipeline: [
-						{
-							$project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 },
-						},
-					],
-				},
-			},
-			{ $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
-		]);
+            // drop any docs that now have no activeReminders
+            {
+                $match: {
+                    'activeReminders.0': { $exists: true },
+                },
+            },
+            /* latest reminder fields */
+            {
+                $addFields: {
+                    lastReminderTime: { $max: '$activeReminders.time' },
+                    lastReminderStatus: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: '$activeReminders',
+                                    cond: {
+                                        $eq: ['$$this.time', { $max: '$activeReminders.time' }],
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    lastReminderStatus: '$lastReminderStatus.status',
+                    lastReminderComment: '$lastReminderStatus.commentId',
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMsg: 1,
+                    lastMessageTime: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                    activeReminders: 1,
+                    lastReminderTime: 1,
+                    lastReminderStatus: 1,
+                    lastReminderComment: 1,
+                },
+            },
+            { $sort: { lastReminderTime: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            /* populate CRE */
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'creName',
+                    foreignField: '_id',
+                    as: 'creName',
+                    pipeline: [
+                        {
+                            $project: { nameAsPerNID: 1, nickname: 1, profilePicture: 1 },
+                        },
+                    ],
+                },
+            },
+            { $unwind: { path: '$creName', preserveNullAndEmptyArrays: true } },
+        ]);
 
-		/* ---------- counts & filters ---------- */
-		const totalLeads = await Lead.countDocuments(matchConditions);
+        /* ---------- counts & filters ---------- */
+        const totalLeads = await Lead.countDocuments(matchConditions);
 
-		const statuses = [...new Set(leads.map(l => l.status))];
-		const pagesMap = new Map();
-		const creMap = new Map();
+        const statuses = [...new Set(leads.map((l) => l.status))];
+        const pagesMap = new Map();
+        const creMap = new Map();
 
-		leads.forEach(l => {
-			if (l.pageInfo) pagesMap.set(l.pageInfo.pageId, l.pageInfo);
-			if (l.creName) creMap.set(l.creName._id.toString(), l.creName);
-		});
+        leads.forEach((l) => {
+            if (l.pageInfo) pagesMap.set(l.pageInfo.pageId, l.pageInfo);
+            if (l.creName) creMap.set(l.creName._id.toString(), l.creName);
+        });
 
-		res.status(200).json({
-			totalLeads,
-			totalPages: Math.ceil(totalLeads / limit),
-			currentPage: page,
-			filters: {
-				statuses,
-				pages: Array.from(pagesMap.values()),
-				creNames: Array.from(creMap.values()),
-			},
-			leads,
-		});
-	} catch (error) {
-		console.error('Error getting reminder follow-up leads:', error);
-		res.status(500).json({ error: 'Internal server error' });
-	}
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses,
+                pages: Array.from(pagesMap.values()),
+                creNames: Array.from(creMap.values()),
+            },
+            leads,
+        });
+    } catch (error) {
+        console.error('Error getting reminder follow-up leads:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 // Controller function to get all messages for a specific lead
 exports.getMessagesForLead = async (req, res) => {
-	const { leadId } = req.params;
+    const { leadId } = req.params;
 
-	try {
-		// Find the lead by ID
-		const lead = await Lead.findById(leadId);
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(leadId);
 
-		if (!lead) {
-			return res.status(404).json({ message: 'Lead not found' });
-		}
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead not found' });
+        }
 
-		// Return the messages for the specific lead
-		res.status(200).json({
-			messages: lead.messages,
-			messagesSeen: lead.messagesSeen, // Include global message seen status
-		});
-	} catch (error) {
-		console.error(`Error fetching messages for lead ${leadId}:`, error);
-		res.status(500).json({ message: 'Server Error' });
-	}
+        // Return the messages for the specific lead
+        res.status(200).json({
+            messages: lead.messages,
+            messagesSeen: lead.messagesSeen, // Include global message seen status
+        });
+    } catch (error) {
+        console.error(`Error fetching messages for lead ${leadId}:`, error);
+        res.status(500).json({ message: 'Server Error' });
+    }
 };
 
 // Handler function to mark messages as seen
 exports.markMessagesAsSeen = async (req, res) => {
-	const { id } = req.params; // Lead ID
+    const { id } = req.params; // Lead ID
 
-	try {
-		// Find the lead by ID
-		const lead = await Lead.findById(id);
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
 
-		if (!lead) {
-			return res.status(404).json({ msg: 'Lead not found' });
-		}
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
 
-		// Update the messagesSeen field
-		lead.messagesSeen = true;
+        // Update the messagesSeen field
+        lead.messagesSeen = true;
 
-		// Save the updated lead
-		await lead.save();
+        // Save the updated lead
+        await lead.save();
 
-		res.status(200).json({ msg: 'Messages marked as seen' });
-	} catch (error) {
-		console.error(
-			`Error marking messages as seen for lead ${id}: ${error.message}`
-		);
-		res.status(500).json({ msg: 'Server error' });
-	}
+        res.status(200).json({ msg: 'Messages marked as seen' });
+    } catch (error) {
+        console.error(`Error marking messages as seen for lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
 };
 
 exports.toggleAIreplay = async (req, res) => {
-	const { id } = req.params; // Lead ID
-	const { aiBotReply } = req.body;
+    const { id } = req.params; // Lead ID
+    const { aiBotReply } = req.body;
 
-	try {
-		// Find the lead by ID
-		const lead = await Lead.findById(id);
+    try {
+        // Find the lead by ID
+        const lead = await Lead.findById(id);
 
-		if (!lead) {
-			return res.status(404).json({ msg: 'Lead not found' });
-		}
+        if (!lead) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
 
-		// Update the messagesSeen field
-		lead.aiBotReply = aiBotReply;
+        // Update the messagesSeen field
+        lead.aiBotReply = aiBotReply;
 
-		// Save the updated lead
-		await lead.save();
+        // Save the updated lead
+        await lead.save();
 
-		res.status(200).json({ msg: 'AI Bot Reply updated' });
-	} catch (error) {
-		console.error(
-			`Error updating AI Bot Reply for lead ${id}: ${error.message}`
-		);
-		res.status(500).json({ msg: 'Server error' });
-	}
+        res.status(200).json({ msg: 'AI Bot Reply updated' });
+    } catch (error) {
+        console.error(`Error updating AI Bot Reply for lead ${id}: ${error.message}`);
+        res.status(500).json({ msg: 'Server error' });
+    }
 };
 
 exports.sendMetaMessage = async (req, res) => {
-	const { leadId } = req.params;
-	const { messageType, content } = req.body;
+    const { leadId } = req.params;
+    const { messageType, content } = req.body;
 
-	try {
-		// Fetch lead details
-		const lead = await Lead.findById(leadId);
+    try {
+        // Fetch lead details
+        const lead = await Lead.findById(leadId);
 
-		if (!lead || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
-			return res
-				.status(404)
-				.json({ error: 'Lead not found or missing Facebook ID or Page ID' });
-		}
+        if (!lead || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
+            return res
+                .status(404)
+                .json({ error: 'Lead not found or missing Facebook ID or Page ID' });
+        }
 
-		// Fetch Facebook settings
-		const settings = await Settings.findOne({ name: 'facebook' });
+        // Fetch Facebook settings
+        const settings = await Settings.findOne({ name: 'facebook' });
 
-		if (!settings || !settings.settingsData.page) {
-			return res
-				.status(500)
-				.json({ error: 'Facebook settings or access token not found' });
-		}
+        if (!settings || !settings.settingsData.page) {
+            return res.status(500).json({ error: 'Facebook settings or access token not found' });
+        }
 
-		// Find the specific page settings
-		const pageSettings = settings.settingsData.page.find(
-			page => page.pageId == lead.pageInfo.pageId
-		);
+        // Find the specific page settings
+        const pageSettings = settings.settingsData.page.find(
+            (page) => page.pageId == lead.pageInfo.pageId
+        );
 
-		if (!pageSettings) {
-			return res
-				.status(404)
-				.json({ error: 'Facebook page settings not found' });
-		}
+        if (!pageSettings) {
+            return res.status(404).json({ error: 'Facebook page settings not found' });
+        }
 
-		const { pageAccessToken, pageId } = pageSettings;
-		const newMessages = []; // Array to store new message objects
+        const { pageAccessToken, pageId } = pageSettings;
+        const newMessages = []; // Array to store new message objects
 
-		// Prepare the base message payload
-		const messagePayload = {
-			recipient: { id: lead.pageInfo.fbSenderID },
-			messaging_type: 'RESPONSE',
-			access_token: pageAccessToken, // Include access token in the payload
-			message: {},
-		};
+        // Prepare the base message payload
+        const messagePayload = {
+            recipient: { id: lead.pageInfo.fbSenderID },
+            messaging_type: 'RESPONSE',
+            access_token: pageAccessToken, // Include access token in the payload
+            message: {},
+        };
 
-		// Handle different types of messages
-		if (messageType === 'text') {
-			messagePayload.message = { text: content.text };
+        // Handle different types of messages
+        if (messageType === 'text') {
+            messagePayload.message = { text: content.text };
 
-			// Send the text message through Meta API
-			const fbResponse = await axios.post(
-				`https://graph.facebook.com/v17.0/${pageId}/messages`,
-				messagePayload
-			);
-			console.log('fb send message here !', fbResponse);
-			if (fbResponse.data && fbResponse.data.message_id) {
-				const newMessage = this.createNewMessageObject(
-					fbResponse.data.message_id,
-					content.text,
-					pageId,
-					true
-				);
-				lead.messages.push(newMessage);
-				lead.messagesSeen = true;
-				lead.repliedFromSystem = true;
-				lead.repliedFromSystem = true;
-				await lead.save();
+            // Send the text message through Meta API
+            const fbResponse = await axios.post(
+                `https://graph.facebook.com/v17.0/${pageId}/messages`,
+                messagePayload
+            );
+            console.log('fb send message here !', fbResponse);
+            if (fbResponse.data && fbResponse.data.message_id) {
+                const newMessage = this.createNewMessageObject(
+                    fbResponse.data.message_id,
+                    content.text,
+                    pageId,
+                    true
+                );
+                lead.messages.push(newMessage);
+                lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
+                lead.repliedFromSystem = true;
+                await lead.save();
 
-				// Emit Conversation Updated event
-				emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
+                // Emit Conversation Updated event
+                emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
 
-				this.emitNewMessage(req, leadId, newMessage);
-				newMessages.push(newMessage);
-			}
-		} else if (['image', 'audio', 'video', 'file'].includes(messageType)) {
-			for (const url of content.urls) {
-				messagePayload.message = {
-					attachment: {
-						type: messageType,
-						payload: { url, is_reusable: true },
-					},
-				};
+                this.emitNewMessage(req, leadId, newMessage);
+                newMessages.push(newMessage);
+            }
+        } else if (['image', 'audio', 'video', 'file'].includes(messageType)) {
+            for (const url of content.urls) {
+                messagePayload.message = {
+                    attachment: {
+                        type: messageType,
+                        payload: { url, is_reusable: true },
+                    },
+                };
 
-				// Send the message through Meta API
-				const fbResponse = await axios.post(
-					`https://graph.facebook.com/v18.0/${pageId}/messages`,
-					messagePayload
-				);
+                // Send the message through Meta API
+                const fbResponse = await axios.post(
+                    `https://graph.facebook.com/v18.0/${pageId}/messages`,
+                    messagePayload
+                );
 
-				if (fbResponse.data && fbResponse.data.message_id) {
-					const newMessage = this.createNewMessageObject(
-						fbResponse.data.message_id,
-						'',
-						pageId,
-						true,
-						url
-					);
-					lead.messages.push(newMessage);
-					lead.messagesSeen = true;
-					lead.repliedFromSystem = true;
-					await lead.save();
+                if (fbResponse.data && fbResponse.data.message_id) {
+                    const newMessage = this.createNewMessageObject(
+                        fbResponse.data.message_id,
+                        '',
+                        pageId,
+                        true,
+                        url
+                    );
+                    lead.messages.push(newMessage);
+                    lead.messagesSeen = true;
+                    lead.repliedFromSystem = true;
+                    await lead.save();
 
-					this.emitNewMessage(req, leadId, newMessage);
-					newMessages.push(newMessage);
-				}
-			}
-		} else if (messageType === 'sticker') {
-			messagePayload.message = {
-				attachment: {
-					type: 'image',
-					payload: { sticker_id: content.sticker_id },
-				},
-			};
+                    this.emitNewMessage(req, leadId, newMessage);
+                    newMessages.push(newMessage);
+                }
+            }
+        } else if (messageType === 'sticker') {
+            messagePayload.message = {
+                attachment: {
+                    type: 'image',
+                    payload: { sticker_id: content.sticker_id },
+                },
+            };
 
-			const fbResponse = await axios.post(
-				`https://graph.facebook.com/v17.0/${pageId}/messages`,
-				messagePayload
-			);
+            const fbResponse = await axios.post(
+                `https://graph.facebook.com/v17.0/${pageId}/messages`,
+                messagePayload
+            );
 
-			if (fbResponse.data && fbResponse.data.message_id) {
-				const newMessage = this.createNewMessageObject(
-					fbResponse.data.message_id,
-					'',
-					pageId,
-					true,
-					content.sticker_id
-				);
-				lead.messages.push(newMessage);
-				lead.messagesSeen = true;
-				lead.repliedFromSystem = true;
-				await lead.save();
+            if (fbResponse.data && fbResponse.data.message_id) {
+                const newMessage = this.createNewMessageObject(
+                    fbResponse.data.message_id,
+                    '',
+                    pageId,
+                    true,
+                    content.sticker_id
+                );
+                lead.messages.push(newMessage);
+                lead.messagesSeen = true;
+                lead.repliedFromSystem = true;
+                await lead.save();
 
-				this.emitNewMessage(req, leadId, newMessage);
-				newMessages.push(newMessage);
-			}
-		}
+                this.emitNewMessage(req, leadId, newMessage);
+                newMessages.push(newMessage);
+            }
+        }
 
-		// Return all successfully sent messages
-		if (newMessages.length > 0) {
-			return res.status(200).json({ messages: newMessages });
-		}
+        // Return all successfully sent messages
+        if (newMessages.length > 0) {
+            return res.status(200).json({ messages: newMessages });
+        }
 
-		// If no messages were sent
-		return res.status(500).json({ error: 'Failed to send message' });
-	} catch (error) {
-		console.error('Error sending message:', error);
-		return res.status(500).json({ error: error.toString() });
-	}
+        // If no messages were sent
+        return res.status(500).json({ error: 'Failed to send message' });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        return res.status(500).json({ error: error.toString() });
+    }
 };
 // console.time('Search Leads Execution Time');
 
 exports.searchLeads = async (req, res) => {
-	const { pharams } = req.params;
-	const { creName } = req.query;
+    const { pharams } = req.params;
+    const { creName } = req.query;
 
-	console.time('Search Leads Execution Time');
-	let searchRegex;
-	try {
-		const cleanedPharams = pharams.replace(/\s+/g, '');
-		const safePharams = escapeRegex(cleanedPharams);
-		searchRegex = new RegExp(safePharams, 'i');
-	} catch (err) {
-		console.error('Invalid search parameter for regex:', err);
-		console.timeEnd('Search Leads Execution Time');
-		return res.status(400).json({ error: 'Invalid search parameter.' });
-	}
+    console.time('Search Leads Execution Time');
+    let searchRegex;
+    try {
+        const cleanedPharams = pharams.replace(/\s+/g, '');
+        const safePharams = escapeRegex(cleanedPharams);
+        searchRegex = new RegExp(safePharams, 'i');
+    } catch (err) {
+        console.error('Invalid search parameter for regex:', err);
+        console.timeEnd('Search Leads Execution Time');
+        return res.status(400).json({ error: 'Invalid search parameter.' });
+    }
 
-	const creFilter = creName
-		? { creName: new mongoose.Types.ObjectId(creName) }
-		: {};
+    const creFilter = creName ? { creName: new mongoose.Types.ObjectId(creName) } : {};
 
-	// Improved $match: remove spaces from phone numbers before matching
-	const matchFilter = {
-		...creFilter,
-		$or: [
-			{ name: { $regex: searchRegex } },
-			{
-				$expr: {
-					$gt: [
-						{
-							$size: {
-								$filter: {
-									input: {
-										$cond: [
-											{ $isArray: '$phone' },
-											'$phone',
-											{
-												$cond: [{ $ifNull: ['$phone', false] }, ['$phone'], []],
-											},
-										],
-									},
-									as: 'p',
-									cond: {
-										$regexMatch: {
-											input: {
-												$replaceAll: {
-													input: '$$p',
-													find: ' ',
-													replacement: '',
-												},
-											},
-											regex: searchRegex,
-										},
-									},
-								},
-							},
-						},
-						0,
-					],
-				},
-			},
-		],
-	};
+    // Improved $match: remove spaces from phone numbers before matching
+    const matchFilter = {
+        ...creFilter,
+        $or: [
+            { name: { $regex: searchRegex } },
+            {
+                $expr: {
+                    $gt: [
+                        {
+                            $size: {
+                                $filter: {
+                                    input: {
+                                        $cond: [
+                                            { $isArray: '$phone' },
+                                            '$phone',
+                                            {
+                                                $cond: [
+                                                    { $ifNull: ['$phone', false] },
+                                                    [{ $toString: '$phone' }],
+                                                    [],
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                    as: 'p',
+                                    cond: {
+                                        $regexMatch: {
+                                            input: {
+                                                $replaceAll: {
+                                                    input: { $ifNull: ['$$p', ''] }, // ensure always a string
+                                                    find: ' ',
+                                                    replacement: '',
+                                                },
+                                            },
+                                            regex: searchRegex,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        0,
+                    ],
+                },
+            },
+        ],
+    };
 
-	try {
-		const leads = await Lead.aggregate([
-			{ $match: matchFilter },
-			{
-				$project: {
-					name: 1,
-					phone: 1,
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					createdAt: 1,
-					messages: { $slice: ['$messages', -1] },
-					messagesSeen: 1,
-				},
-			},
-			{
-				$addFields: {
-					lastMessage: { $arrayElemAt: ['$messages.content', 0] },
-					lastMessageTime: { $arrayElemAt: ['$messages.date', 0] },
-					sentByMe: { $arrayElemAt: ['$messages.sentByMe', 0] },
-				},
-			},
-			{ $unset: 'messages' },
-			{
-				$lookup: {
-					from: 'users',
-					let: { creId: '$creName' },
-					pipeline: [
-						{ $match: { $expr: { $eq: ['$_id', '$$creId'] } } },
-						{ $project: { nameAsPerNID: 1, profilePicture: 1 } },
-					],
-					as: 'creUser',
-				},
-			},
-			{ $unwind: { path: '$creUser', preserveNullAndEmptyArrays: true } },
-			{
-				$addFields: {
-					creName: {
-						_id: '$creUser._id',
-						name: '$creUser.nameAsPerNID',
-						profilePicture: '$creUser.profilePicture',
-					},
-				},
-			},
-			{ $unset: 'creUser' },
-			{ $sort: { lastMessageTime: -1 } },
-		]);
+    try {
+        const leads = await Lead.aggregate([
+            { $match: matchFilter },
+            {
+                $project: {
+                    name: 1,
+                    phone: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    createdAt: 1,
+                    messages: { $slice: ['$messages', -1] },
+                    messagesSeen: 1,
+                },
+            },
+            {
+                $addFields: {
+                    lastMessage: { $arrayElemAt: ['$messages.content', 0] },
+                    lastMessageTime: { $arrayElemAt: ['$messages.date', 0] },
+                    sentByMe: { $arrayElemAt: ['$messages.sentByMe', 0] },
+                },
+            },
+            { $unset: 'messages' },
+            {
+                $lookup: {
+                    from: 'users',
+                    let: { creId: '$creName' },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ['$_id', '$$creId'] } } },
+                        { $project: { nameAsPerNID: 1, profilePicture: 1 } },
+                    ],
+                    as: 'creUser',
+                },
+            },
+            { $unwind: { path: '$creUser', preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    creName: {
+                        _id: '$creUser._id',
+                        name: '$creUser.nameAsPerNID',
+                        profilePicture: '$creUser.profilePicture',
+                    },
+                },
+            },
+            { $unset: 'creUser' },
+            { $sort: { lastMessageTime: -1 } },
+        ]);
 
-		console.timeEnd('Search Leads Execution Time');
-		return res.status(200).json({
-			total: leads.length,
-			leads,
-		});
-	} catch (error) {
-		console.error('Error searching leads:', error);
-		console.timeEnd('Search Leads Execution Time');
-		return res.status(500).json({ error: 'Internal server error' });
-	}
+        console.timeEnd('Search Leads Execution Time');
+        return res.status(200).json({
+            total: leads.length,
+            leads,
+        });
+    } catch (error) {
+        console.error('Error searching leads:', error);
+        console.timeEnd('Search Leads Execution Time');
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 exports.conversationStat = async (req, res) => {
-	try {
-		// 1) Tag each doc with its last message's sentByMe flag
-		const [stats] = await Lead.aggregate([
-			{
-				$addFields: {
-					lastMessageSentByMe: { $last: '$messages.sentByMe' },
-				},
-			},
-			{
-				$facet: {
-					unread: [
-						{
-							$match: {
-								lastMessageSentByMe: false,
-								messagesSeen: false,
-							},
-						},
-						{ $count: 'count' },
-					],
-					numberProvided: [
-						{
-							$match: { status: 'Number Provided' },
-						},
-						{ $count: 'count' },
-					],
-				},
-			},
-		]);
+    try {
+        // 1) Tag each doc with its last message's sentByMe flag
+        const [stats] = await Lead.aggregate([
+            {
+                $addFields: {
+                    lastMessageSentByMe: { $last: '$messages.sentByMe' },
+                },
+            },
+            {
+                $facet: {
+                    unread: [
+                        {
+                            $match: {
+                                lastMessageSentByMe: false,
+                                messagesSeen: false,
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                    numberProvided: [
+                        {
+                            $match: { status: 'Number Provided' },
+                        },
+                        { $count: 'count' },
+                    ],
+                },
+            },
+        ]);
 
-		const unreadCount = stats.unread[0]?.count || 0;
-		const numberProvidedCount = stats.numberProvided[0]?.count || 0;
+        const unreadCount = stats.unread[0]?.count || 0;
+        const numberProvidedCount = stats.numberProvided[0]?.count || 0;
 
-		return res.json({ unreadCount, numberProvidedCount });
-	} catch (err) {
-		console.error('Error fetching lead stats:', err);
-		return res.status(500).json({ error: 'Internal server error' });
-	}
+        return res.json({ unreadCount, numberProvidedCount });
+    } catch (err) {
+        console.error('Error fetching lead stats:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 exports.getAllUnseenConversation = async (req, res) => {
-	try {
-		const page = parseInt(req.query.page, 10) || 1;
-		const limit = parseInt(req.query.limit, 10) || 10;
-		const skip = (page - 1) * limit;
-		const { creId } = req.query;
-		const { _id: userId, roleId: userRoleId } = req.user;
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+        const { creId } = req.query;
+        const { _id: userId, roleId: userRoleId } = req.user;
 
-		// Build match conditions for aggregation
-		const matchConditions = { messagesSeen: false, source: 'Facebook' };
-		if (creId) {
-			matchConditions.creName = new mongoose.Types.ObjectId(creId);
-		}
+        // Build match conditions for aggregation
+        const matchConditions = { messagesSeen: false, source: 'Facebook' };
+        if (creId) {
+            matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        }
 
-		// Check if the user is a CRE
-		const creDepartment = await Department.findOne({ departmentName: 'CRE' });
-		const creRoleId = creDepartment.roles.find(
-			role => role.roleName === 'CRE'
-		)._id;
-		const isCRE = userRoleId.toString() === creRoleId.toString();
-		if (isCRE) {
-			matchConditions.creName = userId;
-		}
+        // Check if the user is a CRE
+        const creDepartment = await Department.findOne({ departmentName: 'CRE' });
+        const creRoleId = creDepartment.roles.find((role) => role.roleName === 'CRE')._id;
+        const isCRE = userRoleId.toString() === creRoleId.toString();
+        if (isCRE) {
+            matchConditions.creName = userId;
+        }
 
-		const leadsWithLastMessage = await Lead.aggregate([
-			{ $match: matchConditions },
-			{
-				$addFields: {
-					customerMessages: {
-						$filter: {
-							input: '$messages',
-							as: 'msg',
-							cond: { $eq: ['$$msg.sentByMe', false] },
-						},
-					},
-				},
-			},
-			{
-				$addFields: {
-					lastCustomerMessageTime: { $last: '$customerMessages.date' },
-					lastMessage: { $last: '$messages.content' },
-					lastMessageTime: { $last: '$messages.date' },
-					sentByMe: { $last: '$messages.sentByMe' },
-				},
-			},
-			{
-				$project: {
-					name: 1,
-					lastMessage: 1,
-					lastMessageTime: 1,
-					lastCustomerMessageTime: 1,
-					sentByMe: 1,
-					createdAt: 1,
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					messagesSeen: 1,
-					_id: 1,
-				},
-			},
-		])
-			.sort({ lastMessageTime: -1 })
-			.skip(skip)
-			.limit(limit);
+        const leadsWithLastMessage = await Lead.aggregate([
+            { $match: matchConditions },
+            {
+                $addFields: {
+                    customerMessages: {
+                        $filter: {
+                            input: '$messages',
+                            as: 'msg',
+                            cond: { $eq: ['$$msg.sentByMe', false] },
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    lastCustomerMessageTime: { $last: '$customerMessages.date' },
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    lastCustomerMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                },
+            },
+        ])
+            .sort({ lastMessageTime: -1 })
+            .skip(skip)
+            .limit(limit);
 
-		// Populate creName with details from the User model
-		const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
-			path: 'creName',
-			select: 'nameAsPerNID nickname profilePicture',
-			model: 'User',
-		});
+        // Populate creName with details from the User model
+        const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
+            path: 'creName',
+            select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
+        });
 
-		// Count total leads using the same match conditions
-		const totalLeads = await Lead.countDocuments(matchConditions);
+        // Count total leads using the same match conditions
+        const totalLeads = await Lead.countDocuments(matchConditions);
 
-		// Extract unique statuses from the leads
-		const uniqueStatuses = [
-			...new Set(leadsPopulated.map(lead => lead.status)),
-		];
+        // Extract unique statuses from the leads
+        const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
 
-		// Extract unique pageInfo objects
-		const uniquePagesMap = new Map();
-		leadsPopulated.forEach(lead => {
-			if (!lead.pageInfo) return;
-			const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
-			if (!uniquePagesMap.has(pageId)) {
-				uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
-			}
-		});
-		const uniquePages = Array.from(uniquePagesMap.values());
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsPopulated.forEach((lead) => {
+            if (!lead.pageInfo) return;
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
 
-		// Extract unique CRE names with details
-		const uniqueCRENames = [];
-		const creNamesSet = new Set();
-		leadsPopulated.forEach(lead => {
-			const creDetails = lead.creName;
-			if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
-				creNamesSet.add(creDetails._id.toString());
-				uniqueCRENames.push({
-					_id: creDetails._id,
-					name: creDetails.nameAsPerNID,
-					nickname: creDetails.nickname,
-					profilePicture: creDetails.profilePicture,
-				});
-			}
-		});
+        // Extract unique CRE names with details
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+        leadsPopulated.forEach((lead) => {
+            const creDetails = lead.creName;
+            if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
+                creNamesSet.add(creDetails._id.toString());
+                uniqueCRENames.push({
+                    _id: creDetails._id,
+                    name: creDetails.nameAsPerNID,
+                    nickname: creDetails.nickname,
+                    profilePicture: creDetails.profilePicture,
+                });
+            }
+        });
 
-		res.status(200).json({
-			totalLeads,
-			totalPages: Math.ceil(totalLeads / limit),
-			currentPage: page,
-			filters: {
-				statuses: uniqueStatuses,
-				pages: uniquePages,
-				creNames: uniqueCRENames,
-			},
-			leads: leadsPopulated,
-		});
-	} catch (error) {
-		console.error('Error getting unseen conversations:', error);
-		res.status(500).json({ error: 'Internal server error' });
-	}
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames,
+            },
+            leads: leadsPopulated,
+        });
+    } catch (error) {
+        console.error('Error getting unseen conversations:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };

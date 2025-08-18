@@ -21,6 +21,7 @@ const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema
 const SavedMessage = require('../schemas/settings/SavedMessage.Schema');
 const Assistant = require('../schemas/settings/Assistant.Schema');
 const { sendMessageToLead } = require('../helpers/sendMessageToLead');
+const { MediaBot } = require('../MediaBot/MediaBot');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -327,10 +328,13 @@ const updateExistingLead = async (
                         settings[fileType].aiModel
                     ) {
                         console.log('[AUTO-REPLY] AI enabled, generating reply...');
-                        replyText = await getAIResponse(
-                            settings[fileType].aiModel,
-                            message
-                        );
+                        try{
+                            //  replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
+                        }
+                        catch (error) {
+                            console.error('[AUTO-REPLY] Error generating AI reply:', error);
+                        }
+                       
                     } else if (
                         settings[fileType].savedMessageEnabled &&
                         settings[fileType].savedId
@@ -343,7 +347,8 @@ const updateExistingLead = async (
 
                     if (replyText) {
                         console.log('[AUTO-REPLY] Sending reply...');
-                        await sendMessageToLead(lead._id, replyText, io);
+                        console.log(replyText);
+                        // await sendMessageToLead(lead._id, replyText, io);
                     }
                 }
             }
