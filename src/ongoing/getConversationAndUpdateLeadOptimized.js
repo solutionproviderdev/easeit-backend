@@ -348,7 +348,17 @@ const updateExistingLead = async (
                     if (replyText) {
                         console.log('[AUTO-REPLY] Sending reply...');
                         console.log(replyText);
-                      await sendMessageToLead(lead._id, replyText, io);
+                      try {
+												await sendMessageToLead(lead._id, replyText, io);
+												console.log(
+													'[AUTO-REPLY] Message sent to lead successfully.'
+												);
+											} catch (err) {
+												console.error(
+													'[AUTO-REPLY] Error sending message to lead:',
+													err
+												);
+											}
                     }
                 }
             }
