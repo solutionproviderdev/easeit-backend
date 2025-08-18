@@ -329,7 +329,7 @@ const updateExistingLead = async (
                     ) {
                         console.log('[AUTO-REPLY] AI enabled, generating reply...');
                         try{
-                            //  replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
+                             replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
                         }
                         catch (error) {
                             console.error('[AUTO-REPLY] Error generating AI reply:', error);
