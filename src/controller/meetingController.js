@@ -5,6 +5,7 @@ const User = require('../schemas/auth/UserSchema');
 const {
     getRandomFreeSalesExecutiveFromSlot,
 } = require('../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
+const { log } = require('../helpers/activityLogger');
 
 exports.fixMeeting = async (req, res) => {
     try {
@@ -100,6 +101,33 @@ exports.fixMeeting = async (req, res) => {
         // Update the lead with the new meeting and sales executive assignment
         await Lead.findByIdAndUpdate(leadId, leadUpdate);
 
+        // Fetch lead details for activity log
+        const lead = await Lead.findById(leadId).select('name phone source address salesExqName');
+
+        // Fetch sales executive nickname
+        let salesExecutiveNickname = '';
+        if (lead && lead.salesExqName) {
+            const salesExecUser = await User.findById(lead.salesExqName).select('nickname');
+            salesExecutiveNickname = salesExecUser?.nickname || '';
+        }
+
+        // Activity log for meeting set
+        if (req.user && req.user._id) {
+            log(req.user._id, 'LEAD_MEETING_SET', {
+                lead: {
+                    _id: lead._id,
+                    name: lead.name,
+                    phone: lead.phone,
+                    source: lead.source,
+                    address: lead.address,
+                },
+                meetingId: newMeeting._id,
+                date,
+                slot,
+                salesExecutiveNickname,
+            });
+        }
+
         res.status(201).json(newMeeting);
     } catch (error) {
         console.error(error);
@@ -180,6 +208,17 @@ exports.createLeadAndFixMeeting = async (req, res) => {
             newLead.meetings.push(newMeeting._id);
             newLead.status = 'Meeting Fixed';
             await newLead.save();
+
+            // Activity log for meeting set
+            if (req.user && req.user._id) {
+                log(req.user._id, 'LEAD_CREATE_AND_MEETING_SET', {
+                    leadId: newLead._id,
+                    meetingId: newMeeting._id,
+                    date,
+                    slot,
+                    salesExecutive,
+                });
+            }
         }
 
         res.status(201).json({
@@ -859,7 +898,9 @@ exports.getMeetingsReport = async (req, res) => {
                     salesName: {
                         $cond: {
                             if: '$salesInfo',
-                            then: { $ifNull: ['$salesInfo.nameAsPerNID', '$salesInfo.nickname'] },
+                            then: {
+                                $ifNull: ['$salesInfo.nameAsPerNID', '$salesInfo.nickname'],
+                            },
                             else: 'N/A',
                         },
                     },

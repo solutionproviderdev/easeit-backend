@@ -17,6 +17,7 @@ const checkLogin = async (req, res, next) => {
 
         // Find the user based on decoded data
         const user = await People.findById(decoded.id);
+        console.log(user);
         if (!user) {
             throw new Error('User not found');
         }

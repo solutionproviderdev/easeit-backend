@@ -33,6 +33,8 @@ const {
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const leadSalesRouter = require('../sales/sales');
 const leadFinanceRouter = require('../finance/finance');
+const { getConversationsAndUpdateLeadsUpdated } = require('../../../ongoing/getConversationAndUpdateLeadOptimized');
+const { conversationStat } = require('../../../controller/lead/leadConversationController');
 
 const leadRouter = express.Router();
 
@@ -40,8 +42,12 @@ leadRouter.use('/conversation', leadConversationRouter);
 leadRouter.use('/sales', leadSalesRouter);
 leadRouter.use('/finance', leadFinanceRouter);
 
+
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
+
+//Get stat of unread lead and need to call leads
+leadRouter.get('/conversationstat', conversationStat);
 
 // get all the leads with reminders
 leadRouter.get('/reminders', checkAuth, getAllLeadsWithReminders);
@@ -69,6 +75,8 @@ leadRouter.put('/:id', checkAuth, validateLeadUpdate, updateLead);
 
 // route for adding a reminder to a lead
 leadRouter.post('/:id/reminders', validateReminder, addReminder);
+
+
 
 // New route for updating a reminder status
 leadRouter.put(

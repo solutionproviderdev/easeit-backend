@@ -305,4 +305,5 @@ leadSchema.index({ lastAssigned: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);
 
+
 module.exports = Lead;

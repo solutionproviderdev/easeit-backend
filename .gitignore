@@ -30,3 +30,7 @@
 .vercel
 
 /.yarn
+
+# log files
+/logs
+logs/app.csv
