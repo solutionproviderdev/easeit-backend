@@ -617,24 +617,31 @@ exports.searchLeads = async (req, res) => {
                         {
                             $size: {
                                 $filter: {
-                                    input: '$phone',
-                                    as: 'p',
-                                    cond: {
-                                        $and: [
-                                            { $eq: [{ $type: '$$p' }, 'string'] },
+                                    input: {
+                                        $cond: [
+                                            { $isArray: '$phone' },
+                                            '$phone',
                                             {
-                                                $regexMatch: {
-                                                    input: {
-                                                        $replaceAll: {
-                                                            input: '$$p',
-                                                            find: ' ',
-                                                            replacement: '',
-                                                        },
-                                                    },
-                                                    regex: searchRegex,
-                                                },
+                                                $cond: [
+                                                    { $ifNull: ['$phone', false] },
+                                                    [{ $toString: '$phone' }],
+                                                    [],
+                                                ],
                                             },
                                         ],
+                                    },
+                                    as: 'p',
+                                    cond: {
+                                        $regexMatch: {
+                                            input: {
+                                                $replaceAll: {
+                                                    input: { $ifNull: ['$$p', ''] }, // ensure always a string
+                                                    find: ' ',
+                                                    replacement: '',
+                                                },
+                                            },
+                                            regex: searchRegex,
+                                        },
                                     },
                                 },
                             },
