@@ -3,8 +3,23 @@ const ActivityLog = require('../schemas/ActivityLogSchema');
 // Get all activity logs function
 exports.getAllActivityLogs = async (req, res) => {
     try {
-        const activityLogs = await ActivityLog.find();
-        res.status(200).json(activityLogs);
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+
+        const activityLogs = await ActivityLog.find()
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        const totalLogs = await ActivityLog.countDocuments();
+
+        res.status(200).json({
+            activityLogs,
+            totalLogs,
+            currentPage: page,
+            totalPages: Math.ceil(totalLogs / limit),
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
@@ -31,11 +46,23 @@ exports.deleteActivityLog = async (req, res) => {
 // Get activity logs by user ID function
 exports.getActivityLogsByUserId = async (req, res) => {
     try {
-        const activityLogs = await ActivityLog.find({ userId: req.params.userId });
-        if (!activityLogs) {
-            return res.status(404).json({ msg: 'No activity logs found for this user' });
-        }
-        res.status(200).json(activityLogs);
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 30) || 20;
+        const skip = (page - 1) * limit;
+
+        const activityLogs = await ActivityLog.find({ userId: req.params.userId })
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        const totalLogs = await ActivityLog.countDocuments({ userId: req.params.userId });
+
+        res.status(200).json({
+            activityLogs,
+            totalLogs,
+            currentPage: page,
+            totalPages: Math.ceil(totalLogs / limit),
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });
