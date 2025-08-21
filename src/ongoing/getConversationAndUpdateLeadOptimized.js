@@ -18,8 +18,6 @@ const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTr
 const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
 const { SholutionBot } = require('../SolutionBot/SolutionBot');
 const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema');
-const SavedMessage = require('../schemas/settings/SavedMessage.Schema');
-const Assistant = require('../schemas/settings/Assistant.Schema');
 const { sendMessageToLead } = require('../helpers/sendMessageToLead');
 const { MediaBot } = require('../MediaBot/MediaBot');
 
@@ -323,18 +321,17 @@ const updateExistingLead = async (
 
                     let replyText = null;
 
-                    if (
-                        settings[fileType].aiEnabled &&
-                        settings[fileType].aiModel
-                    ) {
+                    if (settings[fileType].aiEnabled && settings[fileType].aiModel) {
                         // console.log('[AUTO-REPLY] AI enabled, generating reply...');
-                        try{
-                             replyText = await MediaBot(settings[fileType].aiModel,lead.messages, message );
-                        }
-                        catch (error) {
+                        try {
+                            replyText = await MediaBot(
+                                settings[fileType].aiModel,
+                                lead.messages,
+                                message
+                            );
+                        } catch (error) {
                             console.error('[AUTO-REPLY] Error generating AI reply:', error);
                         }
-                       
                     } else if (
                         settings[fileType].savedMessageEnabled &&
                         settings[fileType].savedId
@@ -548,19 +545,6 @@ const getConversationsAndUpdateLeadsUpdated = async (io) => {
     }
     console.timeEnd('getConversationsAndUpdateLeadsUpdated');
 };
-
-/**
- * Generates an AI response based on the provided model and message.
- * @param {string} aiModel - The AI model to use for generating the response.
- * @param {Object} message - The message object containing content and other details.
- * @returns {string} - The generated AI response.
- */
-// async function getAIResponse(aiModel, message) {
-//     // Call your AI assistant logic here, passing the model and message context
-//     // Return the generated text
-//     // Example: return await Assistant.generate(aiModel, message);
-//     return 'This is an AI-generated reply.'; // Placeholder
-// }
 
 module.exports = {
     getConversationsAndUpdateLeadsUpdated,
