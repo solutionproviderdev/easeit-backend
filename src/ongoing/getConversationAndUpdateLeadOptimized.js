@@ -299,13 +299,13 @@ const updateExistingLead = async (
                 const fileType = message.fileTypes[0];
 
                 // Log the file detection for debugging purposes.
-                console.log('[AUTO-REPLY TRIGGER] File detected:', {
-                    fileType,
-                    fileUrl: message.fileUrl,
-                    leadId: lead._id,
-                    senderName: message.senderName,
-                    messageId: message.messageId,
-                });
+                // console.log('[AUTO-REPLY TRIGGER] File detected:', {
+                //     fileType,
+                //     fileUrl: message.fileUrl,
+                //     leadId: lead._id,
+                //     senderName: message.senderName,
+                //     messageId: message.messageId,
+                // });
                 // 1. Get the lead owner (or org/user as needed)
 
                 // 2. Fetch media reply settings
@@ -315,7 +315,7 @@ const updateExistingLead = async (
                     .lean();
                 // console.log('[AUTO-REPLY] Settings found:', settings);
 
-                console.log('Enabled value:', settings[fileType]?.enabled);
+                // console.log('Enabled value:', settings[fileType]?.enabled);
                 if (settings && settings[fileType]?.enabled) {
                     // console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
 
@@ -336,21 +336,26 @@ const updateExistingLead = async (
                         settings[fileType].savedMessageEnabled &&
                         settings[fileType].savedId
                     ) {
-                        console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
+                        // console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
                         replyText = settings[fileType].savedId.message;
                     }
 
-                    console.log('[AUTO-REPLY] Reply text:', replyText);
+                    // console.log('[AUTO-REPLY] Reply text:', replyText);
 
                     if (replyText) {
-                        console.log('[AUTO-REPLY] Sending reply...');
-                        console.log(replyText);
-                        try {
-                            await sendMessageToLead(lead._id, replyText, io);
-                            console.log('[AUTO-REPLY] Message sent to lead successfully.');
-                        } catch (err) {
-                            console.error('[AUTO-REPLY] Error sending message to lead:', err);
-                        }
+                        // console.log('[AUTO-REPLY] Sending reply...');
+                        // console.log(replyText);
+                      try {
+												await sendMessageToLead(lead._id, replyText, io);
+												// console.log(
+												// 	'[AUTO-REPLY] Message sent to lead successfully.'
+												// );
+											} catch (err) {
+												console.error(
+													'[AUTO-REPLY] Error sending message to lead:',
+													err
+												);
+											}
                     }
                 }
             }
