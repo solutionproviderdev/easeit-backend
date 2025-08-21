@@ -4,13 +4,14 @@ const ActivityLog = require('../schemas/ActivityLogSchema');
 exports.getAllActivityLogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 10;
+        const limit = parseInt(req.query.limit, 10) || 40;
         const skip = (page - 1) * limit;
 
         const activityLogs = await ActivityLog.find()
             .skip(skip)
             .limit(limit)
-            .sort({ createdAt: -1 });
+            .sort({ timestamp: -1 })
+            .populate('userId', 'nameAsPerNID nickname email profilePicture'); // <-- add this line
 
         const totalLogs = await ActivityLog.countDocuments();
 
@@ -47,13 +48,13 @@ exports.deleteActivityLog = async (req, res) => {
 exports.getActivityLogsByUserId = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 30) || 20;
+        const limit = parseInt(req.query.limit, 10) || 40;
         const skip = (page - 1) * limit;
 
         const activityLogs = await ActivityLog.find({ userId: req.params.userId })
             .skip(skip)
             .limit(limit)
-            .sort({ createdAt: -1 });
+            .sort({ timestamp: -1 });
 
         const totalLogs = await ActivityLog.countDocuments({ userId: req.params.userId });
 
