@@ -504,21 +504,28 @@ exports.getMeetingById = async (req, res) => {
 // Update meeting details
 exports.updateMeetingDetails = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updates = req.body;
+			const { id } = req.params;
+			const updates = req.body;
 
-        const updatedMeeting = await Meeting.findByIdAndUpdate(
-            id,
-            { ...updates, 'auditFields.updatedBy': req.user._id },
-            { new: true }
-        );
+			const updatedMeeting = await Meeting.findByIdAndUpdate(
+				id,
+				{ ...updates, 'auditFields.updatedBy': req.user._id },
+				{ new: true }
+			);
 
-        if (!updatedMeeting) {
-            return res.status(404).json({ msg: 'Meeting not found' });
-        }
+			if (!updatedMeeting) {
+				return res.status(404).json({ msg: 'Meeting not found' });
+			}
 
-        res.status(200).json(updatedMeeting);
-    } catch (error) {
+			// If salesExecutive is being updated, update it in the Lead too
+			if (updates.salesExecutive) {
+				await Lead.findByIdAndUpdate(updatedMeeting.lead, {
+					salesExqName: updates.salesExecutive,
+				});
+			}
+
+			res.status(200).json(updatedMeeting);
+		} catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -622,8 +629,9 @@ exports.deleteMeeting = async (req, res) => {
 
         // Remove the meeting reference from the lead's meetings array
         await Lead.findByIdAndUpdate(meeting.lead, {
-            $pull: { meetings: meeting._id },
-        });
+					$pull: { meetings: meeting._id },
+					status: 'New',//<-- set status to "New"
+				});
 
         // Delete the meeting
         await Meeting.findByIdAndDelete(id);
