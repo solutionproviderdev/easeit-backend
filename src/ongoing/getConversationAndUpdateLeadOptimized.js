@@ -379,10 +379,18 @@ const updateExistingLead = async (
 			}
 			// --- end media type auto-reply trigger ---
 
-			console.log('New message added to lead:', newMessage);
-			console.log('Lead AI Bot Reply Status:', lead.aiBotReply);
-			if (lead.aiBotReply && !lastMessageSentFromUs) {
-				SholutionBot(lead._id, io, newMessage);
+			// console.log('New message added to lead:', newMessage);
+			// console.log('Lead AI Bot Reply Status:', lead.aiBotReply);
+			if (
+				lead.aiBotReply &&
+				!lastMessageSentFromUs &&
+				(!message.fileTypes || message.fileTypes.length === 0)
+			) {
+				try {
+					SholutionBot(lead._id, io, newMessage);
+				} catch (error) {
+					console.error('[updateExistingLead] Error in SholutionBot:', error);
+				}
 			}
 			// // Determine if the message is from a user (not from the Facebook page).
 			// Set messagesSeen based on whether the message is from us.
