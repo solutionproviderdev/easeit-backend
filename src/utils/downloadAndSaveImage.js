@@ -15,7 +15,7 @@ async function downloadAndSaveImage(remoteUrl, destFolder) {
         const filename = `image_${Date.now()}${ext}`;
         const filePath = path.join(destFolder, filename);
 
-        console.log('[downloadAndSaveImage] Saving image to:', filePath);
+        // console.log('[downloadAndSaveImage] Saving image to:', filePath);
 
         await new Promise((resolve, reject) => {
             const stream = fs.createWriteStream(filePath);

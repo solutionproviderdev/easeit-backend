@@ -326,24 +326,24 @@ const updateExistingLead = async (
 				const settings = await MediaReplySettings.findOne({})
 					.populate(`${fileType}.savedId`)
 					.lean();
-				console.log('[AUTO-REPLY] Settings found:', settings);
+				// console.log('[AUTO-REPLY] Settings found:', settings);
 
 				// console.log('Enabled value:', settings[fileType]?.enabled);
 				if (settings && settings[fileType]?.enabled) {
-					console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
+					// console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
 
 					let replyText = null;
 
 					if (settings[fileType].aiEnabled && settings[fileType].aiPrompt) {
 						// Use aiPrompt as the prompt for MediaBot
-						console.log('[AUTO-REPLY] AI reply enabled, generating reply...');
+						// console.log('[AUTO-REPLY] AI reply enabled, generating reply...');
 						try {
 							const mediabotResponse = await MediaBot(
 								settings[fileType].aiPrompt, // Pass aiPrompt string
-								lead.messages,
+								
 								message
 							);
-							console.log('[AUTO-REPLY] AI reply generated:', mediabotResponse);
+							// console.log('[AUTO-REPLY] AI reply generated:', mediabotResponse);
 							replyText = mediabotResponse?.reply;
 						} catch (error) {
 							console.error('[AUTO-REPLY] Error generating AI reply:', error);
