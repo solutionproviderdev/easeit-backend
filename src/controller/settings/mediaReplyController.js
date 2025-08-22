@@ -11,9 +11,6 @@ exports.getMine = async (req, res) => {
         .populate('image.savedId')
         .populate('audio.savedId')
         .populate('video.savedId')
-        .populate('image.aiModel')
-        .populate('audio.aiModel')
-        .populate('video.aiModel')
         .lean();
     res.json(doc || { image: {}, audio: {}, video: {} });
 };
@@ -34,7 +31,7 @@ exports.updateMine = async (req, res) => {
             allowed[k] = {};
             if ('enabled' in v) allowed[k].enabled = !!v.enabled;
             if ('aiEnabled' in v) allowed[k].aiEnabled = !!v.aiEnabled;
-            if ('aiModel' in v) allowed[k].aiModel = v.aiModel || null;
+            if ('aiPrompt' in v) allowed[k].aiPrompt = v.aiPrompt || '';
             if ('savedMessageEnabled' in v) allowed[k].savedMessageEnabled = !!v.savedMessageEnabled;
             if ('savedId' in v) allowed[k].savedId = v.savedId || null;
         }
@@ -48,9 +45,6 @@ exports.updateMine = async (req, res) => {
         .populate('image.savedId')
         .populate('audio.savedId')
         .populate('video.savedId')
-        .populate('image.aiModel')
-        .populate('audio.aiModel')
-        .populate('video.aiModel')
         .lean();
 
     res.json(doc);

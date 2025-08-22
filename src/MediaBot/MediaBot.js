@@ -3,7 +3,7 @@ const downloadAndSaveImage = require('../utils/downloadAndSaveImage');
 
 const DOMAIN = process.env.PUBLIC_DOMAIN || 'https://crm.solutionprovider.com.bd/api';
 
-async function MediaBot(aiModel, messages, newMessage, threadId = null, req = null) {
+async function MediaBot(aiPrompt, messages, newMessage, threadId = null, req = null) {
     // console.log('[MediaBot] Called with:', {
     //     aiModel,
     //     messagesLength: messages.length,
@@ -31,7 +31,7 @@ async function MediaBot(aiModel, messages, newMessage, threadId = null, req = nu
             }
         }
 
-        const text = 'Describe this image for a customer support context.';
+        const text = aiPrompt || 'Describe this image for a customer support context.';
         // console.log('[MediaBot] Detected image message:', { text, imageUrl });
 
         try {

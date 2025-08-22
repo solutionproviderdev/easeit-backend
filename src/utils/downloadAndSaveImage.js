@@ -3,20 +3,38 @@ const fs = require('fs');
 const path = require('path');
 
 async function downloadAndSaveImage(remoteUrl, destFolder) {
-    const response = await axios({ url: remoteUrl, responseType: 'stream' });
-    // console.log('[downloadAndSaveImage] Downloading image from:-----', remoteUrl);
-    const ext = path.extname(remoteUrl.split('?')[0]) || '.jpg';
-    const filename = `image_${Date.now()}${ext}`;
-    const filePath = path.join(destFolder, filename);
+    try {
+        console.log('[downloadAndSaveImage] Downloading image from:', remoteUrl);
+        if (!fs.existsSync(destFolder)) {
+            fs.mkdirSync(destFolder, { recursive: true });
+            console.log('[downloadAndSaveImage] Created destination folder:', destFolder);
+        }
 
-    await new Promise((resolve, reject) => {
-        const stream = fs.createWriteStream(filePath);
-        response.data.pipe(stream);
-        stream.on('finish', resolve);
-        stream.on('error', reject);
-    });
+        const response = await axios({ url: remoteUrl, responseType: 'stream' });
+        const ext = path.extname(remoteUrl.split('?')[0]) || '.jpg';
+        const filename = `image_${Date.now()}${ext}`;
+        const filePath = path.join(destFolder, filename);
 
-    return filename;
+        console.log('[downloadAndSaveImage] Saving image to:', filePath);
+
+        await new Promise((resolve, reject) => {
+            const stream = fs.createWriteStream(filePath);
+            response.data.pipe(stream);
+            stream.on('finish', () => {
+                console.log('[downloadAndSaveImage] Image saved successfully:', filePath);
+                resolve();
+            });
+            stream.on('error', (err) => {
+                console.error('[downloadAndSaveImage] Error saving image:', err);
+                reject(err);
+            });
+        });
+
+        return filename;
+    } catch (error) {
+        console.error('[downloadAndSaveImage] Error downloading or saving image:', error);
+        throw error;
+    }
 }
 
 module.exports = downloadAndSaveImage;

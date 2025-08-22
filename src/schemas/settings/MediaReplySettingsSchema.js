@@ -1,16 +1,12 @@
 const mongoose = require('mongoose');
 
-const MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-5-thinking'];
+
 
 const mediaConfigSchema = new mongoose.Schema(
 	{
 		enabled: { type: Boolean, default: false },
 		aiEnabled: { type: Boolean, default: false },
-		aiModel: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Assistant',
-			default: null,
-		},
+		aiPrompt: { type: String, default: '' }, 
 		savedMessageEnabled: { type: Boolean, default: false },
 		savedId: {
 			type: mongoose.Schema.Types.ObjectId,
