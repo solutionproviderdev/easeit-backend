@@ -379,6 +379,8 @@ const updateExistingLead = async (
 			}
 			// --- end media type auto-reply trigger ---
 
+			console.log('New message added to lead:', newMessage);
+			console.log('Lead AI Bot Reply Status:', lead.aiBotReply);
 			if (lead.aiBotReply && !lastMessageSentFromUs) {
 				SholutionBot(lead._id, io, newMessage);
 			}

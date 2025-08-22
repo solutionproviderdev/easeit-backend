@@ -116,19 +116,19 @@ const SholutionBot = async (leadId, io, newMessage) => {
 
     
 
-    // const fbRes = await sendFacebookMessage(fbSenderID, reply, pageSettings.pageAccessToken);
-    // const aiMessage = {
-    //     messageId: fbRes.message_id,
-    //     content: reply,
-    //     senderId: 'SholutionBot',
-    //     sentByMe: true,
-    //     date: new Date(),
-    //     isAiMessage: true,
-    // };
-    // lead.messages.push(aiMessage);
-    // await lead.save();
+    const fbRes = await sendFacebookMessage(fbSenderID, reply, pageSettings.pageAccessToken);
+    const aiMessage = {
+        messageId: fbRes.message_id,
+        content: reply,
+        senderId: 'SholutionBot',
+        sentByMe: true,
+        date: new Date(),
+        isAiMessage: true,
+    };
+    lead.messages.push(aiMessage);
+    await lead.save();
 
-    // io.emit(`fbMessage${lead._id}`, aiMessage);
+    io.emit(`fbMessage${lead._id}`, aiMessage);
 };
 
 module.exports = { SholutionBot };
