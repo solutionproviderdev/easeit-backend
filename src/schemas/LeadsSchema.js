@@ -213,6 +213,8 @@ const leadSchema = mongoose.Schema(
         callLogs: [callLogSchema], // Updated call log schema
         messages: [messageSchema],
         messagesSeen: { type: Boolean, default: false },
+        lastMessageSentFromUs: { type: Boolean, default: false },
+        lastCustomerMessageTime: { type: Date },
         requirements: [String], // New simple array for requirements
         botResponded: { type: Boolean, default: false },
 

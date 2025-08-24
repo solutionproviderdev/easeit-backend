@@ -16,6 +16,7 @@ const exportConversations = require('../bot/trainingData');
 const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
 const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
 const { getSpecificMessageLog } = require('../temp/getSpecificMessageLog');
+const { processLeadsForAIResponse } = require('../ongoing/solutionBotCronJob');
 
 const initializeCronJobs = (io) => {
     // Every second cron job
@@ -27,6 +28,7 @@ const initializeCronJobs = (io) => {
                 findDuplicateLeads();
                 nameBasedLeadAssign();
                 getConversationsAndUpdateLeadsUpdated(io);
+                processLeadsForAIResponse(io);
             }
         },
         {
@@ -78,9 +80,9 @@ const runStartupTasks = (io) => {
     // exportConversations();
     // analyzeLeadConversations();
     // rewriteUnadssigneLead();
-    getSpecificMessageLog(
-        'hi this is solution provider sir do you have any other query or not tell me !'
-    );
+    // getSpecificMessageLog(
+    //     'hi this is solution provider sir do you have any other query or not tell me !'
+    // );
 };
 
 module.exports = {
