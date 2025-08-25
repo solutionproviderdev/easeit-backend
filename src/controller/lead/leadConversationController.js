@@ -635,7 +635,7 @@ exports.searchLeads = async (req, res) => {
                                         $regexMatch: {
                                             input: {
                                                 $replaceAll: {
-                                                    input: { $ifNull: ['$$p', ''] }, // ensure always a string
+                                                    input: { $toString: { $ifNull: ['$$p', ''] } }, // Ensure string type
                                                     find: ' ',
                                                     replacement: '',
                                                 },

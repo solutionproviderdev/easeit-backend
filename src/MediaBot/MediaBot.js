@@ -32,6 +32,9 @@ async function MediaBot(aiPrompt, messages, newMessage, threadId = null, req = n
 
         try {
             const reply = await analyzeImageWithText({ text, imageUrl: validImageUrls });
+            const customReply = reply.reply;
+
+            console.log(`${customReply} from MediaBot what reply we got in text`);
             return { reply, threadId: null };
         } catch (error) {
             return { reply: '', threadId: null };
