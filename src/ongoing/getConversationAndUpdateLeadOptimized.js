@@ -17,6 +17,9 @@ const User = require('../schemas/auth/UserSchema');
 const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
 const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
 const { SholutionBot } = require('../SolutionBot/SolutionBot');
+const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema');
+const { sendMessageToLead } = require('../helpers/sendMessageToLead');
+const { MediaBot } = require('../MediaBot/MediaBot');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -70,13 +73,17 @@ const extractValidPhoneNumber = (content, countryCode = 'BD') => {
 const processMessages = (messages) => {
     let phoneNumber = '';
 
+    let lastCustomerMessageTime = null;
+
     const lastMessage = messages[messages.length - 1];
     const lastMessageSentFromUs = lastMessage.from.name === 'Solution Provider';
 
     // Map each message to a standardized format.
     const processedMessages = messages.map((msg) => {
         let fileUrl = [];
-
+        /* Added to handle file types */
+        const fileTypes = [];
+        // ______________________________
         // If the sender is not "Solution Provider", try to extract a phone number.
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
@@ -84,6 +91,7 @@ const processMessages = (messages) => {
             if (extractedNumber) {
                 phoneNumber = extractedNumber; // Update phoneNumber if a valid one is found.
             }
+            lastCustomerMessageTime = msg.created_time;
         }
 
         // If the message has attachments, extract URLs from them.
@@ -94,6 +102,13 @@ const processMessages = (messages) => {
                 msg?.attachments?.data[0]?.video_data ||
                 msg?.attachments?.data[0]?.file_url)
         ) {
+            // Determine the file type based on the attachment data.
+            const att = msg.attachments.data[0];
+            if (att.image_data) fileTypes.push('image');
+            else if (att.video_data) fileTypes.push('video');
+            else if (att.file_url && att.mime_type && att.mime_type.startsWith('audio')) fileTypes.push('audio');
+            // _____________________________________________________________
+
             fileUrl = msg?.attachments?.data?.map((att) => {
                 if (att.image_data) {
                     return att.image_data.url;
@@ -118,10 +133,16 @@ const processMessages = (messages) => {
             sentByMe: msg.from.name === 'Solution Provider',
             date: moment(msg.created_time).format('LLL'),
             fileUrl,
+            fileTypes, // array of types
         };
     });
 
-    return { processedMessages, phoneNumber, lastMessageSentFromUs };
+    return {
+        processedMessages,
+        phoneNumber,
+        lastMessageSentFromUs,
+        lastCustomerMessageTime,
+    };
 };
 
 /**
@@ -204,9 +225,8 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         );
         const fbSenderID = otherParticipant.id;
         // Process the messages from the conversation.
-        const { processedMessages, phoneNumber, lastMessageSentFromUs } = processMessages(
-            [...(conversation?.messages?.data ?? [])].reverse()
-        );
+        const { processedMessages, phoneNumber, lastMessageSentFromUs, lastCustomerMessageTime } =
+            processMessages([...(conversation?.messages?.data ?? [])].reverse());
         // Try to find an existing lead using the Facebook sender ID.
         let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
 
@@ -222,7 +242,8 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 nameToCreId,
                 io,
                 pageInfo,
-                lastMessageSentFromUs
+                lastMessageSentFromUs,
+                lastCustomerMessageTime
             );
         } else {
             // If no lead exists, create a new lead.
@@ -231,7 +252,8 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
                 processedMessages,
                 pageInfo,
                 io,
-                lastMessageSentFromUs
+                lastMessageSentFromUs,
+                lastCustomerMessageTime
             );
         }
 
@@ -263,7 +285,8 @@ const updateExistingLead = async (
     nameToCreId,
     io,
     pageInfo,
-    lastMessageSentFromUs
+    lastMessageSentFromUs,
+    lastCustomerMessageTime
 ) => {
     let isNewMessageAdded = false;
     let newCreId = lead.creName;
@@ -278,10 +301,90 @@ const updateExistingLead = async (
             lead.messages.push(message);
             newMessage = message.content;
 
-            if (lead.aiBotReply && !lastMessageSentFromUs) {
-                SholutionBot(lead._id, io, newMessage);
-            }
-            // // Determine if the message is from a user (not from the Facebook page).
+            // /** *    What  I have added here to action the media type Reply */
+
+            // // --- Media auto-reply trigger ---
+            // if (
+            //     !lastMessageSentFromUs && // <-- Only run if last message NOT sent by us
+            //     message.fileTypes &&
+            //     message.fileTypes.length > 0 &&
+            //     !message.sentByMe
+            // ) {
+            //     // Only trigger reply for the first file type
+            //     const fileType = message.fileTypes[0];
+
+            //     // 1. Get the lead owner (or org/user as needed)
+
+            //     // 2. Fetch media reply settings
+            //     const settings = await MediaReplySettings.findOne({})
+            //         .populate(`${fileType}.savedId`)
+            //         .lean();
+            //     // console.log('[AUTO-REPLY] Settings found:', settings);
+
+            //     // console.log('Enabled value:', settings[fileType]?.enabled);
+            //     if (settings && settings[fileType]?.enabled) {
+            //         // console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
+
+            //         let replyText = null;
+
+            //         if (settings[fileType].aiEnabled && settings[fileType].aiPrompt) {
+            //             // Use aiPrompt as the prompt for MediaBot
+            //             // console.log('[AUTO-REPLY] AI reply enabled, generating reply...');
+            //             try {
+            //                 const mediabotResponse = await MediaBot(
+            //                     settings[fileType].aiPrompt, // Pass aiPrompt string
+            //                     'Nothing',
+            //                     message
+            //                 );
+            //                 // console.log('[AUTO-REPLY] AI reply generated:', mediabotResponse);
+            //                 replyText = mediabotResponse?.reply;
+            //             } catch (error) {
+            //                 console.error('[AUTO-REPLY] Error generating AI reply:', error);
+            //             }
+
+            //             if (lead.aiBotReply && !lastMessageSentFromUs) {
+            //                 SholutionBot(lead._id, io, replyText);
+            //             }
+            //         } else if (
+            //             settings[fileType].savedMessageEnabled &&
+            //             settings[fileType].savedId
+            //         ) {
+            //             // console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
+            //             replyText = settings[fileType].savedId.message;
+            //             // console.log('[AUTO-REPLY] Saved message text:', replyText);
+            //             if (replyText) {
+            //                 // console.log('[AUTO-REPLY] Sending reply...');
+            //                 // console.log(replyText);
+            //                 try {
+            //                     // await sendMessageToLead(lead._id, replyText, io);
+            //                     console.log('[AUTO-REPLY] Message sent to lead successfully.');
+            //                 } catch (err) {
+            //                     console.error('[AUTO-REPLY] Error sending message to lead:', err);
+            //                 }
+            //             }
+            //         }
+
+            //         // console.log('[AUTO-REPLY] Reply text:', replyText);
+            //     }
+            // }
+            // // --- end media type auto-reply trigger ---
+
+            // // --- SholutionBot trigger ---
+            // if (
+            //     lead.aiBotReply &&
+            //     !lastMessageSentFromUs &&
+            //     (!message.fileTypes || message.fileTypes.length === 0)
+            // ) {
+            //     try {
+            //         SholutionBot(lead._id, io, newMessage);
+            //     } catch (error) {
+            //         console.error('[updateExistingLead] Error in SholutionBot:', error);
+            //     }
+            // }
+
+            // // --- end SholutionBot trigger ---
+
+            // Determine if the message is from a user (not from the Facebook page).
             // Set messagesSeen based on whether the message is from us.
             // Check if the message content includes any known CRE names to update assignment.
             Object.entries(nameToCreId).forEach(([name, id]) => {
@@ -301,7 +404,11 @@ const updateExistingLead = async (
         lead.creName = newCreId;
         lead.messagesSeen = lastMessageSentFromUs;
         lead.repliedFromSystem = true;
+        lead.lastMessageSentFromUs = lastMessageSentFromUs;
 
+        if (lastCustomerMessageTime) {
+            lead.lastCustomerMessageTime = lastCustomerMessageTime || null;
+        }
         // If a valid phone number was extracted, update the lead's phone numbers.
         if (phoneNumber?.number?.length === 14) {
             const formattedPhoneNumber = phoneNumber.number;
@@ -335,12 +442,18 @@ const createNewLead = async (
     processedMessages,
     pageInfo,
     io,
-    lastMessageSentFromUs
+    lastMessageSentFromUs,
+    lastCustomerMessageTime
 ) => {
     // Get the best-performing CRE for assignment.
     const cre = await getPerformanceBasedCRE();
     // Use the date of the first message as the createdAt time.
     const firstMessageTime = processedMessages[0].date;
+
+    const settings = await Settings.findOne({ name: 'ai-integration' });
+    const { facebookPages } = settings.settingsData;
+    const pageConfig = facebookPages.find((page) => page.pageId === pageInfo.pageId);
+    const { assistantId, aiEnabled } = pageConfig;
 
     const newLead = new Lead({
         CID: '',
@@ -359,6 +472,14 @@ const createNewLead = async (
         createdAt: new Date(firstMessageTime),
         messagesSeen: lastMessageSentFromUs,
         lastAssigned: new Date(),
+        lastMessageSentFromUs,
+        lastCustomerMessageTime,
+
+        // ai bot config
+        aiBotReply: aiEnabled,
+        aiBotConfig: {
+            assistantId,
+        },
     });
 
     const savedNewLead = await newLead.save();

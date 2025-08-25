@@ -617,13 +617,25 @@ exports.searchLeads = async (req, res) => {
                         {
                             $size: {
                                 $filter: {
-                                    input: '$phone',
+                                    input: {
+                                        $cond: [
+                                            { $isArray: '$phone' },
+                                            '$phone',
+                                            {
+                                                $cond: [
+                                                    { $ifNull: ['$phone', false] },
+                                                    [{ $toString: '$phone' }],
+                                                    [],
+                                                ],
+                                            },
+                                        ],
+                                    },
                                     as: 'p',
                                     cond: {
                                         $regexMatch: {
                                             input: {
                                                 $replaceAll: {
-                                                    input: '$$p',
+                                                    input: { $ifNull: ['$$p', ''] }, // ensure always a string
                                                     find: ' ',
                                                     replacement: '',
                                                 },
@@ -742,125 +754,121 @@ exports.conversationStat = async (req, res) => {
 };
 
 exports.getAllUnseenConversation = async (req, res) => {
-	try {
-		const page = parseInt(req.query.page, 10) || 1;
-		const limit = parseInt(req.query.limit, 10) || 10;
-		const skip = (page - 1) * limit;
-		const { creId } = req.query;
-		const { _id: userId, roleId: userRoleId } = req.user;
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const skip = (page - 1) * limit;
+        const { creId } = req.query;
+        const { _id: userId, roleId: userRoleId } = req.user;
 
-		// Build match conditions for aggregation
-		const matchConditions = { messagesSeen: false, source: 'Facebook' };
-		if (creId) {
-			matchConditions.creName = new mongoose.Types.ObjectId(creId);
-		}
+        // Build match conditions for aggregation
+        const matchConditions = { messagesSeen: false, source: 'Facebook' };
+        if (creId) {
+            matchConditions.creName = new mongoose.Types.ObjectId(creId);
+        }
 
-		// Check if the user is a CRE
-		const creDepartment = await Department.findOne({ departmentName: 'CRE' });
-		const creRoleId = creDepartment.roles.find(
-			role => role.roleName === 'CRE'
-		)._id;
-		const isCRE = userRoleId.toString() === creRoleId.toString();
-		if (isCRE) {
-			matchConditions.creName = userId;
-		}
+        // Check if the user is a CRE
+        const creDepartment = await Department.findOne({ departmentName: 'CRE' });
+        const creRoleId = creDepartment.roles.find((role) => role.roleName === 'CRE')._id;
+        const isCRE = userRoleId.toString() === creRoleId.toString();
+        if (isCRE) {
+            matchConditions.creName = userId;
+        }
 
-		const leadsWithLastMessage = await Lead.aggregate([
-			{ $match: matchConditions },
-			{
-				$addFields: {
-					customerMessages: {
-						$filter: {
-							input: '$messages',
-							as: 'msg',
-							cond: { $eq: ['$$msg.sentByMe', false] },
-						},
-					},
-				},
-			},
-			{
-				$addFields: {
-					lastCustomerMessageTime: { $last: '$customerMessages.date' },
-					lastMessage: { $last: '$messages.content' },
-					lastMessageTime: { $last: '$messages.date' },
-					sentByMe: { $last: '$messages.sentByMe' },
-				},
-			},
-			{
-				$project: {
-					name: 1,
-					lastMessage: 1,
-					lastMessageTime: 1,
-					lastCustomerMessageTime: 1,
-					sentByMe: 1,
-					createdAt: 1,
-					status: 1,
-					pageInfo: 1,
-					creName: 1,
-					messagesSeen: 1,
-					_id: 1,
-				},
-			},
-		])
-			.sort({ lastMessageTime: -1 })
-			.skip(skip)
-			.limit(limit);
+        const leadsWithLastMessage = await Lead.aggregate([
+            { $match: matchConditions },
+            {
+                $addFields: {
+                    customerMessages: {
+                        $filter: {
+                            input: '$messages',
+                            as: 'msg',
+                            cond: { $eq: ['$$msg.sentByMe', false] },
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    lastCustomerMessageTime: { $last: '$customerMessages.date' },
+                    lastMessage: { $last: '$messages.content' },
+                    lastMessageTime: { $last: '$messages.date' },
+                    sentByMe: { $last: '$messages.sentByMe' },
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    lastMessage: 1,
+                    lastMessageTime: 1,
+                    lastCustomerMessageTime: 1,
+                    sentByMe: 1,
+                    createdAt: 1,
+                    status: 1,
+                    pageInfo: 1,
+                    creName: 1,
+                    messagesSeen: 1,
+                    _id: 1,
+                },
+            },
+        ])
+            .sort({ lastMessageTime: -1 })
+            .skip(skip)
+            .limit(limit);
 
-		// Populate creName with details from the User model
-		const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
-			path: 'creName',
-			select: 'nameAsPerNID nickname profilePicture',
-			model: 'User',
-		});
+        // Populate creName with details from the User model
+        const leadsPopulated = await Lead.populate(leadsWithLastMessage, {
+            path: 'creName',
+            select: 'nameAsPerNID nickname profilePicture',
+            model: 'User',
+        });
 
-		// Count total leads using the same match conditions
-		const totalLeads = await Lead.countDocuments(matchConditions);
+        // Count total leads using the same match conditions
+        const totalLeads = await Lead.countDocuments(matchConditions);
 
-		// Extract unique statuses from the leads
-		const uniqueStatuses = [
-			...new Set(leadsPopulated.map(lead => lead.status)),
-		];
+        // Extract unique statuses from the leads
+        const uniqueStatuses = [...new Set(leadsPopulated.map((lead) => lead.status))];
 
-		// Extract unique pageInfo objects
-		const uniquePagesMap = new Map();
-		leadsPopulated.forEach(lead => {
-			if (!lead.pageInfo) return;
-			const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
-			if (!uniquePagesMap.has(pageId)) {
-				uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
-			}
-		});
-		const uniquePages = Array.from(uniquePagesMap.values());
+        // Extract unique pageInfo objects
+        const uniquePagesMap = new Map();
+        leadsPopulated.forEach((lead) => {
+            if (!lead.pageInfo) return;
+            const { pageId, pageName, pageProfilePicture } = lead.pageInfo;
+            if (!uniquePagesMap.has(pageId)) {
+                uniquePagesMap.set(pageId, { pageId, pageName, pageProfilePicture });
+            }
+        });
+        const uniquePages = Array.from(uniquePagesMap.values());
 
-		// Extract unique CRE names with details
-		const uniqueCRENames = [];
-		const creNamesSet = new Set();
-		leadsPopulated.forEach(lead => {
-			const creDetails = lead.creName;
-			if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
-				creNamesSet.add(creDetails._id.toString());
-				uniqueCRENames.push({
-					_id: creDetails._id,
-					name: creDetails.nameAsPerNID,
-					nickname: creDetails.nickname,
-					profilePicture: creDetails.profilePicture,
-				});
-			}
-		});
+        // Extract unique CRE names with details
+        const uniqueCRENames = [];
+        const creNamesSet = new Set();
+        leadsPopulated.forEach((lead) => {
+            const creDetails = lead.creName;
+            if (creDetails && !creNamesSet.has(creDetails._id.toString())) {
+                creNamesSet.add(creDetails._id.toString());
+                uniqueCRENames.push({
+                    _id: creDetails._id,
+                    name: creDetails.nameAsPerNID,
+                    nickname: creDetails.nickname,
+                    profilePicture: creDetails.profilePicture,
+                });
+            }
+        });
 
-		res.status(200).json({
-			totalLeads,
-			totalPages: Math.ceil(totalLeads / limit),
-			currentPage: page,
-			filters: {
-				statuses: uniqueStatuses,
-				pages: uniquePages,
-				creNames: uniqueCRENames,
-			},
-			leads: leadsPopulated,
-		});
-	} catch (error) {
-		console.error('Error getting unseen conversations:', error);
-		res.status(500).json({ error: 'Internal server error' });
-	}
+        res.status(200).json({
+            totalLeads,
+            totalPages: Math.ceil(totalLeads / limit),
+            currentPage: page,
+            filters: {
+                statuses: uniqueStatuses,
+                pages: uniquePages,
+                creNames: uniqueCRENames,
+            },
+            leads: leadsPopulated,
+        });
+    } catch (error) {
+        console.error('Error getting unseen conversations:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };

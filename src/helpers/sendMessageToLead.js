@@ -45,9 +45,11 @@ const createNewMessageObject = (messageId, content, pageId, sentByMe, url) => ({
  * @returns {Promise<boolean>} - True if message sent and saved successfully, false otherwise.
  */
 const sendMessageToLead = async (leadId, message, io) => {
+    console.log('-------------sendmessage >');
     try {
         // Retrieve the lead document by ID.
         const lead = await Lead.findById(leadId);
+        console.log('----------------lead found sendmessage', leadId);
         if (!lead || !lead.pageInfo || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
             console.error('Lead missing required Facebook page information.');
             return false;
@@ -84,7 +86,7 @@ const sendMessageToLead = async (leadId, message, io) => {
             `https://graph.facebook.com/v17.0/${pageId}/messages`,
             messagePayload
         );
-
+        console.log('send message facebook response-------->');
         if (fbResponse.data && fbResponse.data.message_id) {
             // Create a new message object.
             const newMessage = createNewMessageObject(
