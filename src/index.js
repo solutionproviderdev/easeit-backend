@@ -63,8 +63,8 @@ mongoose
 app.use(timingMiddleware); // Add this line to use the middleware
 
 // request process
-// app.use(express.json());
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json());
+// app.use(express.json({ limit: '20mb' }));
 
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));

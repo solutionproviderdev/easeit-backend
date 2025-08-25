@@ -14,8 +14,40 @@ const {
   STATE_SECRET,
   ALLOWED_FE_ORIGINS = '',
 } = process.env;
+ const ALLOWED = ALLOWED_FE_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
 
-const ALLOWED = ALLOWED_FE_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
+const WA_REDIRECT_PATH = '/auth/whatsapp/callback';
+
+
+
+// ---- logging helpers ----
+const ts = () => new Date().toISOString();
+const LOG = (...a) => console.log(`[WA][${ts()}]`, ...a);
+const WARN = (...a) => console.warn(`[WA][WARN][${ts()}]`, ...a);
+const ERR = (label, e) => {
+  const boom = e?.output
+    ? { statusCode: e.output.statusCode, payload: e.output.payload }
+    : undefined;
+  console.error(`[WA][ERR][${ts()}] ${label}`, {
+    name: e?.name, message: e?.message, code: e?.code, status: e?.status,
+    stack: e?.stack, boom
+  });
+};
+
+function humanDiscReason(code) {
+  const map = {
+    [DisconnectReason.badSession]: 'badSession',
+    [DisconnectReason.connectionClosed]: 'connectionClosed',
+    [DisconnectReason.connectionLost]: 'connectionLost',
+    [DisconnectReason.connectionReplaced]: 'connectionReplaced',
+    [DisconnectReason.loggedOut]: 'loggedOut',
+    [DisconnectReason.restartRequired]: 'restartRequired',
+    [DisconnectReason.timedOut]: 'timedOut'
+  };
+  return map[code] || code;
+}
+
+
 
 // ---------- helpers ----------
 const safeRet = (ret) => (typeof ret === 'string' && ret.startsWith('/')) ? ret : '/settings/meta';
@@ -43,7 +75,7 @@ function originFromRedirect(redirectUri) {
 function signState(obj) {
   const json = JSON.stringify(obj);
   const mac  = crypto.createHmac('sha256', STATE_SECRET).update(json).digest('hex');
-  return Buffer.from(JSON.stringify({ json, mac })).toString('base64url');
+   return Buffer.from(JSON.stringify({ json, mac })).toString('base64url');
 }
 
 function verifyState(stateB64) {
@@ -66,68 +98,11 @@ function addQuery(url, obj) {
 
 // ---------- controllers ----------
 // auth controller---->
-// exports.fbLoginStart = async (req, res, next) => {
-//   try {
-// 		// REQUIRE CRM AUTH here (route should use requireAuth)
-// 		if (!req.user?._id)
-// 			return res.status(401).json({ error: 'LOGIN_REQUIRED' });
-
-// 		const redirect_uri = buildRedirectUri(req);
-// 		const scope = [
-// 			'public_profile',
-// 			'email',
-// 			'business_management',
-// 			'pages_show_list',
-// 			'pages_read_engagement',
-// 			'pages_manage_metadata',
-// 			'pages_messaging',
-// 			'whatsapp_business_management',
-// 			'whatsapp_business_messaging',
-// 		].join(',');
-
-// 		const uid = req.user._id.toString(); // CRM user ObjectId as string
-// 		const ret = safeRet(req.query.return);
-
-// 		const state = signState({ uid, ret, redir: redirect_uri, ts: Date.now() });
-
-// 		console.log('[FB][start]', {
-// 			origin: req.query.origin,
-// 			redirect_uri,
-// 			scope,
-// 			uid,
-// 			ret,
-// 		});
-
-// 		const url =
-// 			`https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth` +
-// 			`?client_id=${encodeURIComponent(FB_APP_ID)}` +
-// 			`&redirect_uri=${encodeURIComponent(redirect_uri)}` +
-// 			`&response_type=code` +
-// 			`&state=${encodeURIComponent(state)}` +
-// 			`&scope=${encodeURIComponent(scope)}`;
-
-
-// 		// // 🔸 add this: force account chooser / re-consent if requested
-// 		// const force = String(req.query.force || ''); // 'reauth' | 'rerequest' | ''
-// 		// if (force === 'reauth') {
-// 		// 	const nonce = require('crypto').randomUUID(); // Node 18+
-// 		// 	url += `&auth_type=reauthenticate&auth_nonce=${encodeURIComponent(
-// 		// 		nonce
-// 		// 	)}`;
-// 		// } else if (force === 'rerequest') {
-// 		// 	url += `&auth_type=rerequest`;
-// 		// }
-
-// 		return res.json({ url });
-// 	} catch (err) {
-//     console.error('[FB][start][error]', err);
-//     next(err);
-//   }
-// };
 
 // this two are same but when chose form two then it not redirect that the issue
 // fbLoginStart
 exports.fbLoginStart = async (req, res, next) => {
+  console.log('fb login start-----controller start--->', req.query);
   try {
     if (!req.user?._id) return res.status(401).json({ error: 'LOGIN_REQUIRED' });
 
@@ -148,6 +123,7 @@ exports.fbLoginStart = async (req, res, next) => {
     u.searchParams.set('state', state);
     u.searchParams.set('scope', scope);
 
+ 
     const force = String(req.query.force || '');  // 'reauth' | 'rerequest' | ''
     if (force === 'reauth') {
       u.searchParams.set('auth_type', 'reauthenticate');
@@ -256,15 +232,6 @@ exports.fbLoginCallback = async (req, res, next) => {
   }
 };
 
-// Optional clean-up
-// exports.fbUnlink = async (req, res, next) => {
-//   try {
-//     if (!req.user?._id) return res.status(401).json({ error: 'LOGIN_REQUIRED' });
-//     await FacebookAuth.deleteOne({ userId: req.user._id });
-//     return res.json({ ok: true });
-//   } catch (e) { next(e); }
-// };
-
 // controller/meta/metaAuthController.js
 exports.fbUnlink = async (req, res, next) => {
   try {
@@ -298,10 +265,10 @@ exports.fbUnlink = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-
 // facebook other works------->
 // List status (connected? name? cached pages?)
 exports.fbStatus = async (req, res, next) => {
+  console.log('fb status check-----controller start--->');
   try {
     const doc = await FacebookAuth.findOne({ userId: new Types.ObjectId(req.user._id) }).lean();
     if (!doc) return res.json({ connected: false, pages: [] });
@@ -410,3 +377,181 @@ exports.fbSendMessage = async (req, res, next) => {
     res.json({ ok: true, result: j });
   } catch (e) { next(e); }
 };
+
+
+
+// =============== WHATSAPP (Embedded Signup 'controllers' – Link/Unlink/Status) ===============
+
+
+// Build WA redirect URI (same origin logic; different path)
+function buildWaRedirectUri(req) {
+  const origin = pickOrigin(req);
+  return `${origin}${WA_REDIRECT_PATH}`;
+}
+
+/**
+ * ========== WhatsApp: Start ESU ==========
+ * GET /auth/whatsapp/link/start?tenant_id=...
+ * - Requires CRM auth (checkUserId adds req.user)
+ * - Returns { ok:true, url } for popup
+ */
+
+// const ESU_URL = `https://www.facebook.com/${process.env.API_VERSION}/dialog/whatsapp_business_account_linking`;
+
+// const ESU_URL = `https://www.facebook.com/${process.env.API_VERSION}/dialog/oauth`;
+
+const ESU_URL = `https://www.facebook.com/v19.0/dialog/oauth`;
+
+exports.waLinkStart = async (req, res, next) => {
+  console.log('WhatsApp ESU start received--------------->', req.query);
+  try {
+    if (!req.user?._id)
+      return res.status(401).json({ error: 'LOGIN_REQUIRED' });
+
+    const redirect_uri = buildWaRedirectUri(req);
+    console.log('WhatsApp Redirect URI:', redirect_uri);
+
+    const state = signState({
+      uid: req.user._id.toString(),
+      redir: redirect_uri,
+      ts: Date.now(),
+      nonce: crypto.randomUUID(),
+    });
+
+    console.log('Generated State:', state);
+
+    const u = new URL(ESU_URL);
+    u.searchParams.set('app_id', process.env.FB_APP_ID); // app id as string
+    u.searchParams.set('redirect_uri', redirect_uri);
+    u.searchParams.set('state', state);
+    u.searchParams.set('config_id', process.env.FACEBOOK_CONFIG_ID);
+    u.searchParams.set('response_type', 'code'); // required for code grant
+    u.searchParams.set('override_default_response_type', 'true'); // to ensure code response
+
+    // Optional: add extra setup information here if desired, else omit
+    // u.searchParams.set('extras', JSON.stringify({setup: {...}}));
+
+    console.log('Generated OAuth URL:', u.toString());
+
+    return res.json({ ok: true, url: u.toString() });
+  } catch (err) {
+    console.error('[WA][ESU][start][error]', err.stack || err);
+    next(err);
+  }
+};
+
+
+
+
+exports.waCallbackGet = async (req, res, next) => {
+  console.log('WhatsApp ESU get callback received:----------->', req.query);
+  try {
+    const { state: stateB64 } = req.query || {};
+    if (!stateB64) return res.status(400).send('Missing state');
+
+    const state = verifyState(stateB64);
+    const { tenant_id, uid, redir } = state || {};
+
+    const waba_id = req.query.waba_id;
+    const phone_number_id = req.query.phone_number_id;
+    const display_phone_number = req.query.display_phone_number;
+    const business_id = req.query.business_id;
+
+    if (!waba_id || !phone_number_id) {
+      return res.status(400).send('Missing WhatsApp IDs from ESU (waba_id/phone_number_id)');
+    }
+
+    await FacebookAuth.findOneAndUpdate(
+      { userId: new Types.ObjectId(uid) },
+      {
+        $set: {
+          waTenantId: tenant_id,
+          wabaId: waba_id,
+          phoneNumberId: phone_number_id,
+          displayPhoneNumber: display_phone_number || null,
+          waBusinessId: business_id || null,
+          waLinkedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log('[WA][ESU][callback][GET][ok]', { tenant_id, waba_id, phone_number_id });
+
+    // redirect back to your front-end "linked" page (keep it simple)
+    const origin = originFromRedirect(redir || buildWaRedirectUri(req));
+    const back = new URL('/settings/meta', origin);
+    back.searchParams.set('wa_connected', '1');
+    back.searchParams.set('tenant_id', tenant_id);
+    return res.redirect(back.toString());
+  } catch (err) { console.error('[WA][ESU][callback][GET][error]', err); next(err); }
+};
+
+/**
+ * ========== WhatsApp: Callback (POST – body delivery) ==========
+ * Some ESU variants POST the same fields. Accept both forms.
+ */
+exports.waCallbackPost = async (req, res, next) => {
+  console.log('WhatsApp ESU POST callback received:----------->', req.body);
+  try {
+    const { state: stateB64, waba_id, phone_number_id, display_phone_number, business_id } = req.body || {};
+    if (!stateB64) return res.status(400).json({ ok: false, error: 'Missing state' });
+
+    const state = verifyState(stateB64);
+    const { tenant_id, uid } = state || {};
+    if (!waba_id || !phone_number_id) {
+      return res.status(400).json({ ok: false, error: 'Missing WhatsApp IDs' });
+    }
+
+    await FacebookAuth.findOneAndUpdate(
+      { userId: new Types.ObjectId(uid) },
+      {
+        $set: {
+          waTenantId: tenant_id,
+          wabaId: waba_id,
+          phoneNumberId: phone_number_id,
+          displayPhoneNumber: display_phone_number || null,
+          waBusinessId: business_id || null,
+          waLinkedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log('[WA][ESU][callback][POST][ok]', { tenant_id, waba_id, phone_number_id });
+    return res.json({ ok: true });
+  } catch (err) { console.error('[WA][ESU][callback][POST][error]', err); next(err); }
+};
+
+/**
+ * ========== WhatsApp: Unlink ==========
+ * Forget stored WA identifiers for this user/tenant.
+ * (Advanced: also revoke app access to WABA if you added that later.)
+ */
+exports.waUnlink = async (req, res, next) => {
+  try {
+    if (!req.user?._id) return res.status(401).json({ error: 'LOGIN_REQUIRED' });
+
+    await FacebookAuth.findOneAndUpdate(
+      { userId: req.user._id },
+      {
+        $unset: {
+          waTenantId: 1,
+          wabaId: 1,
+          phoneNumberId: 1,
+          displayPhoneNumber: 1,
+          waBusinessId: 1,
+          waLinkedAt: 1,
+        },
+      },
+      { new: true }
+    );
+
+    return res.json({ ok: true, unlinked: true });
+  } catch (err) { console.error('[WA][unlink][error]', err); next(err); }
+};
+
+
+
+
+

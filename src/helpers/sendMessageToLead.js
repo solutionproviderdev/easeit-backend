@@ -45,7 +45,9 @@ const createNewMessageObject = (messageId, content, pageId, sentByMe, url) => ({
  * @returns {Promise<boolean>} - True if message sent and saved successfully, false otherwise.
  */
 const sendMessageToLead = async (leadId, message, io) => {
+    
     try {
+        console.log('Sending message to lead:', leadId, 'Message:', message);
         // Retrieve the lead document by ID.
         const lead = await Lead.findById(leadId);
         if (!lead || !lead.pageInfo || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
