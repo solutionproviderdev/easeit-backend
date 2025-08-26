@@ -28,7 +28,7 @@ const initializeCronJobs = (io) => {
                 findDuplicateLeads();
                 nameBasedLeadAssign();
                 getConversationsAndUpdateLeadsUpdated(io);
-                // processLeadsForAIResponse(io);
+                processLeadsForAIResponse(io);
             }
         },
         {
