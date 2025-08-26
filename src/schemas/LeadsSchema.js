@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 const mongoose = require('mongoose');
 
 // Address Schema
@@ -138,6 +139,7 @@ const financeSchema = new mongoose.Schema({
 const leadSchema = mongoose.Schema(
     {
         CID: String,
+        profilePicture: String,
         name: { type: String, required: true },
         status: {
             type: String,
@@ -163,12 +165,25 @@ const leadSchema = mongoose.Schema(
         address: addressSchema,
         lastMsg: String,
         meetings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' }],
+
+        // Facebook info
         pageInfo: {
             pageId: String,
             pageName: String,
             pageProfilePicture: String,
             fbSenderID: { type: String, sparse: true },
         },
+
+        // WhatsApp info
+        whatsAppInfo: {
+            jid: { type: String, index: true }, // e.g. "8801xxxx@s.whatsapp.net" or "115556699136116@lid"
+            lid: { type: String, sparse: true }, // raw numeric part if it's a LID (not always available)
+            pushName: String, // display name from WA client
+            verifiedBizName: String, // if it's a business account, WhatsApp provides this
+            device: String, // optional: device hint if you want to track (web/ios/android)
+            profilePicture: String,
+        },
+
         source: {
             type: String,
             enum: ['Facebook', 'WhatsApp', 'Web', 'Phone'],
@@ -306,6 +321,5 @@ leadSchema.index({ updatedAt: -1 });
 leadSchema.index({ lastAssigned: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);
-
 
 module.exports = Lead;

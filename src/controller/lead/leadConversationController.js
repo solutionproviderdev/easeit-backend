@@ -6,6 +6,7 @@ const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const Department = require('../../schemas/auth/DepartmentSchema');
+const { sendWhatsAppMessage } = require('../../services/sendWhatsAppMessage');
 
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -83,7 +84,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
         const { _id: userId, roleId: userRoleId } = req.user;
 
         // Build match conditions for aggregation
-        const matchConditions = { source: 'Facebook' };
+        const matchConditions = { source: { $in: ['Facebook', 'WhatsApp'] } }; // facebook and whatsApp
         // If a CRE id is provided, add it to the match filter
         // (assuming creName is stored as ObjectId)
         if (creId) {
@@ -145,6 +146,7 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                     pageInfo: 1,
                     creName: 1,
                     messagesSeen: 1,
+                    profilePicture: 1,
                     _id: 1,
                 },
             },
@@ -449,6 +451,14 @@ exports.sendMetaMessage = async (req, res) => {
         // Fetch lead details
         const lead = await Lead.findById(leadId);
 
+        if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+        if (lead.source === 'WhatsApp') {
+            console.log('WhatsApp Lead sent to whatsApp Handler for', lead.name);
+            const newMessages = await sendWhatsAppMessage(lead, messageType, content, req.io);
+            return res.status(200).json({ messages: newMessages });
+        }
+
         if (!lead || !lead.pageInfo.fbSenderID || !lead.pageInfo.pageId) {
             return res
                 .status(404)
@@ -586,7 +596,6 @@ exports.sendMetaMessage = async (req, res) => {
         return res.status(500).json({ error: error.toString() });
     }
 };
-// console.time('Search Leads Execution Time');
 
 exports.searchLeads = async (req, res) => {
     const { pharams } = req.params;

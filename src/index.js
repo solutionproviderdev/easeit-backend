@@ -38,6 +38,8 @@ const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
 const { timingMiddleware } = require('./config/winston');
+const { startBaileys } = require('./services/whatsappClient');
+const whatsAppRouter = require('./routes/whatsapp');
 
 // Initialize app
 const app = express();
@@ -132,6 +134,9 @@ io.on('connection', (socket) => {
 // Set the io instance in your socket service
 setIO(io);
 
+// start baileys
+startBaileys();
+
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {
 	req.io = io;
@@ -148,6 +153,9 @@ app.use('/dashboard', dashBoardRouter);
 app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
+
+// whatsapp router
+app.use('/whatsapp', whatsAppRouter);
 
 // product, vendor, router,discount
 app.use('/products', productRouter);
