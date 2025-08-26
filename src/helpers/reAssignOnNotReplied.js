@@ -14,7 +14,7 @@ const { selectCREBasedOnOverFlow } = require('./getPerformanceBasedCRE');
 const { notifyNewLeadAssignment } = require('./notification/lead/leadTriggers');
 
 const reAssignOnNotReplied = async (io) => {
-    console.time('reAssignOnNotReplied');
+    // console.time('reAssignOnNotReplied');
     try {
         // 1. Get global lead settings
         const settings = await getLeadSettingsDoc();
@@ -25,7 +25,7 @@ const reAssignOnNotReplied = async (io) => {
         // If reassign on not replied is disabled, do nothing.
         if (!reAssignOnReplied) {
             // console.log('Reassign on not replied is disabled');
-            console.timeEnd('reAssignOnNotReplied');
+            // console.timeEnd('reAssignOnNotReplied');
             return;
         }
 
@@ -129,10 +129,10 @@ const reAssignOnNotReplied = async (io) => {
         }
         // console.log(`Total leads reassigned: ${reAssignedCount}`);
     } catch (error) {
-        console.error('Error in reAssignOnNotReplied:', error.message);
+        // console.error('Error in reAssignOnNotReplied:', error.message);
         throw error;
     }
-    console.timeEnd('reAssignOnNotReplied');
+    // console.timeEnd('reAssignOnNotReplied');
 };
 
 module.exports = {

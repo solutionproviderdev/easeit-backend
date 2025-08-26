@@ -47,9 +47,10 @@ const reschedulePendingReminders = async (io) => {
             });
         }
 
-        console.log('Pending reminders rescheduled successfully.');
+        // console.log('Pending reminders rescheduled successfully.');
     } catch (error) {
-        console.error('Error rescheduling pending reminders:', error);
+        res.json({ error: error.message });
+        // console.error('Error rescheduling pending reminders:', error);
     }
 };
 

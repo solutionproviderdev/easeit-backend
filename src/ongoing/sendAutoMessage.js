@@ -79,6 +79,7 @@ const getEligibleLeadsForAutoMessage = async (twentyFourHoursAgo, delayThreshold
  * but less than 24 hours ago. For each such lead, you can trigger your auto message
  * sending logic (e.g. using a messaging API or socket).
  */
+
 const sendAutoMessage = async (io) => {
     try {
         // Retrieve the lead control settings document (creates one if not exists)

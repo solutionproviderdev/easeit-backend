@@ -116,7 +116,7 @@ app.get('/', (req, res) => {
 
 // io connection start
 io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    // console.log(`User connected: ${socket.id}`);
 
     // Listen for the register-user event to join a room named after the userId
     socket.on('register-user', (userId) => {

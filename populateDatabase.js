@@ -493,12 +493,12 @@ const assignLeadsToCRE = async () => {
             // Save the updated lead
             await lead.save();
 
-            console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
+            // console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
         }
 
-        console.log('Lead assignment to CRE completed.');
+        // console.log('Lead assignment to CRE completed.');
     } catch (error) {
-        console.error('Error assigning leads to CRE:', error);
+        // console.error('Error assigning leads to CRE:', error);
         throw error;
     }
 };
