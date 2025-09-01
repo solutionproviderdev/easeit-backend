@@ -228,7 +228,10 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         const { processedMessages, phoneNumber, lastMessageSentFromUs, lastCustomerMessageTime } =
             processMessages([...(conversation?.messages?.data ?? [])].reverse());
         // Try to find an existing lead using the Facebook sender ID.
-        let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
+        let lead = await Lead.findOne({
+            'pageInfo.fbSenderID': fbSenderID,
+            source: 'Facebook',
+        });
 
         // check for meta convesation Delete
         metaDeletedMessageAllart(conversation?.messages?.data, lead, io);

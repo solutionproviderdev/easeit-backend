@@ -38,3 +38,8 @@ logs/app.csv
 # wa_auth folder all files
 /wa_auth/*
 
+# Temporary data files
+/tmp/*.json
+
+# Data exports
+*.csv
