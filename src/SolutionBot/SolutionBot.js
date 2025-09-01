@@ -14,6 +14,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ---------- Helpers ---------- */
 const pickAssistant = async () => {
+    // need to find the assistant id from the settings not from Assistance collection
     const active = await Assistant.find({ active: true });
     if (!active.length) {
         logger.error('No active assistant found');
@@ -85,9 +86,6 @@ const generateAIResponse = async (message, assistantId, threadId) => {
     }
 
     threadId = await ensureThread(message, threadId);
-
-    console.log('assistantId', assistantId);
-    console.log('threadId', threadId);
 
     try {
         await runAssistant(assistantId, threadId);

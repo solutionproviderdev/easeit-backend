@@ -36,6 +36,9 @@ const initializeCronJobs = (io) => {
         }
     );
 
+    // 15 sec corn job
+    
+
     // Every 10 minutes cron job
     cron.schedule(
         '*/10 * * * *',
@@ -59,8 +62,7 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotSeen(io);
                 await sendAutoMessage(io);
             } catch (error) {
-                res.json({ error: error.message });
-                // console.error('Error in reAssignOnNotReplied cron job:', error);
+                console.error('Error in reAssignOnNotReplied cron job:', error);
             }
         },
         {

@@ -3,10 +3,10 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 const path = require('path');
-const Lead = require('../schemas/LeadsSchema');
+const Lead = require('../../schemas/LeadsSchema');
 const { startBaileys, getSock } = require('./whatsappClient');
-const { getIO } = require('../socket/socketService');
-const { createNewMessageObject } = require('../controller/lead/leadConversationController');
+const { getIO } = require('../../socket/socketService');
+const { createNewMessageObject } = require('../../controller/lead/leadConversationController');
 
 /** Pick a destination JID for this lead */
 function resolveDestinationJid(lead) {

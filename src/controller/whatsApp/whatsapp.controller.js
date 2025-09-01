@@ -4,7 +4,7 @@ const {
     logoutWhatsApp,
     sendTextMessage,
     getPendingQR,
-} = require('../../services/whatsappClient');
+} = require('../../services/WhatsApp/whatsappClient');
 
 exports.status = async (req, res, next) => {
     try {

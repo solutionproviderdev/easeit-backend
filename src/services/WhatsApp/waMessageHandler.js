@@ -4,9 +4,9 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 const { parsePhoneNumberFromString } = require('libphonenumber-js');
-const Lead = require('../schemas/LeadsSchema');
-const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
-const { getIO } = require('../socket/socketService');
+const Lead = require('../../schemas/LeadsSchema');
+const { getPerformanceBasedCRE } = require('../../helpers/getPerformanceBasedCRE');
+const { getIO } = require('../../socket/socketService');
 
 /** ---------- ID helpers ---------- */
 

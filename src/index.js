@@ -38,7 +38,7 @@ const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
 const { timingMiddleware } = require('./config/winston');
-const { startBaileys } = require('./services/whatsappClient');
+const { startBaileys } = require('./services/WhatsApp/whatsappClient');
 const whatsAppRouter = require('./routes/whatsapp');
 
 // Initialize app

@@ -6,7 +6,7 @@ const Settings = require('../../schemas/SettingsSchema');
 const Lead = require('../../schemas/LeadsSchema');
 const { getCreInfo } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const Department = require('../../schemas/auth/DepartmentSchema');
-const { sendWhatsAppMessage } = require('../../services/sendWhatsAppMessage');
+const { sendWhatsAppMessage } = require('../../services/WhatsApp/sendWhatsAppMessage');
 
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -7,7 +7,7 @@ const {
 } = require('@whiskeysockets/baileys');
 const path = require('path');
 const fs = require('fs');
-const { getIO } = require('../socket/socketService');
+const { getIO } = require('../../socket/socketService');
 const { handleWhatsAppUpsert } = require('./waMessageHandler');
 
 const STATE_DIR = path.join(__dirname, '../../wa_auth');

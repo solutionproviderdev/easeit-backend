@@ -7,8 +7,8 @@ whatsAppRouter.get('/status', whatsappController.status);
 // restart
 whatsAppRouter.post('/restart', whatsappController.restart);
 
-// send message
-whatsAppRouter.post('/send', whatsappController.send);
+// // send message
+// whatsAppRouter.post('/send', whatsappController.send);
 
 // logout
 whatsAppRouter.post('/logout', whatsappController.logout);
