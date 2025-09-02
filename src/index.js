@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
  const cron = require('node-cron');
-const swaggerFile = require('../swagger_output.json');
+const swaggerSpec = require('../swagger_output.json');
 
 // internal imports
 const {
@@ -21,7 +21,7 @@ const userRouter = require('./routes/auth/user');
 const uploadRouter = require('./routes/upload');
 const leadRouter = require('./routes/native-routes/leads/leads');
 const mapDataRouter = require('./routes/mapDataRouters');
-const meetingsRouter = require('./routes/meetings/meeting');
+const meetingsRouter = require('./routes/meetings/meeting.route');
 const { getConversationsAndUpdateLeadsUpdated } = require('./ongoing/getConversationAndUpdateLeadOptimized');
 const dashBoardRouter = require('./routes/dashboard/dashboard');
 const settingsRouter = require('./routes/settings/settingsRouter');
@@ -42,6 +42,11 @@ const { sendAutoMessage } = require('./ongoing/sendAutoMessage');
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
 const { getPerformanceBasedCRE } = require('./helpers/getPerformanceBasedCRE');
+const productRouter = require('./routes/product/product.routes');
+const { swaggerUi } = require('../swagger');
+const findDuplicateMessagesAndDelete = require('./ongoing/findDuplicateMesagesAndDelete');
+const vendorRouter = require('./routes/inventory/vendor.routes');
+const quotationrouter = require('./routes/quotation.routes');
 
 // Initialize app
 const app = express();
@@ -71,7 +76,9 @@ app.use(
 				'http://localhost:3000',
 				'http://localhost:5000',
 				'http://localhost:8080',
+				'http://localhost:8081',
 				'http://localhost:5173',
+				'https://680390003c985823ec14ae5d--melodic-platypus-c4121d.netlify.app',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
 				'http://103.122.143.63:3000',
@@ -84,7 +91,7 @@ app.use(
 				'http://192.168.68.130:3000',
 				'http://192.168.68.130:5000',
 				'http://192.168.68.130',
-				'http://192.168.68.101:8080',
+				'http://localhost:5173',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
@@ -100,7 +107,8 @@ app.use(
 // set up EJS
 app.set('view engine', 'ejs');
 
-// swagger setup
+// Serve swagger API documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
@@ -147,6 +155,11 @@ app.use('/webhook', webhookRouter);
 app.use('/meta-ads', productAdRouter);
 app.use('/notifications', notificationRouter);
 
+// product, vendor, router
+app.use('/products', productRouter);
+app.use('/vendors', vendorRouter);
+app.use('/quotations', quotationrouter);
+
 // seetings router
 app.use('/settings', settingsRouter);
 
@@ -154,9 +167,9 @@ app.use('/settings', settingsRouter);
 cron.schedule('*/1 * * * * *', async () => { // Runs every second
     const now = new Date();
     if (now.getSeconds() % 20 === 0) { // Check if the current second is a multiple of 20
-        getConversationsAndUpdateLeadsUpdated(io);
-		nameBasedLeadAssign();
 		findDuplicateLeads();
+		nameBasedLeadAssign();
+        getConversationsAndUpdateLeadsUpdated(io);
     }
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
@@ -166,11 +179,13 @@ cron.schedule('*/1 * * * * *', async () => { // Runs every second
 cron.schedule('*/10 * * * *', async () => {
 	await assignUnassignedLeads(io);
 	await checkAndUpdateMissedReminders(io);
+	findDuplicateMessagesAndDelete();
 }, {
 	timezone: 'Asia/Dhaka' // Set your timezone here
 });
 
 checkAndUpdateMissedReminders(io);
+findDuplicateMessagesAndDelete();
 
 // Schedule the task to run every 1 minutes
 cron.schedule(

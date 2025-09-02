@@ -52,6 +52,10 @@ const userSchema = new Schema({
         type: [String],
         default: [],
     },
+    mobileDeviceToken: {
+        type: String,
+        default: '',
+    }
 });
 
 const User = mongoose.model('User', userSchema);

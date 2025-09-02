@@ -7,6 +7,14 @@ const addressSchema = new mongoose.Schema(
         district: String,
         area: String,
         address: String,
+        location: {
+            lan: {
+                type: String,
+            },
+            lat: {
+                type: String,
+            },
+        },
     },
     { _id: false }
 );
@@ -229,6 +237,63 @@ const leadSchema = mongoose.Schema(
         timestamps: true,
     }
 );
+
+// Compound and Single Field Indexes
+
+// Index for CID and status queries
+leadSchema.index({ CID: 1, status: 1 });
+
+// Index for sales executive and status
+leadSchema.index({ salesExqName: 1, status: 1 });
+
+// Index for customer relationship executive
+leadSchema.index({ creName: 1 });
+
+// Index for source and status based queries
+leadSchema.index({ source: 1, status: 1 });
+
+// Index for phone number searches
+leadSchema.index({ phone: 1 });
+
+// Index for Facebook sender ID (sparse to handle null values)
+leadSchema.index({ 'pageInfo.fbSenderID': 1 }, { sparse: true });
+
+// Index for project status queries
+leadSchema.index({ 'projectStatus.status': 1, 'projectStatus.subStatus': 1 });
+
+// Index for message management
+leadSchema.index({ messagesSeen: 1, botResponded: 1 });
+
+// Index for finance-related queries
+leadSchema.index({ 'finance.soldDate': 1, 'finance.soldAmmount': 1 });
+leadSchema.index({ 'finance.totalDue': 1 });
+
+// Index for follow-ups and reminders
+leadSchema.index({ 'salesFollowUp.time': 1, 'salesFollowUp.status': 1 });
+leadSchema.index({ 'reminder.time': 1, 'reminder.status': 1 });
+
+// Text index for search across multiple fields
+leadSchema.index(
+    {
+        name: 'text',
+        'address.area': 'text',
+        'address.address': 'text',
+        lastMsg: 'text',
+    },
+    {
+        weights: {
+            name: 10,
+            'address.area': 5,
+            'address.address': 3,
+            lastMsg: 1,
+        },
+    }
+);
+
+// Timestamp based index for recent activities
+leadSchema.index({ createdAt: -1 });
+leadSchema.index({ updatedAt: -1 });
+leadSchema.index({ lastAssigned: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);
 

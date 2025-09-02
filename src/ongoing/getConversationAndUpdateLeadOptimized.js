@@ -16,6 +16,7 @@ const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const User = require('../schemas/auth/UserSchema');
 const { SholutionBot } = require('../SolutionBot/SolutionBotGemini');
 const { notifyNewLeadAssignment } = require('../helpers/notification/lead/leadTriggers');
+const { metaDeletedMessageAllart } = require('./metaDeletedMessageAllart');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -149,7 +150,8 @@ const fetchFacebookSettings = async () => {
 
 /**
  * Creates a mapping of CRE names (using the last name) to their IDs.
- * @returns {Object} - An object where keys are CRE last names and values are their corresponding IDs.
+ * @returns {Object} - An object where keys are CRE last names
+ *  and values are their corresponding IDs.
  */
 const getCREMapping = async () => {
     const cres = await People.find({ role: 'CRE' });
@@ -201,9 +203,11 @@ const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
         const { processedMessages, phoneNumber } = processMessages(
             [...(conversation?.messages?.data ?? [])].reverse()
         );
-
         // Try to find an existing lead using the Facebook sender ID.
         let lead = await Lead.findOne({ 'pageInfo.fbSenderID': fbSenderID });
+
+        // check for meta convesation Delete
+        metaDeletedMessageAllart(conversation?.messages?.data, lead, io);
 
         // If lead exists, update it with new messages.
         if (lead) {

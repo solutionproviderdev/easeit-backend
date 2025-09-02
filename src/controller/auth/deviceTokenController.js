@@ -62,3 +62,22 @@ exports.removeDeviceToken = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
+exports.addMobileDeviceToken = async (req, res) => {
+    try {
+        const { deviceToken } = req.body;
+        const { _id: userId } = req.user;
+        if (!userId || !deviceToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId and deviceToken are required',
+            });
+        }
+        // Update the user's mobileDeviceToken field
+        await User.updateOne({ _id: userId }, { mobileDeviceToken: deviceToken });
+        res.status(200).json({ success: true, message: 'Mobile device token added successfully' });
+    } catch (error) {
+        console.error('Error adding mobile device token:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};

@@ -3,11 +3,49 @@ const Meeting = require('../schemas/MeetingSchema');
 
 // Helper function to calculate performance
 const calculatePerformance = (completed, lateCompleted, missed) => {
-    // console.log("completed data", completed);
     const resolved = completed + lateCompleted + missed;
-    if (resolved === 0) return 0; // To avoid division by zero if no reminders are resolved
+    if (resolved === 0) return 0; // Avoid division by zero if no reminders are resolved
     const weightedSum = completed + 0.7 * lateCompleted;
     return (weightedSum / resolved) * 100;
+};
+
+const findLowestperformanceMetric = (performanceRates) => {
+    // Extract metrics
+    const { NCR, MSR, MCR, MPR, MCeR } = performanceRates;
+
+    // Define thresholds for low positive metrics
+    const lowThresholds = {
+        NCR: 100, // Number Collection Ratio
+        MSR: 100, // Meeting Set Ratio
+        MCR: 100, // Meeting Completion Ratio
+    };
+
+    // Define thresholds for high negative metrics
+    const highThresholds = {
+        MPR: 1, // Meeting Postponed Ratio
+        MCeR: 1, // Meeting Cancelled Ratio
+    };
+
+    // Find the lowest positive metric
+    let lowestPositiveMessage = null;
+    if (NCR < lowThresholds.NCR) {
+        lowestPositiveMessage = `Number collection: ${NCR.toFixed(1)}%`;
+    } else if (MSR < lowThresholds.MSR) {
+        lowestPositiveMessage = `Meeting set: ${MSR.toFixed(1)}%`;
+    } else if (MCR < lowThresholds.MCR) {
+        lowestPositiveMessage = `Meeting completion: ${MCR.toFixed(1)}%`;
+    }
+
+    // Find the highest negative metric
+    let highestNegativeMessage = null;
+    if (MCeR > highThresholds.MCeR) {
+        highestNegativeMessage = `Meeting cancellation: ${MCeR.toFixed(1)}%`;
+    } else if (MPR > highThresholds.MPR) {
+        highestNegativeMessage = `Meeting postpone: ${MPR.toFixed(1)}%`;
+    }
+
+    // Return the lowest positive metric and the highest negative metric
+    return { lowestPositiveMessage, highestNegativeMessage };
 };
 
 const getCREPerformance = async (
@@ -16,25 +54,37 @@ const getCREPerformance = async (
     endDate = new Date().setHours(23, 23, 59, 59, 999)
 ) => {
     try {
-        // get Total Leads
+        // Get Total Leads in the performance window.
         const totalLeads = await Lead.countDocuments({
             createdAt: { $gte: startDate, $lte: endDate },
         });
 
-        // Count leads assigned within the last 7 days
+        // Count all leads assigned within the performance window.
         const assigned = await Lead.countDocuments({
             creName: creId,
             createdAt: { $gte: startDate, $lte: endDate },
         });
 
-        // Count leads with collected numbers within the same period
+        // Fetch the last 10 leads (regardless of CRE) in the performance window.
+        const lastTenLeadsDocs = await Lead.find({
+            createdAt: { $gte: startDate, $lte: endDate },
+        })
+            .sort({ createdAt: -1 }) // Most recent first
+            .limit(10);
+
+        // Count how many of these 10 leads were assigned to the given CRE.
+        const assignedRecent = lastTenLeadsDocs.filter(
+            (lead) => lead.creName.toString() === creId.toString()
+        ).length;
+
+        // Count leads with collected numbers in the same period.
         const numberCollected = await Lead.countDocuments({
             creName: creId,
             phone: { $exists: true, $ne: [] },
             createdAt: { $gte: startDate, $lte: endDate },
         });
 
-        // count the documents that are meeting fixed
+        // Count the documents with certain meeting statuses.
         const meetings = await Lead.find({
             creName: creId,
             status: {
@@ -42,104 +92,66 @@ const getCREPerformance = async (
             },
             createdAt: { $gte: startDate, $lte: endDate },
         });
-
         const meetingsSet = meetings.length;
 
-        // get the metings ids in an array
+        // Gather meeting IDs from the first meeting reference in each lead.
         const meetingIds = meetings.map((l) => l.meetings[0]?._id);
-
-        // filter out the undefined values from the meetingIds array
         const filteredMeetingIds = meetingIds.filter((id) => id !== undefined);
 
-        // Get the leads for this CRE in the 7-day window to derive meeting metrics
+        // Retrieve leads for this CRE to further derive meeting metrics.
         const leadsForCRE = await Lead.find({
             creName: creId,
-            // createdAt: { $gte: startDate },
         }).select('_id');
-
-        // Extract lead IDs from the leadsForCRE array
         const leadIds = leadsForCRE.map((lead) => lead._id);
 
-        // Count meetings set (from Meeting collection) with a lower bound (7-day window)
-        // const meetingsSet = await Meeting.countDocuments({
-        //     lead: { $in: leadIds },
-        //     date: { $gte: startDate, $lte: endDate },
-        // });
-
-        // Pending Meetings data (Which meeting has set but not event occured)
-
-        // finding the meetings which occured and geeting and into status "complete","Reschedule", "cancel" or "PostPoned"
-
-        // Count meetings completed (status: 'Complete' or 'Sold') in the 7-day window
+        // Count meetings completed.
         const meetingsCompleted = await Meeting.countDocuments({
-            // lead: { $in: leadIds },
             _id: { $in: filteredMeetingIds },
             status: { $in: ['Complete', 'Sold'] },
-            // date: { $gte: startDate, $lte: endDate },
         });
 
-        // Count rescheduled meetings within the 7-day window
+        // Count rescheduled meetings.
         const meetingsRescheduled = await Meeting.countDocuments({
-            // lead: { $in: leadIds },
             _id: { $in: filteredMeetingIds },
             status: 'Rescheduled',
-            // date: { $gte: startDate, $lte: endDate },
         });
 
-        // Count postponed meetings within the 7-day window
+        // Count postponed meetings.
         const meetingPostponed = await Meeting.countDocuments({
-            // lead: { $in: leadIds },
             _id: { $in: filteredMeetingIds },
             status: 'Postponed',
-            // date: { $gte: startDate, $lte: endDate },
         });
 
+        // Count canceled meetings.
         const meetingCancelled = await Meeting.countDocuments({
-            // lead: { $in: leadIds },
             _id: { $in: filteredMeetingIds },
             status: 'Canceled',
-            // date: { $gte: startDate, $lte: endDate },
         });
 
-        // count total sold leads
+        // Count total sold leads within the window.
         const totalSales = await Lead.countDocuments({
             creName: creId,
             status: { $in: ['Sold', 'Prospect'] },
             'finance.soldDate': { $gte: startDate, $lte: endDate },
         });
 
-        // // Count total sales (status: 'Sold') within the 7-day window
-        // const totalSales = await Meeting.countDocuments({
-        //     // lead: { $in: leadIds },
-        //     _id: { $in: filteredMeetingIds },
-        //     status: 'Sold',
-        //     // date: { $gte: startDate, $lte: endDate },
-        // });
-
         const target = 200;
 
-        // reminder counting mongoose Query
+        // Query to count reminders by status.
         const reminderStatusCounts = await Lead.aggregate([
-            // Only consider leads with non-empty reminder arrays.
             {
                 $match: {
                     creName: creId,
                     reminder: { $exists: true, $ne: [] },
                 },
             },
-
-            // Unwind the reminder array so each reminder is processed individually.
             { $unwind: '$reminder' },
-
-            // Group the reminders by their status and count each one.
             {
                 $group: {
-                    _id: '$reminder.status', // Grouping key is the reminder status.
-                    count: { $sum: 1 }, // Count each reminder.
+                    _id: '$reminder.status',
+                    count: { $sum: 1 },
                 },
             },
-
-            // Optionally, project the output to rename _id to status.
             {
                 $project: {
                     status: '$_id',
@@ -156,36 +168,50 @@ const getCREPerformance = async (
         const missedCount =
             reminderStatusCounts.find((item) => item.status === 'Missed')?.count || 0;
 
-        // Calculate follow-up performance using your equation
-        // Note: Only resolved follow-ups are used (i.e. excluding pending)
+        // Calculate follow-up performance.
         const followUpPerformance = calculatePerformance(
             completeCount,
             lateCompleteCount,
             missedCount
         );
 
-        // Calculate performance metrics:
+        // Calculate various performance metrics.
         const LAR = totalLeads > 0 ? (assigned / totalLeads) * 100 : 0;
         const NCR = assigned > 0 ? (numberCollected / assigned) * 100 : 0;
         const MSR = numberCollected > 0 ? (meetingsSet / numberCollected) * 100 : 0;
         const MCR = meetingsSet > 0 ? (meetingsCompleted / meetingsSet) * 100 : 0;
         const TA = target > 0 ? (meetingsCompleted / target) * 100 : 0;
         const MRR = meetingsSet > 0 ? (meetingsRescheduled / meetingsSet) * 100 : 0;
+
+        // calculate nagative performance data
         const MPR = meetingsSet > 0 ? (meetingPostponed / meetingsSet) * 100 : 0;
         const MCeR = meetingsSet > 0 ? (meetingCancelled / meetingsSet) * 100 : 0;
+
+        // Calculate sales performance.
         const SR = meetingsCompleted > 0 ? (totalSales / meetingsCompleted) * 100 : 0;
 
-        // Complete performance formula:
-        // (LAR + NCR + MSR + MCR + TA + SR) / 6 - (MRR + MPR) / 4
+        // Final composite performance score.
         const positiveAverage = (LAR + NCR + MSR + MCR + TA + SR) / 6;
-        const penalty = (MRR + MPR) / 4; // 50% for rescheduled and postponed meetings
-        const penaltyForCancel = MCeR * 0.5; // 50% for canceled meetings
+        const penalty = (MRR + MPR) / 4;
+        const penaltyForCancel = MCeR * 0.5;
         const performance = positiveAverage - penalty - penaltyForCancel;
+
+        // Get performance messages
+        const performanceMessages = findLowestperformanceMetric({
+            NCR,
+            MSR,
+            MCR,
+            MPR,
+            MCeR,
+        });
 
         return {
             creId,
             performance,
             assigned,
+            // NEW: Return the count of leads from the last 10 assignments.
+            assignedRecent,
+            performanceMessages,
             performanceMetrics: {
                 totalLeads,
                 assigned,

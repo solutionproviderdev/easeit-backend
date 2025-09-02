@@ -7,6 +7,7 @@ const {
     deleteProductAd,
     addProductAdImage,
     getProductAdsForLead,
+    getProductAdStats,
 } = require('../../controller/ad/productAdController');
 const { checkAuth } = require('../../middlewares/auth/checkAuth');
 
@@ -32,5 +33,8 @@ productAdRouter.post('/:id/images', checkAuth, addProductAdImage);
 
 // Delete a product ad
 productAdRouter.delete('/:id', checkAuth, deleteProductAd);
+
+// Get stats for product ads with date range
+productAdRouter.get('/report/stats', checkAuth, getProductAdStats);
 
 module.exports = productAdRouter;

@@ -103,6 +103,7 @@ const getAllCREsPerformanceData = async (req, res) => {
                         departmentName: department.departmentName,
                     },
                     profilePictureUrl: user.profilePicture || null,
+                    performanceMessages: performances.performanceMessages,
                     performanceMetrics: {
                         assigned,
                         numberCollected,
@@ -409,7 +410,8 @@ const getDateWiseLeadData = async (req, res) => {
         }, {});
 
         // Aggregate leads data.
-        // Note: We use timezone 'Asia/Dhaka' so that the createdAt dates are converted to the local day.
+        // Note: We use timezone 'Asia/Dhaka' so that the
+        // createdAt dates are converted to the local day.
         const leads = await Lead.aggregate([
             {
                 $match: {

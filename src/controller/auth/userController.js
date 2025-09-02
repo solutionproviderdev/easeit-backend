@@ -171,7 +171,7 @@ exports.getAllUsers = async (req, res) => {
 // Get user by ID function excluding sensitive properties and populating department and role
 exports.getUserById = async (req, res) => {
     try {
-        console.log(req.params.id);
+        // console.log(req.params.id);
         // Find the user by ID and populate the department
         const user = await User.findById(req.params.id)
             .select('-password') // Exclude password
@@ -527,6 +527,7 @@ exports.deleteUser = async (req, res) => {
 // Login User
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
+    console.log('email,password,email,password-->', email, password);
 
     try {
         // Check if user exists
@@ -537,7 +538,7 @@ exports.loginUser = async (req, res) => {
 
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
-        // console.log("password ",isMatch,'---',user)
+        // console.log('password ', isMatch, '---', user);
         if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
@@ -573,7 +574,7 @@ exports.logoutUser = async (req, res) => {
         // If a deviceToken is provided, remove it from the user's deviceTokens array.
         if (deviceToken && userId) {
             await User.updateOne({ _id: userId }, { $pull: { deviceTokens: deviceToken } });
-            console.log(`Device token ${deviceToken} removed for user ${userId}`);
+            // console.log(`Device token ${deviceToken} removed for user ${userId}`);
         }
 
         // Clear the session token cookie.

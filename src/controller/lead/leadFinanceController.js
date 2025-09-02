@@ -4,7 +4,7 @@ const momenttz = require('moment-timezone');
 const Department = require('../../schemas/auth/DepartmentSchema');
 const User = require('../../schemas/auth/UserSchema');
 const Lead = require('../../schemas/LeadsSchema');
-const { formatDateRange } = require('../../helpers/firmatDateRange');
+const { formatDateRange } = require('../../helpers/formatDateRange');
 
 exports.getAllLeadsWithFinanceDetails = async (req, res) => {
     try {
