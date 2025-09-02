@@ -227,12 +227,13 @@ exports.createDefaultTimeSlots = async () => {
 		// Save new time slots
 		if (newTimeSlots.length > 0) {
 			await TimeSlots.insertMany(newTimeSlots);
-			console.log('Default time slots created');
+			// console.log('Default time slots created');
 		} else {
-			console.log('Default time slots already exist');
+			// console.log('Default time slots already exist');
 		}
 	} catch (error) {
-		console.error('Error creating default time slots:', error);
+		res.status(500).json({ msg: 'Error creating default time slots' });
+		// console.error('Error creating default time slots:', error);
 	}
 };
 

@@ -493,12 +493,12 @@ const assignLeadsToCRE = async () => {
             // Save the updated lead
             await lead.save();
 
-            console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
+            // console.log(`Assigned lead ${lead._id} to CRE ${creId}`);
         }
 
-        console.log('Lead assignment to CRE completed.');
+        // console.log('Lead assignment to CRE completed.');
     } catch (error) {
-        console.error('Error assigning leads to CRE:', error);
+        // console.error('Error assigning leads to CRE:', error);
         throw error;
     }
 };
@@ -994,13 +994,13 @@ const nameBasedLeadAssign = async () => {
         if (leads.length === 0) return;
 
         const creCRMNamesToFacebookNames = {
-            'Morium Ritu': 'Morium Ritu',
-            'Antika Sp': 'Antika Sadia Islam',
-            'আরিহা তানিয়া ইসলাম': 'Ariha Taniya Islam',
-            'Joynob Islam': 'Joynob Islam',
-            'Sumaia Akter Aysa': 'Sumaiya Akter',
-            'Faima Kanz Shorna': 'Faima Kanij Shorna',
-        };
+					'Morium Ritu': 'Morium Ritu',
+					'আন্তিকা সাদিয়া ইসলাম': 'Antika Sadia Islam',
+					'Nazmul SP': 'Ariha Taniya Islam',
+					// 'Joynob Islam': 'Joynob Islam',
+					'Sumaia Akter Aysa': 'Sumaiya Akter',
+					'Faima Kanz Shorna': 'Faima Kanij Shorna',
+				};
 
         const normalizeName = (name) => name
                 .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -1076,7 +1076,6 @@ const nameBasedLeadAssign = async () => {
         if (bulkOperations.length > 0) {
             await Lead.bulkWrite(bulkOperations);
         }
-        console.log('name based lead assign Completed with', updatedLeads, 'leads updated');
     } catch (error) {
         console.error('Error in nameBasedLeadAssign:', error.message);
     }
@@ -1349,8 +1348,6 @@ const findDuplicateLeads = async () => {
             const result = await Lead.deleteMany({ _id: { $in: idsToDelete } });
             totalDeleted += result.deletedCount || 0;
         }
-
-        console.log(`Deleted ${totalDeleted} duplicate leads.`);
     } catch (error) {
         console.error('Error finding duplicate leads:', error);
     }
@@ -1382,8 +1379,6 @@ const assignToRightSalesExecutive = async () => {
                 // Continue with the next meeting
             }
         }
-
-        console.log(`Total leads updated: ${totalUpdatedLeads}`);
     } catch (error) {
         console.error('Error assigning leads to sales executive:', error);
     }

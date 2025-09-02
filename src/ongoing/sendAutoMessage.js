@@ -79,6 +79,7 @@ const getEligibleLeadsForAutoMessage = async (twentyFourHoursAgo, delayThreshold
  * but less than 24 hours ago. For each such lead, you can trigger your auto message
  * sending logic (e.g. using a messaging API or socket).
  */
+
 const sendAutoMessage = async (io) => {
     try {
         // Retrieve the lead control settings document (creates one if not exists)
@@ -91,7 +92,7 @@ const sendAutoMessage = async (io) => {
         // Extract autoMessage settings from the global settings
         const { autoMessage } = settings.settingsData.global;
         if (!autoMessage || !autoMessage.enabled) {
-            console.log('Auto message is disabled.');
+            // console.log('Auto message is disabled.');
             return;
         }
 
@@ -101,7 +102,7 @@ const sendAutoMessage = async (io) => {
             console.error('Invalid delayHours value in autoMessage settings');
             return;
         }
-        console.log('Delay hours:', delayHours);
+        // console.log('Delay hours:', delayHours);
 
         // Calculate the time thresholds in milliseconds
         const now = Date.now();
@@ -113,15 +114,16 @@ const sendAutoMessage = async (io) => {
             delayThreshold
         );
 
-        console.log(`Found ${leadsToAutoMessage.length} leads eligible for auto messaging.`);
+        // console.log(`Found ${leadsToAutoMessage.length} leads eligible for auto messaging.`);
 
         // Loop over each eligible lead and send the auto message.
         // (Replace this part with your actual message sending logic.)
         for (const lead of leadsToAutoMessage) {
             // Personalize the message by replacing a placeholder with the lead's name.
             const personalizedMessage = autoMessage.message.replace('{{name}}', lead.name);
+            console.log(`Sending auto message to lead ${lead._id}: ${personalizedMessage}`);
             // For example, you might call a messaging API or emit a socket event here:
-            sendMessageToLead(lead._id, personalizedMessage, io);
+            // sendMessageToLead(lead._id, personalizedMessage, io);
 
             // save the lead
         }

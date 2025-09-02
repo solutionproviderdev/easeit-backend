@@ -6,6 +6,9 @@ const {
     markMessagesAsSeen,
     sendMetaMessage,
     searchLeads,
+    toggleAIreplay,
+    getAllLeeadConversionOfFolowUp,
+    getAllUnseenConversation,
 } = require('../../../controller/lead/leadConversationController');
 const { validateSendMetaMessage } = require('../../../validators/leadConversationValidators');
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
@@ -14,6 +17,12 @@ const leadConversationRouter = express.Router();
 
 // Existing endpoint to get all lead conversations
 leadConversationRouter.get('/', checkAuth, getAllLeadConversationUpdated);
+
+// New endpoint to get all lead conversations Followup
+leadConversationRouter.get('/followup', checkAuth, getAllLeeadConversionOfFolowUp);
+
+// New endpoint to get all lead conversations who is sitll unseen
+leadConversationRouter.get('/unseen', checkAuth, getAllUnseenConversation);
 
 // search endpoint for name and phone number
 leadConversationRouter.get('/search/:pharams', searchLeads);
@@ -26,5 +35,9 @@ leadConversationRouter.post('/:leadId/messages', validateSendMetaMessage, sendMe
 
 // New route for marking messages as seen
 leadConversationRouter.put('/:id/mark-messages-seen', markMessagesAsSeen);
+
+// New route for toggle AI Bot Reply
+leadConversationRouter.put('/:id/toggle-ai-bot-reply', toggleAIreplay);
+
 
 module.exports = leadConversationRouter;

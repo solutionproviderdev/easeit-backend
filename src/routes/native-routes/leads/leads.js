@@ -16,6 +16,7 @@ const {
     addCallLog,
     addPhoneNumberToLead,
     getAllLeadsWithReminders,
+    batchAssignLeadToCRE,
 } = require('../../../controller/lead/leadController');
 const {
     validateLeadCreation,
@@ -32,6 +33,7 @@ const {
 const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const leadSalesRouter = require('../sales/sales');
 const leadFinanceRouter = require('../finance/finance');
+const { conversationStat } = require('../../../controller/lead/leadConversationController');
 
 const leadRouter = express.Router();
 
@@ -41,6 +43,9 @@ leadRouter.use('/finance', leadFinanceRouter);
 
 // Get all Leads with filter
 leadRouter.get('/', getAllLeads);
+
+// Get stat of unread lead and need to call leads
+leadRouter.get('/conversationstat', conversationStat);
 
 // get all the leads with reminders
 leadRouter.get('/reminders', checkAuth, getAllLeadsWithReminders);
@@ -89,5 +94,8 @@ leadRouter.post('/:id/call-logs', validateCallLog, addCallLog);
 
 // New route for assigned cre [Need Update]
 leadRouter.put('/:id/assign-cre', validateCreAssignment, assignCreToLead);
+
+// batch Assign lead to a CRE
+leadRouter.put('/assign-cre/batch', batchAssignLeadToCRE);
 
 module.exports = leadRouter;

@@ -1,9 +1,11 @@
 const { default: mongoose } = require('mongoose');
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
+const User = require('../schemas/auth/UserSchema');
 const {
     getRandomFreeSalesExecutiveFromSlot,
 } = require('../helpers/meeting/getRandomFreeSalesExecutiveFromSlot');
+const { log } = require('../helpers/activityLogger');
 
 exports.fixMeeting = async (req, res) => {
     try {
@@ -99,6 +101,33 @@ exports.fixMeeting = async (req, res) => {
         // Update the lead with the new meeting and sales executive assignment
         await Lead.findByIdAndUpdate(leadId, leadUpdate);
 
+        // Fetch lead details for activity log
+        const lead = await Lead.findById(leadId).select('name phone source address salesExqName');
+
+        // Fetch sales executive nickname
+        let salesExecutiveNickname = '';
+        if (lead && lead.salesExqName) {
+            const salesExecUser = await User.findById(lead.salesExqName).select('nickname');
+            salesExecutiveNickname = salesExecUser?.nickname || '';
+        }
+
+        // Activity log for meeting set
+        if (req.user && req.user._id) {
+            log(req.user._id, 'LEAD_MEETING_SET', {
+                lead: {
+                    _id: lead._id,
+                    name: lead.name,
+                    phone: lead.phone,
+                    source: lead.source,
+                    address: lead.address,
+                },
+                meetingId: newMeeting._id,
+                date,
+                slot,
+                salesExecutiveNickname,
+            });
+        }
+
         res.status(201).json(newMeeting);
     } catch (error) {
         console.error(error);
@@ -179,6 +208,17 @@ exports.createLeadAndFixMeeting = async (req, res) => {
             newLead.meetings.push(newMeeting._id);
             newLead.status = 'Meeting Fixed';
             await newLead.save();
+
+            // Activity log for meeting set
+            if (req.user && req.user._id) {
+                log(req.user._id, 'LEAD_CREATE_AND_MEETING_SET', {
+                    leadId: newLead._id,
+                    meetingId: newMeeting._id,
+                    date,
+                    slot,
+                    salesExecutive,
+                });
+            }
         }
 
         res.status(201).json({
@@ -464,21 +504,28 @@ exports.getMeetingById = async (req, res) => {
 // Update meeting details
 exports.updateMeetingDetails = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updates = req.body;
+			const { id } = req.params;
+			const updates = req.body;
 
-        const updatedMeeting = await Meeting.findByIdAndUpdate(
-            id,
-            { ...updates, 'auditFields.updatedBy': req.user._id },
-            { new: true }
-        );
+			const updatedMeeting = await Meeting.findByIdAndUpdate(
+				id,
+				{ ...updates, 'auditFields.updatedBy': req.user._id },
+				{ new: true }
+			);
 
-        if (!updatedMeeting) {
-            return res.status(404).json({ msg: 'Meeting not found' });
-        }
+			if (!updatedMeeting) {
+				return res.status(404).json({ msg: 'Meeting not found' });
+			}
 
-        res.status(200).json(updatedMeeting);
-    } catch (error) {
+			// If salesExecutive is being updated, update it in the Lead too
+			if (updates.salesExecutive) {
+				await Lead.findByIdAndUpdate(updatedMeeting.lead, {
+					salesExqName: updates.salesExecutive,
+				});
+			}
+
+			res.status(200).json(updatedMeeting);
+		} catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -582,8 +629,9 @@ exports.deleteMeeting = async (req, res) => {
 
         // Remove the meeting reference from the lead's meetings array
         await Lead.findByIdAndUpdate(meeting.lead, {
-            $pull: { meetings: meeting._id },
-        });
+					$pull: { meetings: meeting._id },
+					status: 'New',//<-- set status to "New"
+				});
 
         // Delete the meeting
         await Meeting.findByIdAndDelete(id);
@@ -768,5 +816,123 @@ exports.endMeeting = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Get meetings report with simple output
+exports.getMeetingsReport = async (req, res) => {
+    try {
+        const { status, dateRange, salesExecutiveId, creId } = req.query;
+        const filter = {};
+
+        // Filter by status if provided
+        if (status) filter.status = status;
+
+        // Handle date range filtering
+        if (dateRange) {
+            const [startDate, endDate] = dateRange.split('_');
+
+            if (startDate === endDate) {
+                // Specific day: set time range for that day
+                const startOfDay = new Date(startDate);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(endDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                filter.date = { $gte: startOfDay, $lte: endOfDay };
+            } else {
+                // Date range
+                filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+            }
+        }
+
+        // Filter by sales executive ID if provided
+        if (salesExecutiveId) filter.salesExecutive = salesExecutiveId;
+
+        // Filter by CRE ID if provided
+        if (creId) {
+            // Find leads that belong to the given creId
+            const leadsMatching = await Lead.find({ creName: creId }).select('_id');
+            const leadIds = leadsMatching.map((lead) => lead._id);
+            // If no leads match, ensure no meetings are returned.
+            filter.lead = { $in: leadIds.length > 0 ? leadIds : [null] };
+        }
+
+        // Fetch meetings with applied filters and populate necessary fields
+        const meetings = await Meeting.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: 'leads',
+                    localField: 'lead',
+                    foreignField: '_id',
+                    as: 'lead',
+                },
+            },
+            { $unwind: '$lead' },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'lead.creName',
+                    foreignField: '_id',
+                    as: 'creInfo',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'salesExecutive',
+                    foreignField: '_id',
+                    as: 'salesInfo',
+                },
+            },
+            { $unwind: { path: '$creInfo', preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: '$salesInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    leadName: '$lead.name',
+                    phone: '$lead.phone',
+                    address: '$lead.address.address',
+                    meetingDate: '$date',
+                    meetingSlot: '$slot',
+                    projectValue: '$lead.finance.projectValue',
+                    soldValue: '$lead.finance.soldAmmount',
+                    creName: {
+                        $cond: {
+                            if: '$creInfo',
+                            then: { $ifNull: ['$creInfo.nameAsPerNID', '$creInfo.nickname'] },
+                            else: 'N/A',
+                        },
+                    },
+                    salesName: {
+                        $cond: {
+                            if: '$salesInfo',
+                            then: {
+                                $ifNull: ['$salesInfo.nameAsPerNID', '$salesInfo.nickname'],
+                            },
+                            else: 'N/A',
+                        },
+                    },
+                    status: 1,
+                },
+            },
+        ]);
+
+        // Format dates in the results
+        const formattedMeetings = meetings.map((meeting) => ({
+            ...meeting,
+            meetingDate: new Date(meeting.meetingDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            }),
+            phone: Array.isArray(meeting.phone) ? meeting.phone.join(', ') : 'N/A',
+            projectValue: meeting.projectValue || 0,
+            soldValue: meeting.soldValue || 0,
+        }));
+
+        res.status(200).json(formattedMeetings);
+    } catch (error) {
+        console.error('Error generating meetings report:', error);
+        res.status(500).json({ msg: 'Server error', error });
     }
 };

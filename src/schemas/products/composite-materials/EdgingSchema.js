@@ -31,6 +31,11 @@ const EdgingSchema = new Schema(
             required: true,
             default: 'meter',
         },
+        unitPrice: {
+            type: Number,
+            required: true,
+            min: [0, 'Unit price cannot be negative'],
+        },
     },
     { id: true }
 );

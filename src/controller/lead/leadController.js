@@ -10,6 +10,8 @@ const {
 } = require('../../ongoing/getConversationAndUpdateLeadOptimized');
 const { notifyNewLeadAssignment } = require('../../helpers/notification/lead/leadTriggers');
 const { formatDateRange } = require('../../helpers/formatDateRange');
+const ProductAd = require('../../schemas/ProductAdSchema');
+const { log } = require('../../helpers/activityLogger'); // Add this import at the top if not already present
 
 // Utility function to add a comment to a lead and emit a Socket.io event
 const addCommentToLead = async (leadId, commentData, user, io) => {
@@ -103,6 +105,8 @@ exports.getAllLeads = async (req, res) => {
             endDate,
             assignedCre,
             salesExecutive,
+            productAd, // New query parameter for product ad filtering
+            search,
         } = req.query;
 
         // Create a filter object
@@ -133,13 +137,26 @@ exports.getAllLeads = async (req, res) => {
             filter.salesExqName = salesExecutive;
         }
 
+        // Add product ad filter
+        if (productAd) {
+            filter.productAds = new mongoose.Types.ObjectId(productAd);
+        }
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
+            ];
+        }
+
         // Fetch leads with pagination and filters
         const leads = await Lead.find(filter)
             .select('-messages -callLogs')
             .skip((page - 1) * limit)
             .limit(Number(limit))
             .populate('creName', 'nameAsPerNID nickname profilePicture')
-            .populate('salesExqName', 'nameAsPerNID nickname profilePicture');
+            .populate('salesExqName', 'nameAsPerNID nickname profilePicture')
+            .populate('productAds', 'name images '); // Add population for product ads
 
         const totalLeads = await Lead.countDocuments(filter);
 
@@ -148,6 +165,7 @@ exports.getAllLeads = async (req, res) => {
             'New',
             'No Response',
             'Need Support',
+            'Number Provided',
             'Message Rescheduled',
             'Number Collected',
             'Call Reschedule',
@@ -168,10 +186,16 @@ exports.getAllLeads = async (req, res) => {
             await Promise.all(
                 allStatuses.map(async (status) => {
                     const count = await Lead.countDocuments({ ...filter, status });
-                    return count > 0 ? { status, count } : null; // Return null if count is zero
+                    return count > 0 ? { status, count } : null;
                 })
             )
-        ).filter((data) => data !== null); // Filter out null entries
+        ).filter((data) => data !== null);
+
+        // Get unique product ads
+        const uniqueProductAds = await Lead.distinct('productAds');
+        const productAds = await ProductAd.find({
+            _id: { $in: uniqueProductAds },
+        }).select('name images');
 
         // Extract unique CREs and Sales Executives
         const uniqueCRENames = [];
@@ -233,6 +257,7 @@ exports.getAllLeads = async (req, res) => {
                 sources: allSources,
                 creNames: activeCREs,
                 salesExecutives: uniqueSalesExecs,
+                productAds, // Add product ads to filters
             },
             leads,
         });
@@ -267,57 +292,75 @@ exports.getLeadById = async (req, res) => {
 
 // Create a new Lead with an optional comment
 exports.createLead = async (req, res) => {
-    const { name, phone, source, status, comment, images, cre } = req.body;
+    const { name, phone, source, status, comment, images, cre, productAd } = req.body;
 
     // console.log(req.body);
 
     try {
-        // Normalize the input phone number
-        const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
+			// Normalize the input phone number
+			const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
 
-        if (!parsedNumber || !parsedNumber.isValid()) {
-            return res.status(400).json({ msg: 'Invalid phone number format.' });
-        }
+			if (!parsedNumber || !parsedNumber.isValid()) {
+				return res.status(400).json({ msg: 'Invalid phone number format.' });
+			}
 
-        const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
+			const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
 
-        // Step 1: Check if the phone number exists in any lead's phone array
-        const existingLead = await Lead.findOne({
-            phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
-        });
+			// Step 1: Check if the phone number exists in any lead's phone array
+			const existingLead = await Lead.findOne({
+				phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
+			});
 
-        if (existingLead) {
-            return res.status(400).json({ msg: 'Phone number already exists in another lead.' });
-        }
+			if (existingLead) {
+				return res
+					.status(400)
+					.json({ msg: 'Phone number already exists in another lead.' });
+			}
 
-        // Step 2: Create the new lead
-        const newLead = new Lead({
-            name,
-            phone: formattedPhone, // Save in normalized format
-            source: source || 'Phone',
-            status: status || 'Number Collected',
-            creName: cre,
-        });
+			// Step 2: Create the new lead
+			const newLead = new Lead({
+				name,
+				phone: formattedPhone, // Save in normalized format
+				source: source || 'Phone',
+				status: status || 'Number Collected',
+				creName: cre,
+				productAds: productAd ? [productAd] : [],
+			});
 
-        // Save the new lead
-        await newLead.save();
+			// Save the new lead
+			await newLead.save();
 
-        // Step 3: Add comment if provided
-        if (comment) {
-            const commentData = { comment, images };
-            const populatedComment = await addCommentToLead(
-                newLead._id,
-                commentData,
-                req.user,
-                req.io
-            );
-            newLead.comment.push(populatedComment);
-        }
+			// Step 3: Add comment if provided
+			if (comment) {
+				const commentData = { comment, images };
+				const populatedComment = await addCommentToLead(
+					newLead._id,
+					commentData,
+					req.user,
+					req.io
+				);
+				newLead.comment.push(populatedComment);
+			}
 
-        // console.log(newLead);
+			// console.log(newLead);
 
-        res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
-    } catch (error) {
+			// _____ Add activity log here ____
+			if (req.user && req.user._id) {
+				log(req.user._id, 'CREATE_LEAD', {
+					lead: {
+						_id: newLead._id,
+						name: newLead.name,
+						phone: newLead.phone,
+						address: newLead.address,
+						source: newLead.source,
+						status: newLead.status,
+					},
+				});
+			}
+			//_______ Activity log end ____
+
+			res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
+		} catch (error) {
         // console.log(error);
         console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
@@ -330,15 +373,33 @@ exports.addComment = async (req, res) => {
     const { comment, images } = req.body;
 
     try {
-        // Add the comment using the reusable function
-        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
+			// Add the comment using the reusable function
+			const populatedComment = await addCommentToLead(
+				id,
+				{ comment, images },
+				req.user,
+				req.io
+			);
 
-        // Respond to the client
-        res.status(200).json({
-            msg: 'Comment added successfully',
-            savedComment: populatedComment,
-        });
-    } catch (error) {
+			//______ Log the activity _____
+			if (req.user && req.user._id) {
+				// Fetch the lead to get name and status
+				const lead = await Lead.findById(id).select('name status');
+				log(req.user._id, 'LEAD_ADD_COMMENT', {
+					leadName: lead?.name || '',
+					status: lead?.status || '',
+					commentId: populatedComment._id,
+					comment: populatedComment.comment,
+				});
+			}
+			//_______ Activity log end ____
+
+			// Respond to the client
+			res.status(200).json({
+				msg: 'Comment added successfully',
+				savedComment: populatedComment,
+			});
+		} catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
@@ -463,17 +524,45 @@ exports.updateLead = async (req, res) => {
     if (req.body.requirements) updateFields.requirements = req.body.requirements;
 
     if (req.body.comment) {
-        const commentData = { comment: req.body.comment.comment, images: req.body.comment.images };
+        const commentData = {
+            comment: req.body.comment.comment,
+            images: req.body.comment.images,
+        };
         await addCommentToLead(id, commentData, req.user, req.io);
     }
 
     try {
-        // Find the lead by ID and update with new data
-        const updatedLead = await Lead.findByIdAndUpdate(id, updateFields, { new: true });
+        // Find the lead by ID (get the old status and other info)
+        const leadBeforeUpdate = await Lead.findById(id);
+
+        if (!leadBeforeUpdate) {
+            return res.status(404).json({ msg: 'Lead not found' });
+        }
+
+        // Update the lead
+        const updatedLead = await Lead.findByIdAndUpdate(id, updateFields, {
+            new: true,
+        });
 
         if (!updatedLead) {
             return res.status(404).json({ msg: 'Lead not found' });
         }
+
+        // --- Activity log for status change ---
+        if (req.body.status && req.user && req.user._id) {
+            log(req.user._id, 'LEAD_STATUS_CHANGE', {
+                lead: {
+                    _id: updatedLead._id,
+                    name: leadBeforeUpdate.name,
+                    phone: leadBeforeUpdate.phone,
+                    address: leadBeforeUpdate.address,
+                    source: leadBeforeUpdate.source,
+                    oldStatus: leadBeforeUpdate.status,
+                    newStatus: req.body.status,
+                },
+            });
+        }
+        // --------------------------------------
 
         res.status(200).json({ msg: 'Lead updated successfully', lead: updatedLead });
     } catch (error) {
@@ -507,7 +596,23 @@ exports.addReminder = async (req, res) => {
                 .slice(-1)[0];
 
             if (lastIncompleteReminder) {
-                lastIncompleteReminder.status = 'Complete';
+                // 1️⃣ Mark it complete
+                // 1️⃣ Mark as 'Late Complete' if missed, else 'Complete'
+                if (lastIncompleteReminder.status === 'Missed') {
+                    lastIncompleteReminder.status = 'Late Complete';
+                } else if (lastIncompleteReminder.status === 'Pending') {
+                    lastIncompleteReminder.status = 'Complete';
+                }
+
+                // 2️⃣ Emit the socket event so clients can remove it immediately
+                if (req.io) {
+                    req.io.emit('followUpStatusUpdated', {
+                        leadId: lead._id.toString(),
+                        reminderId: lastIncompleteReminder._id.toString(),
+                        newStatus: 'Complete',
+                    });
+                }
+
                 // Save the lead after marking the last reminder as Complete
                 await lead.save();
             }
@@ -536,6 +641,16 @@ exports.addReminder = async (req, res) => {
             .populate('creName', 'name')
             .populate('salesExqName', 'name')
             .lean();
+
+        // --- Activity log for adding a reminder ---
+        if (req.user && req.user._id) {
+            log(req.user._id, 'LEAD_REMINDER_SET', {
+                leadId: lead._id,
+                reminderTime: time,
+                commentId: commentId || null,
+            });
+        }
+        // ------------------------------------------
 
         // Map reminders to include comments (if needed)
         updatedLead.reminder = updatedLead.reminder.map((reminder) => ({
@@ -582,14 +697,18 @@ exports.addReminderWithComment = async (req, res) => {
             (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
 
-        // If completeLastReminder is true, mark the last incomplete reminder as Complete
+        // If completeLastReminder is true, mark the last incomplete reminder as Complete or Late Complete
         if (completeLastReminder && hasIncompleteReminder) {
             const lastIncompleteReminder = lead.reminder.find(
                 (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
             );
 
             if (lastIncompleteReminder) {
-                lastIncompleteReminder.status = 'Complete';
+                if (lastIncompleteReminder.status === 'Missed') {
+                    lastIncompleteReminder.status = 'Late Complete';
+                } else if (lastIncompleteReminder.status === 'Pending') {
+                    lastIncompleteReminder.status = 'Complete';
+                }
             }
         } else if (hasIncompleteReminder) {
             // If completeLastReminder is false or not provided, return an error
@@ -853,6 +972,39 @@ exports.getAllLeadsWithReminders = async (req, res) => {
                 salesNames: await getSalesUsers(),
             },
         });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+exports.batchAssignLeadToCRE = async (req, res) => {
+    const { leadIds, creId } = req.body;
+
+    try {
+        // Find the leads by IDs
+        const leads = await Lead.find({ _id: { $in: leadIds } });
+
+        if (leads.length !== leadIds.length) {
+            return res.status(404).json({ msg: 'Some leads not found' });
+        }
+
+        // Update the property and mark it as modified
+        leads.forEach((lead) => {
+            lead.creName = creId;
+        });
+
+        // Save the updated leads
+        await Lead.bulkWrite(
+            leads.map((lead) => ({
+                updateOne: {
+                    filter: { _id: lead._id },
+                    update: { $set: { creName: creId } },
+                },
+            }))
+        );
+
+        res.status(200).json({ msg: 'CRE assigned successfully', leads });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error' });

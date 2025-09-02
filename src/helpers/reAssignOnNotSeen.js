@@ -12,7 +12,7 @@ const getCREPerformance = require('./getCREPerformance');
 const { selectCREBasedOnOverFlow } = require('./getPerformanceBasedCRE');
 
 const reAssignOnNotSeen = async (io) => {
-    console.time('reAssignOnNotSeen');
+    // console.time('reAssignOnNotSeen');
     try {
         // Get global lead settings
         const settings = await getLeadSettingsDoc();
@@ -22,8 +22,8 @@ const reAssignOnNotSeen = async (io) => {
 
         // If reassign on not seen is disabled, do nothing.
         if (!reAssignOnSeen) {
-            console.log('Reassign on not seen is disabled');
-            console.timeEnd('reAssignOnNotSeen');
+            // console.log('Reassign on not seen is disabled');
+            // console.timeEnd('reAssignOnNotSeen');
             return;
         }
 
@@ -65,7 +65,7 @@ const reAssignOnNotSeen = async (io) => {
             source: 'Facebook',
             lastAssigned: { $lte: threshold },
         });
-        console.log(`Found ${leads.length} leads for reassignment (not seen).`);
+        // console.log(`Found ${leads.length} leads for reassignment (not seen).`);
 
         let reAssignedCount = 0;
 
@@ -106,7 +106,7 @@ const reAssignOnNotSeen = async (io) => {
                     );
                     // eslint-disable-next-line no-plusplus
                     reAssignedCount++;
-                    console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
+                    // console.log(`Lead ${reAssignedCount} reassigned to CRE ${selectedCRE.name}`);
 
                     // Emit socket events for the new assignment.
                     emitSocketEventsForNewMessage(io, savedLead, savedLead.pageInfo);
@@ -116,12 +116,12 @@ const reAssignOnNotSeen = async (io) => {
                 continue;
             }
         }
-        console.log(`Total leads reassigned: ${reAssignedCount}`);
+        // console.log(`Total leads reassigned: ${reAssignedCount}`);
     } catch (error) {
-        console.error('Error in reAssignOnNotSeen:', error.message);
+        // console.error('Error in reAssignOnNotSeen:', error.message);
         throw error;
     }
-    console.timeEnd('reAssignOnNotSeen');
+    // console.timeEnd('reAssignOnNotSeen');
 };
 
 module.exports = {
