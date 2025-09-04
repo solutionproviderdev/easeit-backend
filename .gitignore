@@ -53,3 +53,11 @@ logs/app.csv
 
 # Data exports
 *.csv
+
+# Yarn folder  all files
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
