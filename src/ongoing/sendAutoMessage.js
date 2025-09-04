@@ -121,7 +121,7 @@ const sendAutoMessage = async (io) => {
         for (const lead of leadsToAutoMessage) {
             // Personalize the message by replacing a placeholder with the lead's name.
             const personalizedMessage = autoMessage.message.replace('{{name}}', lead.name);
-            console.log(`Sending auto message to lead ${lead._id}: ${personalizedMessage}`);
+            // console.log(`Sending auto message to lead ${lead._id}: ${personalizedMessage}`);
             // For example, you might call a messaging API or emit a socket event here:
             // sendMessageToLead(lead._id, personalizedMessage, io);
 

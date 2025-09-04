@@ -37,7 +37,6 @@ const initializeCronJobs = (io) => {
     );
 
     // 15 sec corn job
-    
 
     // Every 10 minutes cron job
     cron.schedule(
