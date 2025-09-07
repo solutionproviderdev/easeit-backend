@@ -19,7 +19,10 @@ const settingsSchema = mongoose.Schema(
 
 settingsSchema.path('name').validate({
     async validator(value) {
-        const count = await this.model('setting').countDocuments({ name: value });
+        const count = await this.model('setting').countDocuments({
+            name: value,
+            _id: { $ne: this._id }, // exclude current doc
+        });
         return count === 0;
     },
     message: 'The name must be unique within the enum values.',

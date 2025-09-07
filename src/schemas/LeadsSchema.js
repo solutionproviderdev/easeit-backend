@@ -12,9 +12,7 @@ const addressSchema = new mongoose.Schema(
             lan: {
                 type: String,
             },
-            lat: {
-                type: String,
-            },
+            lat: { type: String },
         },
     },
     { _id: false }
@@ -158,6 +156,15 @@ const leadSchema = mongoose.Schema(
                 'Meeting Complete',
                 'Sold',
                 'Prospect',
+                'Lost',
+                'Mesurement Done',
+                'Material Ordered',
+                'Material Received',
+                'Making',
+                'Ready for Installation',
+                'Out for Installation',
+                'Installation Completed',
+                'Handed Over',
             ],
             required: true,
             default: 'unread',
