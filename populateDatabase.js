@@ -994,12 +994,12 @@ const nameBasedLeadAssign = async () => {
         if (leads.length === 0) return;
 
         const creCRMNamesToFacebookNames = {
-					'Morium Ritu': 'Morium Ritu',
+					// 'Morium Ritu': 'Morium Ritu',
 					'আন্তিকা সাদিয়া ইসলাম': 'Antika Sadia Islam',
 					'Nazmul SP': 'Ariha Taniya Islam',
 					// 'Joynob Islam': 'Joynob Islam',
 					'Sumaia Akter Aysa': 'Sumaiya Akter',
-					'Faima Kanz Shorna': 'Faima Kanij Shorna',
+					// 'Faima Kanz Shorna': 'Faima Kanij Shorna',
 				};
 
         const normalizeName = (name) => name
