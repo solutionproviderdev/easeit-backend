@@ -22,24 +22,20 @@ function createNewMessageObject(messageId, content, senderId, sentByMe, fileUrl 
     return newMessage;
 }
 
+// Import centralized socket emitter functions
+const {
+    emitLeadMessage,
+    emitConversationUpdate: emitConversationUpdateCentral,
+} = require('../utils/socketEmitter');
+
 function emitNewMessage(req, leadId, newMessage) {
-    req.io.emit(`fbMessage${leadId}`, newMessage);
+    emitLeadMessage({ req, leadId, message: newMessage });
 }
 
+// Original emitConversationUpdate function is now using the centralized version
+// This wrapper maintains backward compatibility
 function emitConversationUpdate(req, lead) {
-    const lastMessage = lead.messages[lead.messages.length - 1];
-    const socketPayload = {
-        name: lead.name,
-        sourcePageName: lead.sourcePageName,
-        sourcePageId: lead.sourcePageId,
-        sourcePageProfilePicture: lead.sourcePageProfilePicture,
-        lastMessage: lastMessage.content,
-        lastMessageTime: lastMessage.date,
-        sentByMe: lastMessage.sentByMe,
-        createdAt: lead.createdAt,
-        _id: lead._id,
-    };
-    req.io.emit('conversation', socketPayload);
+    emitConversationUpdateCentral({ req, lead });
 }
 
 // Function to get all messages for a specific lead

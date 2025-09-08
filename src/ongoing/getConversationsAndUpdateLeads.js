@@ -18,6 +18,7 @@ const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const findCREWithLowestLeads = require('../helpers/findCREWithLowestLeads');
 const People = require('../schemas/PeopleSchema');
+const { emitLeadMessage, emitConversationUpdate } = require('../utils/socketEmitter');
 
 const logError = (message, error) => {
     const currentTime = new Date().toLocaleString();
@@ -131,7 +132,8 @@ const getConversationsAndUpdateLeads = async (io) => {
 										}
 									});
 
-									io.emit(`fbMessage${lead._id}`, message);
+									// Use the centralized socket emitter function
+            emitLeadMessage({ io, leadId: lead._id, message });
 									isNewMessageAdded = true;
 								}
 							}
@@ -172,7 +174,8 @@ const getConversationsAndUpdateLeads = async (io) => {
 									_id: savedLead._id,
 								};
 
-								io.emit('conversation', socketPayload);
+								// Use the centralized socket emitter function for conversation updates
+                                emitConversationUpdate({ io, lead: savedLead });
 							}
 						} else {
 							const cre = await findCREWithLowestLeads();
@@ -212,7 +215,8 @@ const getConversationsAndUpdateLeads = async (io) => {
 								_id: savedNewLead._id,
 							};
 
-							io.emit('conversation', socketPayload);
+							// Use the centralized socket emitter function for conversation updates
+                                emitConversationUpdate({ io, lead: newLead });
 
 							const socketPayloadNewLead = {
 								...savedNewLead._doc,

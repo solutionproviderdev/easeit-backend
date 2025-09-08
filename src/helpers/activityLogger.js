@@ -1,7 +1,7 @@
 // helpers/activityLogger.js
 
 const User = require('../schemas/auth/UserSchema');
-const ActivityLog = require('../schemas/ActivityLogSchema');
+const ActivityLog = require('../schemas/activitylog/ActivityLogSchema');
 
 /**
  * Writes an activity log without crashing the app.
@@ -12,7 +12,8 @@ const ActivityLog = require('../schemas/ActivityLogSchema');
 async function log(userId, action, details = {}) {
     try {
         // Save to global ActivityLog collection
-        await ActivityLog.create({ userId, action, details });
+        const doc = new ActivityLog({ userId, action, details });
+        await doc.save();
 
         // Save to user's activityLog array
         await User.findByIdAndUpdate(

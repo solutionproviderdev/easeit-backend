@@ -29,8 +29,15 @@ exports.createNewMessageObject = (messageId, content, senderId, sentByMe, fileUr
     return newMessage;
 };
 
+// Import centralized socket emitter functions
+const {
+    emitLeadMessage,
+    emitConversationUpdate: emitConversationUpdateCentral,
+} = require('../../utils/socketEmitter');
+
 // Emit Socket.io events for new messages or leads
-const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
+// This function is exported and used elsewhere
+exports.emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
     // get cre information
     const cre = await getCreInfo(savedLead.creName);
 
@@ -66,6 +73,16 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
         messagesSeen: savedLead.messagesSeen,
     };
 
+    // Use the centralized socket emitter functions
+    emitLeadMessage({
+        io,
+        leadId: savedLead._id,
+        message: savedLead.messages[savedLead.messages.length - 1],
+    });
+    // Using the imported emitConversationUpdateCentral function
+    emitConversationUpdateCentral({ io, lead: savedLead });
+
+    // Keep backward compatibility
     io.emit('conversation', socketPayload);
     io.emit('newLead', { newLead: socketPayload });
 };
@@ -474,7 +491,7 @@ exports.sendMetaMessage = async (req, res) => {
 
         // Find the specific page settings
         const pageSettings = settings.settingsData.page.find(
-            (page) => page.pageId == lead.pageInfo.pageId
+            (page) => page.pageId === lead.pageInfo.pageId
         );
 
         if (!pageSettings) {
@@ -516,7 +533,7 @@ exports.sendMetaMessage = async (req, res) => {
                 await lead.save();
 
                 // Emit Conversation Updated event
-                emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
+                this.emitSocketEventsForNewMessage(req.io, lead, lead.pageInfo);
 
                 this.emitNewMessage(req, leadId, newMessage);
                 newMessages.push(newMessage);

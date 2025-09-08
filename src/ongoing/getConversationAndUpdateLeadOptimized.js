@@ -20,6 +20,7 @@ const { SholutionBot } = require('../SolutionBot/SolutionBot');
 const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema');
 const { sendMessageToLead } = require('../helpers/sendMessageToLead');
 const { MediaBot } = require('../MediaBot/MediaBot');
+const { emitLeadMessage, emitConversationUpdate } = require('../utils/socketEmitter');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -103,21 +104,27 @@ const processMessages = (messages) => {
                 msg?.attachments?.data[0]?.file_url)
         ) {
             // Determine the file type based on the attachment data.
-            const att = msg.attachments.data[0];
-            if (att.image_data) fileTypes.push('image');
-            else if (att.video_data) fileTypes.push('video');
-            else if (att.file_url && att.mime_type && att.mime_type.startsWith('audio')) fileTypes.push('audio');
+            const attachment = msg.attachments.data[0];
+            if (attachment.image_data) fileTypes.push('image');
+            else if (attachment.video_data) fileTypes.push('video');
+            else if (
+                attachment.file_url &&
+                attachment.mime_type &&
+                attachment.mime_type.startsWith('audio')
+            ) {
+                fileTypes.push('audio');
+            }
             // _____________________________________________________________
 
-            fileUrl = msg?.attachments?.data?.map((att) => {
-                if (att.image_data) {
-                    return att.image_data.url;
+            fileUrl = msg?.attachments?.data?.map((attachmentItem) => {
+                if (attachmentItem.image_data) {
+                    return attachmentItem.image_data.url;
                 }
-                if (att.video_data) {
-                    return att.video_data.url;
+                if (attachmentItem.video_data) {
+                    return attachmentItem.video_data.url;
                 }
-                if (att.file_url) {
-                    return att.file_url;
+                if (attachmentItem.file_url) {
+                    return attachmentItem.file_url;
                 }
                 return [];
             });
@@ -352,7 +359,9 @@ const updateExistingLead = async (
             //             settings[fileType].savedMessageEnabled &&
             //             settings[fileType].savedId
             //         ) {
-            //             // console.log('[AUTO-REPLY] Saved message enabled, using saved message...');
+            //             // console.log(
+            //             //     '[AUTO-REPLY] Saved message enabled, using saved message...'
+            //             // );
             //             replyText = settings[fileType].savedId.message;
             //             // console.log('[AUTO-REPLY] Saved message text:', replyText);
             //             if (replyText) {
@@ -360,9 +369,13 @@ const updateExistingLead = async (
             //                 // console.log(replyText);
             //                 try {
             //                     // await sendMessageToLead(lead._id, replyText, io);
-            //                     console.log('[AUTO-REPLY] Message sent to lead successfully.');
+            //                     console.log(
+            //                         '[AUTO-REPLY] Message sent to lead successfully.'
+            //                     );
             //                 } catch (err) {
-            //                     console.error('[AUTO-REPLY] Error sending message to lead:', err);
+            //                     console.error(
+            //                         '[AUTO-REPLY] Error sending message to lead:', err
+            //                     );
             //                 }
             //             }
             //         }
@@ -396,7 +409,8 @@ const updateExistingLead = async (
                 }
             });
             // Emit a socket event for the new message.
-            io.emit(`fbMessage${lead._id}`, message);
+            // Import at the top of the file instead
+            emitLeadMessage({ io, leadId: lead._id, message });
             isNewMessageAdded = true;
         }
     }
@@ -548,7 +562,8 @@ const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
     };
 
     // Emit socket events for conversation updates.
-    io.emit('conversation', socketPayload);
+    // Use the centralized socket emitter function for conversation updates
+    emitConversationUpdate({ io, lead: savedLead });
     io.emit('newLead', { newLead: socketPayload });
 };
 

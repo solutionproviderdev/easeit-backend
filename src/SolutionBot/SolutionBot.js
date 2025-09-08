@@ -8,6 +8,7 @@ const Settings = require('../schemas/SettingsSchema');
 const Assistant = require('../schemas/settings/Assistant.Schema');
 const { getIO } = require('../socket/socketService');
 const { logger } = require('../config/winston');
+const { emitLeadMessage } = require('../utils/socketEmitter');
 
 dotenv.config();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -41,17 +42,20 @@ const runAssistant = async (assistantId, threadId) => {
     const run = await openai.beta.threads.runs.create(threadId, {
         assistant_id: assistantId,
     });
-    let attempts = 0;
     const maxAttempts = 15;
-    while (attempts < maxAttempts) {
+    // Using a for loop instead of while loop with ++ operator
+    for (let attempts = 0; attempts < maxAttempts; attempts += 1) {
+        // eslint-disable-next-line no-await-in-loop
         const status = await openai.beta.threads.runs.retrieve(threadId, run.id);
         if (status.status === 'completed') return;
         if (['failed', 'cancelled', 'expired'].includes(status.status)) {
             logger.error(`Run ended with status: ${status.status}`);
             throw new Error(`Run ended: ${status.status}`);
         }
-        await new Promise((r) => setTimeout(r, 1000));
-        attempts++;
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => {
+            setTimeout(resolve, 1000);
+        });
     }
     logger.error(`Run timed out after ${maxAttempts} attempts`);
     throw new Error('Run timeout');
@@ -186,7 +190,8 @@ const SholutionBot = async (leadId, io, newMessage) => {
         lead.messages.push(aiMessage);
         await lead.save();
 
-        io.emit(`fbMessage${lead._id}`, aiMessage);
+        // Emit the new message via Socket.IO using the centralized function
+        emitLeadMessage({ io, leadId: lead._id, message: aiMessage });
 
         return { success: true, messageId: fbRes.message_id };
     } catch (error) {

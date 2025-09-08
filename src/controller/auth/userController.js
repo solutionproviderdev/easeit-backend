@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../../schemas/auth/UserSchema');
-const ActivityLog = require('../../schemas/ActivityLogSchema');
+const ActivityLog = require('../../schemas/activitylog/ActivityLogSchema');
 const Department = require('../../schemas/auth/DepartmentSchema');
 
 // Create a new user

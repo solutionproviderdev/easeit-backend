@@ -7,6 +7,8 @@ const Lead = require('../../schemas/LeadsSchema');
 const { startBaileys, getSock } = require('./whatsappClient');
 const { getIO } = require('../../socket/socketService');
 const { createNewMessageObject } = require('../../controller/lead/leadConversationController');
+const { logger } = require('../../config/winston');
+const { emitLeadMessage } = require('../../utils/socketEmitter');
 
 /** Pick a destination JID for this lead */
 function resolveDestinationJid(lead) {
@@ -72,7 +74,8 @@ async function emitForLead(io, savedLead) {
 
     io.emit('conversation', payload);
     io.emit('newLead', { newLead: payload });
-    io.emit(`fbMessage${savedLead._id}`, newMessage);
+    // Use the centralized function for emitting lead messages
+    emitLeadMessage({ io, leadId: savedLead._id, message: newMessage });
 }
 
 /**
