@@ -406,12 +406,13 @@ exports.updateUserPassword = async (req, res) => {
         // Create an activity log entry
         await ActivityLog.create({
             userId: user._id,
-            action: 'Updated Password',
+            action: 'Updated_Password',
         });
 
         res.status(200).json({ msg: 'Password updated' });
     } catch (error) {
         console.error(error.message);
+        console.log('Error updating user password:', error);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -436,12 +437,12 @@ exports.adminUpdateUserPassword = async (req, res) => {
         // Create an activity log entry
         await ActivityLog.create({
             userId: user._id,
-            action: 'Admin Updated Password',
+            action: 'Admin_Updated_Password',
         });
 
         res.status(200).json({ msg: 'Password updated by admin' });
     } catch (error) {
-        console.error(error.message);
+        console.error('Error admin updating user password', error.message);
         res.status(500).json({ msg: 'Server error' });
     }
 };
