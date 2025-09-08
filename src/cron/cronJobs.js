@@ -28,7 +28,6 @@ const initializeCronJobs = (io) => {
                 findDuplicateLeads();
                 nameBasedLeadAssign();
                 getConversationsAndUpdateLeadsUpdated(io);
-                // processLeadsForAIResponse(io);
             }
         },
         {
@@ -60,6 +59,7 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotReplied(io);
                 await reAssignOnNotSeen(io);
                 await sendAutoMessage(io);
+                processLeadsForAIResponse(io);
             } catch (error) {
                 console.error('Error in reAssignOnNotReplied cron job:', error);
             }

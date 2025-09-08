@@ -297,70 +297,68 @@ exports.createLead = async (req, res) => {
     // console.log(req.body);
 
     try {
-			// Normalize the input phone number
-			const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
+        // Normalize the input phone number
+        const parsedNumber = parsePhoneNumberFromString(phone, 'BD');
 
-			if (!parsedNumber || !parsedNumber.isValid()) {
-				return res.status(400).json({ msg: 'Invalid phone number format.' });
-			}
+        if (!parsedNumber || !parsedNumber.isValid()) {
+            return res.status(400).json({ msg: 'Invalid phone number format.' });
+        }
 
-			const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
+        const formattedPhone = parsedNumber.number; // E.164 format (e.g., +8801957795943)
 
-			// Step 1: Check if the phone number exists in any lead's phone array
-			const existingLead = await Lead.findOne({
-				phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
-			});
+        // Step 1: Check if the phone number exists in any lead's phone array
+        const existingLead = await Lead.findOne({
+            phone: { $in: [formattedPhone] }, // Check if the formatted phone exists
+        });
 
-			if (existingLead) {
-				return res
-					.status(400)
-					.json({ msg: 'Phone number already exists in another lead.' });
-			}
+        if (existingLead) {
+            return res.status(400).json({ msg: 'Phone number already exists in another lead.' });
+        }
 
-			// Step 2: Create the new lead
-			const newLead = new Lead({
-				name,
-				phone: formattedPhone, // Save in normalized format
-				source: source || 'Phone',
-				status: status || 'Number Collected',
-				creName: cre,
-				productAds: productAd ? [productAd] : [],
-			});
+        // Step 2: Create the new lead
+        const newLead = new Lead({
+            name,
+            phone: formattedPhone, // Save in normalized format
+            source: source || 'Phone',
+            status: status || 'Number Collected',
+            creName: cre,
+            productAds: productAd ? [productAd] : [],
+        });
 
-			// Save the new lead
-			await newLead.save();
+        // Save the new lead
+        await newLead.save();
 
-			// Step 3: Add comment if provided
-			if (comment) {
-				const commentData = { comment, images };
-				const populatedComment = await addCommentToLead(
-					newLead._id,
-					commentData,
-					req.user,
-					req.io
-				);
-				newLead.comment.push(populatedComment);
-			}
+        // Step 3: Add comment if provided
+        if (comment) {
+            const commentData = { comment, images };
+            const populatedComment = await addCommentToLead(
+                newLead._id,
+                commentData,
+                req.user,
+                req.io
+            );
+            newLead.comment.push(populatedComment);
+        }
 
-			// console.log(newLead);
+        // console.log(newLead);
 
-			// _____ Add activity log here ____
-			if (req.user && req.user._id) {
-				log(req.user._id, 'CREATE_LEAD', {
-					lead: {
-						_id: newLead._id,
-						name: newLead.name,
-						phone: newLead.phone,
-						address: newLead.address,
-						source: newLead.source,
-						status: newLead.status,
-					},
-				});
-			}
-			//_______ Activity log end ____
+        // _____ Add activity log here ____
+        if (req.user && req.user._id) {
+            log(req.user._id, 'CREATE_LEAD', {
+                lead: {
+                    _id: newLead._id,
+                    name: newLead.name,
+                    phone: newLead.phone,
+                    address: newLead.address,
+                    source: newLead.source,
+                    status: newLead.status,
+                },
+            });
+        }
+        // _______ Activity log end ____
 
-			res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
-		} catch (error) {
+        res.status(201).json({ msg: 'Lead created successfully', lead: newLead });
+    } catch (error) {
         // console.log(error);
         console.error(`Error creating lead: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
@@ -373,33 +371,28 @@ exports.addComment = async (req, res) => {
     const { comment, images } = req.body;
 
     try {
-			// Add the comment using the reusable function
-			const populatedComment = await addCommentToLead(
-				id,
-				{ comment, images },
-				req.user,
-				req.io
-			);
+        // Add the comment using the reusable function
+        const populatedComment = await addCommentToLead(id, { comment, images }, req.user, req.io);
 
-			//______ Log the activity _____
-			if (req.user && req.user._id) {
-				// Fetch the lead to get name and status
-				const lead = await Lead.findById(id).select('name status');
-				log(req.user._id, 'LEAD_ADD_COMMENT', {
-					leadName: lead?.name || '',
-					status: lead?.status || '',
-					commentId: populatedComment._id,
-					comment: populatedComment.comment,
-				});
-			}
-			//_______ Activity log end ____
+        // ______ Log the activity _____
+        if (req.user && req.user._id) {
+            // Fetch the lead to get name and status
+            const lead = await Lead.findById(id).select('name status');
+            log(req.user._id, 'LEAD_ADD_COMMENT', {
+                leadName: lead?.name || '',
+                status: lead?.status || '',
+                commentId: populatedComment._id,
+                comment: populatedComment.comment,
+            });
+        }
+        // _______ Activity log end ____
 
-			// Respond to the client
-			res.status(200).json({
-				msg: 'Comment added successfully',
-				savedComment: populatedComment,
-			});
-		} catch (error) {
+        // Respond to the client
+        res.status(200).json({
+            msg: 'Comment added successfully',
+            savedComment: populatedComment,
+        });
+    } catch (error) {
         console.error(`Error adding comment to lead ${id}: ${error.message}`);
         res.status(500).json({ msg: 'Server error' });
     }
