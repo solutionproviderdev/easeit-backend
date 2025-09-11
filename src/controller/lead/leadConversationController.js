@@ -165,6 +165,8 @@ exports.getAllLeadConversationUpdated = async (req, res) => {
                     messagesSeen: 1,
                     profilePicture: 1,
                     _id: 1,
+                    CID: 1,
+                    phone: 1,
                 },
             },
         ])

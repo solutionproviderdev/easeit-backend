@@ -133,18 +133,14 @@ async function emitForLead(io, savedLead) {
 
     // Emit conversation update event
     emitConversationUpdate({
-        leadId: savedLead._id,
+        lead: savedLead,
         io,
     });
 }
 
 /** Decide the best display name to show/store */
-function resolveDisplayName({
-    fromMe,
-    pushName,
-    verifiedBizName,
-    currentName,
-}) {
+// eslint-disable-next-line object-curly-newline
+function resolveDisplayName({ fromMe, pushName, verifiedBizName, currentName }) {
     // If it's our own outbound message, don't overwrite with our own name
     if (fromMe) return currentName || 'WhatsApp Contact';
 
@@ -160,7 +156,6 @@ async function upsertLeadForWAMessage(msg, io, sock) {
     const fromMe = !!msg?.key?.fromMe;
     const pushName = msg?.pushName || '';
     const verifiedBizName = msg?.verifiedBizName || '';
-    console.log(msg);
 
     const { kind, user } = classifyJid(jid);
 
