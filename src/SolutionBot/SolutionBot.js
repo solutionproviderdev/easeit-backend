@@ -173,6 +173,7 @@ const SholutionBot = async (leadId, io, newMessage) => {
         }
 
         const fbRes = await sendFacebookMessage(fbSenderID, reply, pageSettings.pageAccessToken);
+        console.log('ai send message :---------------->', fbRes);
         if (!fbRes.message_id) {
             logger.error('Failed to get message_id from Facebook response');
             // Continue execution even if we don't have a message_id
