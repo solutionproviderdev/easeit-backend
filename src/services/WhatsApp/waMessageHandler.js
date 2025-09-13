@@ -7,6 +7,7 @@ const { parsePhoneNumberFromString } = require('libphonenumber-js');
 const Lead = require('../../schemas/LeadsSchema');
 const { getPerformanceBasedCRE } = require('../../helpers/getPerformanceBasedCRE');
 const { getIO } = require('../../socket/socketService');
+const { emitLeadMessage, emitConversationUpdate } = require('../../utils/socketEmitter');
 
 /** ---------- ID helpers ---------- */
 
@@ -119,37 +120,27 @@ function buildLeadMessageDoc(msg) {
     };
 }
 
-/** Emit socket payloads (minimal) */
+/** Emit socket events using centralized emitter */
 async function emitForLead(io, savedLead) {
-    const last = savedLead.messages[savedLead.messages.length - 1];
-    const customerMsgs = savedLead.messages.filter((m) => m.sentByMe === false);
-    const lastCustomerMessageTime = customerMsgs[customerMsgs.length - 1]?.date;
+    const lastMessage = savedLead.messages[savedLead.messages.length - 1];
 
-    const socketPayload = {
-        name: savedLead.name,
-        lastMessage: last?.content || '',
-        lastMessageTime: last?.date,
-        lastCustomerMessageTime,
-        sentByMe: last?.sentByMe || false,
-        createdAt: savedLead.createdAt,
-        messagesSeen: savedLead.messagesSeen,
-        creName: savedLead.creName || null,
-        status: savedLead.status,
-        _id: savedLead._id,
-        source: savedLead.source,
-        phone: savedLead.phone,
-        profilePicture: savedLead.profilePicture || undefined,
-        whatsAppInfo: savedLead.whatsAppInfo || undefined,
-    };
+    // Emit lead message event
+    emitLeadMessage({
+        leadId: savedLead._id,
+        message: lastMessage,
+        io,
+    });
 
-    io.emit('conversation', socketPayload);
-    io.emit('newLead', { newLead: socketPayload });
+    // Emit conversation update event
+    emitConversationUpdate({
+        lead: savedLead,
+        io,
+    });
 }
 
 /** Decide the best display name to show/store */
-function resolveDisplayName({
- fromMe, pushName, verifiedBizName, currentName 
-}) {
+// eslint-disable-next-line object-curly-newline
+function resolveDisplayName({ fromMe, pushName, verifiedBizName, currentName }) {
     // If it's our own outbound message, don't overwrite with our own name
     if (fromMe) return currentName || 'WhatsApp Contact';
 
@@ -165,7 +156,6 @@ async function upsertLeadForWAMessage(msg, io, sock) {
     const fromMe = !!msg?.key?.fromMe;
     const pushName = msg?.pushName || '';
     const verifiedBizName = msg?.verifiedBizName || '';
-    console.log(msg);
 
     const { kind, user } = classifyJid(jid);
 
@@ -231,7 +221,9 @@ async function upsertLeadForWAMessage(msg, io, sock) {
             if (verifiedBizName) lead.whatsAppInfo.verifiedBizName = verifiedBizName;
             if (profilePicture) {
                 lead.whatsAppInfo.profilePicture = profilePicture;
-                if (!lead.profilePicture) lead.profilePicture = profilePicture; // mirror to top level
+                if (!lead.profilePicture) {
+                    lead.profilePicture = profilePicture; // mirror to top level
+                }
             }
 
             // Store phone if present

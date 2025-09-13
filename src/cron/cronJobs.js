@@ -59,7 +59,7 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotReplied(io);
                 await reAssignOnNotSeen(io);
                 await sendAutoMessage(io);
-                processLeadsForAIResponse(io);
+                // processLeadsForAIResponse(io);
             } catch (error) {
                 console.error('Error in reAssignOnNotReplied cron job:', error);
             }

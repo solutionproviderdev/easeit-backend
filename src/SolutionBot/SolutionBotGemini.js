@@ -8,6 +8,7 @@ const dotenv = require('dotenv');
 const Lead = require('../schemas/LeadsSchema');
 const Settings = require('../schemas/SettingsSchema');
 const Assistant = require('../schemas/settings/Assistant.Schema');
+const { emitLeadMessage } = require('../utils/socketEmitter');
 
 dotenv.config();
 
@@ -106,7 +107,7 @@ const SholutionBot = async (leadId, io) => {
         await lead.save();
 
         // Emit the new message via Socket.IO
-        io.emit(`fbMessage${lead._id}`, aiMessage);
+        emitLeadMessage({ io, leadId: lead._id, message: aiMessage });
         console.log('SholutionBot replied successfully.');
     } catch (error) {
         console.error('Error in SholutionBot function:', error);

@@ -152,6 +152,7 @@ exports.getAllLeads = async (req, res) => {
         // Fetch leads with pagination and filters
         const leads = await Lead.find(filter)
             .select('-messages -callLogs')
+            .sort({ createdAt: -1 }) // make it letest one first
             .skip((page - 1) * limit)
             .limit(Number(limit))
             .populate('creName', 'nameAsPerNID nickname profilePicture')

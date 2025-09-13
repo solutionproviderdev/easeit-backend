@@ -1,4 +1,4 @@
-const ActivityLog = require('../schemas/ActivityLogSchema');
+const ActivityLog = require('../schemas/activitylog/ActivityLogSchema');
 
 // Get all activity logs function
 exports.getAllActivityLogs = async (req, res) => {

@@ -275,6 +275,9 @@ const leadSchema = mongoose.Schema(
 // Index for CID and status queries
 leadSchema.index({ CID: 1, status: 1 });
 
+// Unique index for CID field
+leadSchema.index({ CID: 1 }, { unique: true, sparse: true });
+
 // Index for sales executive and status
 leadSchema.index({ salesExqName: 1, status: 1 });
 
@@ -326,6 +329,74 @@ leadSchema.index(
 leadSchema.index({ createdAt: -1 });
 leadSchema.index({ updatedAt: -1 });
 leadSchema.index({ lastAssigned: -1 });
+
+// CID Generation Function
+async function generateCID(source) {
+    // Map source to abbreviation
+    const sourceMap = {
+        Facebook: 'FB',
+        WhatsApp: 'WA',
+        Phone: 'PH',
+        Web: 'WB',
+    };
+
+    const srcCode = sourceMap[source] || 'UN'; // UN for unknown
+
+    // Get current date in DDMMMYY format
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const months = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC',
+    ];
+    const month = months[now.getMonth()];
+    const year = String(now.getFullYear()).slice(-2);
+    const dateStr = `${day}${month}${year}`;
+
+    // Find the last lead with same source and date to get next sequence
+    const cidPattern = new RegExp(`^${srcCode}-${dateStr}-(\\d{3})$`);
+
+    const lastLead = await mongoose
+        .model('Lead')
+        .findOne({
+            CID: cidPattern,
+        })
+        .sort({ CID: -1 })
+        .exec();
+
+    let sequence = 1;
+    if (lastLead && lastLead.CID) {
+        const match = lastLead.CID.match(cidPattern);
+        if (match) {
+            sequence = parseInt(match[1], 10) + 1;
+        }
+    }
+
+    const sequenceStr = String(sequence).padStart(3, '0');
+    return `${srcCode}-${dateStr}-${sequenceStr}`;
+}
+
+// Pre-save hook to auto-generate CID if empty
+leadSchema.pre('save', async function (next) {
+    if (!this.CID && this.source) {
+        try {
+            this.CID = await generateCID(this.source);
+        } catch (error) {
+            return next(error);
+        }
+    }
+    next();
+});
 
 const Lead = mongoose.model('Lead', leadSchema);
 

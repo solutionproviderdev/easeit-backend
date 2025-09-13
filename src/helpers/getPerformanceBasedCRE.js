@@ -1,10 +1,10 @@
+/* eslint-disable no-useless-catch */
 /* eslint-disable max-len */
 /* eslint-disable prefer-destructuring */
 const { getLeadSettingsDoc } = require('../controller/settings/leadControlController');
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const getCREPerformance = require('./getCREPerformance');
-
 
 const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []) => {
     // Use a fixed base count (10) to represent the max leads considered in the "recent" window.
@@ -93,15 +93,15 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
     }
 
     // (Optional) Log debug info for underQuota candidates.
-    underQuota.forEach((cre) => {
-        // console.log(
-        //     `CRE: ${cre.name}, AssignedRecent: ${
-        //         cre.assignedRecent
-        //     }, Expected: ${cre.expected.toFixed(2)}, Gap: ${cre.gap.toFixed(
-        //         2
-        //     )}, Ratio: ${cre.ratio.toFixed(2)}`
-        // );
-    });
+    // underQuota.forEach((cre) => {
+    //     console.log(
+    //         `CRE: ${cre.name}, AssignedRecent: ${
+    //             cre.assignedRecent
+    //         }, Expected: ${cre.expected.toFixed(2)}, Gap: ${cre.gap.toFixed(
+    //             2
+    //         )}, Ratio: ${cre.ratio.toFixed(2)}`
+    //     );
+    // });
 
     return selectedCRE;
 };
