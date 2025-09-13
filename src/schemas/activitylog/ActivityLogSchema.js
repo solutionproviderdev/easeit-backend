@@ -9,6 +9,8 @@ const ACTIONS = [
     'LEAD_REMINDER_SET',
     'LEAD_REMINDER_UPDATE',
     'LEAD_ADD_COMMENT',
+    'Updated_Password',
+    'Admin_Updated_Password',
 ];
 
 const activityLogSchema = new Schema({
