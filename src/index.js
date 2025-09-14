@@ -181,6 +181,29 @@ app.use(notFoundHandler);
 // Default error handling
 app.use(errorHandler);
 
+// Manual test function for socket emission
+const testSocketEmission = () => {
+	setTimeout(() => {
+		console.log('\n=== MANUAL SOCKET TEST ===');
+		console.log('Emitting test upcomingReminder event...');
+		
+		// Emit a test upcomingReminder event
+		io.emit('upcomingReminder', {
+			leadId: 'test-lead-id-manual',
+			reminderId: 'test-reminder-id-manual',
+			leadName: 'Manual Test Lead',
+			timeRemaining: 3 // 3 minutes
+		});
+		
+		console.log('✅ Manual test upcomingReminder event emitted!');
+		console.log('📱 Check your browser console for the notification');
+		
+		// Also emit a simple test event
+		io.emit('test', { message: 'Manual test from running server!' });
+		console.log('✅ Manual test event emitted!');
+	}, 5000); // Wait 5 seconds after server start
+};
+
 // Start the server
 if (require.main === module) {
 	server.listen(process.env.PORT, '0.0.0.0', () => {
@@ -192,6 +215,9 @@ if (require.main === module) {
 		console.log(`💻 Node version: ${nodeVersion}`);
 		console.log(`🕒 Current Time: ${currentTime}`);
 		console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
+		
+		// Run the manual test
+		testSocketEmission();
 	});
 }
 

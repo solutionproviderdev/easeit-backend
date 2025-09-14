@@ -15,8 +15,8 @@ const createFreshReminder = async () => {
             process.exit(1);
         }
         
-        // Create a new reminder 3 minutes from now
-        const reminderTime = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes from now
+        // Create a new reminder 8 minutes from now (within the 10-minute window)
+        const reminderTime = new Date(Date.now() + 8 * 60 * 1000); // 8 minutes from now
         
         const newReminder = {
             time: reminderTime,

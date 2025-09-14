@@ -570,18 +570,35 @@ exports.addReminder = async (req, res) => {
     const { id } = req.params;
     const { time, commentId, completeLastReminder } = req.body;
 
+    console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Adding reminder for lead ${id}`);
+    console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Reminder time: ${time}`);
+    console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Complete last reminder: ${completeLastReminder}`);
+    console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Comment ID: ${commentId}`);
+    
+    const reminderTime = new Date(time);
+    const currentTime = new Date();
+    const timeDiff = reminderTime.getTime() - currentTime.getTime();
+    const minutesDiff = Math.round(timeDiff / (60 * 1000));
+    console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Time difference: ${minutesDiff} minutes from now`);
+
     try {
         // Find the lead by ID
         const lead = await Lead.findById(id);
 
         if (!lead) {
+            console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Lead not found: ${id}`);
             return res.status(404).json({ msg: 'Lead not found' });
         }
+        
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Found lead: ${lead.name || 'Unknown'} (${lead._id})`);
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Current reminders count: ${lead.reminder.length}`);
 
         // Check if there is any incomplete reminder
         const hasIncompleteReminder = lead.reminder.some(
             (reminder) => reminder.status === 'Pending' || reminder.status === 'Missed'
         );
+        
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Has incomplete reminder: ${hasIncompleteReminder}`);
 
         if (completeLastReminder && hasIncompleteReminder) {
             // Find the last incomplete reminder and mark it as Complete
@@ -623,11 +640,21 @@ exports.addReminder = async (req, res) => {
             status: 'Pending',
             ...(commentId && { commentId }),
         };
-
+        
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Creating new reminder:`, newReminder);
         lead.reminder.push(newReminder);
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Added reminder to lead, total reminders: ${lead.reminder.length}`);
 
         // Save the updated lead after adding the new reminder
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Saving lead to database`);
         await lead.save();
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Lead saved successfully`);
+        
+        // Get the newly created reminder ID
+        const createdReminder = lead.reminder[lead.reminder.length - 1];
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Created reminder ID: ${createdReminder._id}`);
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Created reminder time: ${createdReminder.time}`);
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Created reminder status: ${createdReminder.status}`);
 
         // Fetch the updated lead with populated fields (if needed)
         const updatedLead = await Lead.findById(lead._id)
@@ -666,7 +693,9 @@ exports.addReminder = async (req, res) => {
         // Return only the updated reminders array
         res.status(200).json({ msg: 'Reminder added successfully', reminders: lead.reminder });
     } catch (error) {
-        console.error(`Error adding reminder to lead ${id}: ${error.message}`);
+        console.error(`[BACKEND_REMINDER] ${new Date().toISOString()} - ERROR adding reminder to lead ${id}:`, error.message);
+        console.error(`[BACKEND_REMINDER] ${new Date().toISOString()} - Error stack:`, error.stack);
+        console.error(`[BACKEND_REMINDER] ${new Date().toISOString()} - Request body:`, req.body);
         res.status(500).json({ msg: 'Server error' });
     }
 };
@@ -745,14 +774,20 @@ exports.addReminderWithComment = async (req, res) => {
 
         // Emit a socket event for the new reminder
         if (req.io) {
+            console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Emitting newReminder socket event`);
+            console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Socket event data - Lead ID: ${updatedLead._id}, Lead name: ${updatedLead.name}`);
             req.io.emit('newReminder', {
                 lead: updatedLead, // Emit the entire lead object
             });
+            console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - newReminder socket event emitted successfully`);
+        } else {
+            console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - WARNING: req.io is not available, socket event not emitted`);
         }
 
         // Return only the updated reminders array
+        console.log(`[BACKEND_REMINDER] ${new Date().toISOString()} - Returning success response`);
         res.status(200).json({
-            msg: 'Reminder and comment added successfully',
+            msg: 'Reminder added successfully',
             reminders: lead.reminder,
         });
     } catch (error) {

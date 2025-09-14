@@ -18,6 +18,8 @@ const checkUpcomingReminders = async (io) => {
         console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Starting check for upcoming reminders between ${now.toISOString()} and ${tenMinutesLater.toISOString()}`);
 
         // Find all leads with reminders that are still pending and will occur within the next 10 minutes
+        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Query parameters: now=${now.toISOString()}, tenMinutesLater=${tenMinutesLater.toISOString()}`);
+        
         const leads = await Lead.find({
             reminder: {
                 $elemMatch: {
@@ -27,6 +29,25 @@ const checkUpcomingReminders = async (io) => {
                 },
             },
         });
+        
+        // Also check all pending reminders for debugging
+        const allPendingLeads = await Lead.find({
+            reminder: {
+                $elemMatch: {
+                    status: 'Pending'
+                }
+            }
+        });
+        
+        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Total leads with pending reminders: ${allPendingLeads.length}`);
+        
+        for (const lead of allPendingLeads) {
+            const pendingReminders = lead.reminder.filter(r => r.status === 'Pending');
+            console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Lead ${lead._id} has ${pendingReminders.length} pending reminders:`);
+            pendingReminders.forEach(r => {
+                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Reminder: time=${r.time.toISOString()}, tenMinNotificationSent=${r.tenMinNotificationSent}`);
+            });
+        }
         
         console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Found ${leads.length} leads with potential upcoming reminders`);
 
