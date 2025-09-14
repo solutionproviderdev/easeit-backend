@@ -15,10 +15,7 @@ const checkUpcomingReminders = async (io) => {
         const now = new Date();
         const tenMinutesLater = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
         
-        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Starting check for upcoming reminders between ${now.toISOString()} and ${tenMinutesLater.toISOString()}`);
-
         // Find all leads with reminders that are still pending and will occur within the next 10 minutes
-        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Query parameters: now=${now.toISOString()}, tenMinutesLater=${tenMinutesLater.toISOString()}`);
         
         const leads = await Lead.find({
             reminder: {
@@ -30,37 +27,12 @@ const checkUpcomingReminders = async (io) => {
             },
         });
         
-        // Also check all pending reminders for debugging
-        const allPendingLeads = await Lead.find({
-            reminder: {
-                $elemMatch: {
-                    status: 'Pending'
-                }
-            }
-        });
-        
-        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Total leads with pending reminders: ${allPendingLeads.length}`);
-        
-        for (const lead of allPendingLeads) {
-            const pendingReminders = lead.reminder.filter(r => r.status === 'Pending');
-            console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Lead ${lead._id} has ${pendingReminders.length} pending reminders:`);
-            pendingReminders.forEach(r => {
-                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Reminder: time=${r.time.toISOString()}, tenMinNotificationSent=${r.tenMinNotificationSent}`);
-            });
-        }
-        
-        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Found ${leads.length} leads with potential upcoming reminders`);
-
-        // If no upcoming reminders, exit
         if (leads.length === 0) {
-            console.log(`[REMINDER_LOG] ${new Date().toISOString()} - No upcoming reminders found, exiting`);
             return;
         }
 
         // Loop through each lead and find upcoming reminders
         for (const lead of leads) {
-            console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Processing lead: ${lead._id} (${lead.name || 'Unknown'})`);
-            
             const upcomingReminders = lead.reminder.filter(
                 (reminder) => 
                     reminder.status === 'Pending' && 
@@ -68,15 +40,10 @@ const checkUpcomingReminders = async (io) => {
                     reminder.time <= tenMinutesLater &&
                     !reminder.tenMinNotificationSent
             );
-            
-            console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Found ${upcomingReminders.length} upcoming reminders for lead ${lead._id}`);
 
             // Emit a socket event for each upcoming reminder
             for (const reminder of upcomingReminders) {
                 const timeRemaining = Math.round((reminder.time - now) / (60 * 1000));
-                
-                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Sending notification for reminder ${reminder._id} for lead ${lead._id}`);
-                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Reminder details: time=${reminder.time.toISOString()}, timeRemaining=${timeRemaining} minutes`);
                 
                 // Emit the upcoming reminder event
                 try {
@@ -88,27 +55,23 @@ const checkUpcomingReminders = async (io) => {
                         leadName: lead.name || 'Unknown Lead',
                         timeRemaining: timeRemaining // minutes remaining
                     });
-                    console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Successfully emitted upcomingReminder event`);
                 } catch (socketError) {
-                    console.error(`[REMINDER_LOG] ${new Date().toISOString()} - Failed to emit socket event:`, socketError.message);
+                    console.error('Failed to emit upcoming reminder:', socketError.message);
                 }
 
                 // Mark this reminder as having received the 10-minute notification
                 reminder.tenMinNotificationSent = true;
-                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Marked reminder ${reminder._id} as notified`);
             }
 
             // Save the updated reminders with the notification flag
             if (upcomingReminders.length > 0) {
                 await lead.save();
-                console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Saved lead ${lead._id} with updated notification flags`);
             }
         }
 
-        console.log(`[REMINDER_LOG] ${new Date().toISOString()} - Completed check for upcoming reminders: ${leads.length} leads with upcoming reminders processed`);
+
     } catch (error) {
-        console.error(`[REMINDER_LOG] ${new Date().toISOString()} - ERROR checking upcoming reminders:`, error);
-        console.error(`[REMINDER_LOG] ${new Date().toISOString()} - Error stack:`, error.stack);
+        console.error('Error checking upcoming reminders:', error);
     }
 };
 
