@@ -1,0 +1,35 @@
+TEST EXECUTION: 2025-09-13T12:05:47.829Z
+COMMAND: node C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js
+
+STDERR:
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Failed to emit socket event: Socket.io instance not set
+
+
+STDOUT:
+[TEST_LOG] Socket service mock installed successfully
+[TEST_LOG] Connecting to MongoDB at mongodb://localhost:27017/easeit
+[TEST_LOG] Connected to MongoDB successfully
+
+[TEST_LOG] Starting test for upcoming reminders...
+[TEST_LOG] ----------------------------------------
+[TEST_LOG] Current time: 2025-09-13T12:05:45.735Z
+[TEST_LOG] Setting reminder time to: 2025-09-13T12:14:45.735Z (9 minutes from now)
+[TEST_LOG] Created test lead with ID: 68c55e1983cc0f28e00247b6
+[TEST_LOG] Reminder set for: 2025-09-13T12:14:45.735Z
+[TEST_LOG] Time until reminder: 9 minutes
+[TEST_LOG] Running checkUpcomingReminders...
+[REMINDER_LOG] 2025-09-13T12:05:45.782Z - Starting check for upcoming reminders between 2025-09-13T12:05:45.782Z and 2025-09-13T12:15:45.782Z
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Found 1 leads with potential upcoming reminders
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Processing lead: 68c55e1983cc0f28e00247b6 (Test Lead)
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Found 1 upcoming reminders for lead 68c55e1983cc0f28e00247b6
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Sending notification for reminder 68c55e1983cc0f28e00247b7 for lead 68c55e1983cc0f28e00247b6
+[REMINDER_LOG] 2025-09-13T12:05:45.792Z - Reminder details: time=2025-09-13T12:14:45.735Z, timeRemaining=9 minutes
+[REMINDER_LOG] 2025-09-13T12:05:45.793Z - Marked reminder 68c55e1983cc0f28e00247b7 as notified
+[REMINDER_LOG] 2025-09-13T12:05:45.801Z - Saved lead 68c55e1983cc0f28e00247b6 with updated notification flags
+[REMINDER_LOG] 2025-09-13T12:05:45.801Z - Completed check for upcoming reminders: 1 leads with upcoming reminders processed
+[TEST_LOG] ❌ Test failed: No notification received
+[TEST_LOG] Test lead deleted
+[TEST_LOG] Socket.io emit function restored
+[TEST_LOG] Test completed
+
+TEST COMPLETED: 2025-09-13T12:05:47.830Z

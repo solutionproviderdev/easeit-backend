@@ -5,6 +5,7 @@ const {
 } = require('../ongoing/getConversationAndUpdateLeadOptimized');
 const { assignUnassignedLeads } = require('../ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('../ongoing/checkAndUpdateMissedReminders');
+const { checkUpcomingReminders } = require('../ongoing/checkUpcomingReminders');
 const findDuplicateMessagesAndDelete = require('../ongoing/findDuplicateMesagesAndDelete');
 const checkProductAdForLeadMessages = require('../ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('../helpers/reAssignOnNotReplied');
@@ -19,55 +20,57 @@ const { getSpecificMessageLog } = require('../temp/getSpecificMessageLog');
 const { processLeadsForAIResponse } = require('../ongoing/solutionBotCronJob');
 
 const initializeCronJobs = (io) => {
-    // Every second cron job
-    cron.schedule(
-        '*/1 * * * * *',
-        async () => {
-            const now = new Date();
-            if (now.getSeconds() % 20 === 0) {
-                findDuplicateLeads();
-                nameBasedLeadAssign();
-                getConversationsAndUpdateLeadsUpdated(io);
-            }
-        },
-        {
-            timezone: 'Asia/Dhaka',
-        }
-    );
+	// Every second cron job
+	cron.schedule(
+		'*/1 * * * * *',
+		async () => {
+			const now = new Date();
+			if (now.getSeconds() % 20 === 0) {
+				findDuplicateLeads();
+				nameBasedLeadAssign();
+				getConversationsAndUpdateLeadsUpdated(io);
+			}
+		},
+		{
+			timezone: 'Asia/Dhaka',
+		}
+	);
 
-    // 15 sec corn job
+	// 15 sec corn job
 
-    // Every 10 minutes cron job
-    cron.schedule(
-        '*/10 * * * *',
-        async () => {
-            await assignUnassignedLeads(io);
-            await checkAndUpdateMissedReminders(io);
-            findDuplicateMessagesAndDelete();
-        },
-        {
-            timezone: 'Asia/Dhaka',
-        }
-    );
+	// Every 10 minutes cron job
+	cron.schedule(
+		'*/10 * * * *',
+		async () => {
+			await assignUnassignedLeads(io);
+			await checkAndUpdateMissedReminders(io);
+			findDuplicateMessagesAndDelete();
+		},
+		{
+			timezone: 'Asia/Dhaka',
+		}
+	);
 
-    // Every 1 minute cron job
-    cron.schedule(
-        '* * * * *',
-        async () => {
-            try {
-                await checkProductAdForLeadMessages();
-                await reAssignOnNotReplied(io);
-                await reAssignOnNotSeen(io);
-                await sendAutoMessage(io);
-                // processLeadsForAIResponse(io);
-            } catch (error) {
-                console.error('Error in reAssignOnNotReplied cron job:', error);
-            }
-        },
-        {
-            timezone: 'Asia/Dhaka',
-        }
-    );
+	// Every 1 minute cron job
+	cron.schedule(
+	    '* * * * *',
+	    async () => {
+	        try {
+	            await checkProductAdForLeadMessages();
+	            await reAssignOnNotReplied(io);
+	            await reAssignOnNotSeen(io);
+	            await checkUpcomingReminders(io); // Check for reminders coming up in the next 10 minutes
+	            // await sendAutoMessage(io);
+	            processLeadsForAIResponse(io);
+	        } catch (error) {
+	            console.error('Error in reAssignOnNotReplied cron job:', error);
+	    }},
+	    {
+	        timezone: 'Asia/Dhaka',
+	    }
+	)
+
+	
 };
 
 const runStartupTasks = (io) => {

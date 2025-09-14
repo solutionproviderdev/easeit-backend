@@ -1,0 +1,34 @@
+TEST EXECUTION: 2025-09-13T12:05:26.539Z
+COMMAND: node C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js
+
+STDERR:
+[REMINDER_LOG] 2025-09-13T12:05:24.496Z - Failed to emit socket event: Socket.io instance not set
+
+
+STDOUT:
+[TEST_LOG] Connecting to MongoDB at mongodb://localhost:27017/easeit
+[TEST_LOG] Connected to MongoDB successfully
+
+[TEST_LOG] Starting test for upcoming reminders...
+[TEST_LOG] ----------------------------------------
+[TEST_LOG] Current time: 2025-09-13T12:05:24.442Z
+[TEST_LOG] Setting reminder time to: 2025-09-13T12:14:24.442Z (9 minutes from now)
+[TEST_LOG] Created test lead with ID: 68c55e04500d65b7e0949e93
+[TEST_LOG] Reminder set for: 2025-09-13T12:14:24.442Z
+[TEST_LOG] Time until reminder: 9 minutes
+[TEST_LOG] Running checkUpcomingReminders...
+[REMINDER_LOG] 2025-09-13T12:05:24.489Z - Starting check for upcoming reminders between 2025-09-13T12:05:24.489Z and 2025-09-13T12:15:24.489Z
+[REMINDER_LOG] 2025-09-13T12:05:24.495Z - Found 1 leads with potential upcoming reminders
+[REMINDER_LOG] 2025-09-13T12:05:24.495Z - Processing lead: 68c55e04500d65b7e0949e93 (Test Lead)
+[REMINDER_LOG] 2025-09-13T12:05:24.496Z - Found 1 upcoming reminders for lead 68c55e04500d65b7e0949e93
+[REMINDER_LOG] 2025-09-13T12:05:24.496Z - Sending notification for reminder 68c55e04500d65b7e0949e94 for lead 68c55e04500d65b7e0949e93
+[REMINDER_LOG] 2025-09-13T12:05:24.496Z - Reminder details: time=2025-09-13T12:14:24.442Z, timeRemaining=9 minutes
+[REMINDER_LOG] 2025-09-13T12:05:24.497Z - Marked reminder 68c55e04500d65b7e0949e94 as notified
+[REMINDER_LOG] 2025-09-13T12:05:24.504Z - Saved lead 68c55e04500d65b7e0949e93 with updated notification flags
+[REMINDER_LOG] 2025-09-13T12:05:24.504Z - Completed check for upcoming reminders: 1 leads with upcoming reminders processed
+[TEST_LOG] ❌ Test failed: No notification received
+[TEST_LOG] Test lead deleted
+[TEST_LOG] Socket.io emit function restored
+[TEST_LOG] Test completed
+
+TEST COMPLETED: 2025-09-13T12:05:26.539Z

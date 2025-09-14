@@ -1,0 +1,46 @@
+TEST EXECUTION: 2025-09-13T12:06:52.566Z
+COMMAND: node C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js
+
+STDOUT:
+[TEST_LOG] Using test-specific version of checkUpcomingReminders
+[TEST_LOG] Connecting to MongoDB at mongodb://localhost:27017/easeit
+[TEST_LOG] Connected to MongoDB successfully
+
+[TEST_LOG] Starting test for upcoming reminders...
+[TEST_LOG] ----------------------------------------
+[TEST_LOG] Current time: 2025-09-13T12:06:50.469Z
+[TEST_LOG] Setting reminder time to: 2025-09-13T12:15:50.469Z (9 minutes from now)
+[TEST_LOG] Created test lead with ID: 68c55e5acd3772a64ac26f0e
+[TEST_LOG] Reminder set for: 2025-09-13T12:15:50.469Z
+[TEST_LOG] Time until reminder: 9 minutes
+[TEST_LOG] Running checkUpcomingReminders...
+[REMINDER_LOG] 2025-09-13T12:06:50.510Z - Starting check for upcoming reminders between 2025-09-13T12:06:50.510Z and 2025-09-13T12:16:50.510Z
+[REMINDER_LOG] 2025-09-13T12:06:50.517Z - Found 1 leads with potential upcoming reminders
+[REMINDER_LOG] 2025-09-13T12:06:50.517Z - Processing lead: 68c55e5acd3772a64ac26f0e (Test Lead)
+[REMINDER_LOG] 2025-09-13T12:06:50.517Z - Found 1 upcoming reminders for lead 68c55e5acd3772a64ac26f0e
+[REMINDER_LOG] 2025-09-13T12:06:50.517Z - Sending notification for reminder 68c55e5acd3772a64ac26f0f for lead 68c55e5acd3772a64ac26f0e
+[REMINDER_LOG] 2025-09-13T12:06:50.517Z - Reminder details: time=2025-09-13T12:15:50.469Z, timeRemaining=9 minutes
+[TEST_LOG] Mock socket event 'upcomingReminder' would be emitted with data: {
+  "leadId": "68c55e5acd3772a64ac26f0e",
+  "reminderId": "68c55e5acd3772a64ac26f0f",
+  "reminder": {
+    "time": "2025-09-13T12:15:50.469Z",
+    "status": "Pending",
+    "tenMinNotificationSent": false,
+    "_id": "68c55e5acd3772a64ac26f0f"
+  },
+  "leadName": "Test Lead",
+  "timeRemaining": 9
+}
+[TEST_LOG] ✅ Test passed: Notification received for test lead
+[REMINDER_LOG] 2025-09-13T12:06:50.524Z - Marked reminder 68c55e5acd3772a64ac26f0f as notified
+[REMINDER_LOG] 2025-09-13T12:06:50.531Z - Saved lead 68c55e5acd3772a64ac26f0e with updated notification flags
+[REMINDER_LOG] 2025-09-13T12:06:50.531Z - Completed check for upcoming reminders: 1 leads with upcoming reminders processed
+[TEST_LOG] Checking if reminder was marked as notified...
+[TEST_LOG] Reminder tenMinNotificationSent flag: true ✅
+[TEST_LOG] ✅ Test passed: Reminder was properly marked as notified
+[TEST_LOG] Test lead deleted
+[TEST_LOG] Console.log function restored
+[TEST_LOG] Test completed
+
+TEST COMPLETED: 2025-09-13T12:06:52.566Z

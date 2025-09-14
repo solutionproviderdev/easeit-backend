@@ -1,0 +1,106 @@
+TEST EXECUTION: 2025-09-13T12:01:51.631Z
+COMMAND: node C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js
+
+ERROR: Command failed: node C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js
+[TEST_LOG] Error in test: Error: Lead validation failed: source: Path `source` is required., status: `unread` is not a valid enum value for path `status`.
+    at ValidationError.inspect (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\error\validation.js:50:26)
+    at formatValue (node:internal/util/inspect:829:19)
+    at inspect (node:internal/util/inspect:372:10)
+    at formatWithOptionsInternal (node:internal/util/inspect:2325:40)
+    at formatWithOptions (node:internal/util/inspect:2187:10)
+    at console.value (node:internal/console/constructor:350:14)
+    at console.warn (node:internal/console/constructor:383:61)
+    at testUpcomingReminders (C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js:126:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  errors: {
+    source: ValidatorError: Path `source` is required.
+        at validate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1365:13)
+        at SchemaType.doValidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1349:7)
+        at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2972:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:77:11) {
+      properties: [Object],
+      kind: 'required',
+      path: 'source',
+      value: undefined,
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    },
+    status: ValidatorError: `unread` is not a valid enum value for path `status`.
+        at validate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1365:13)
+        at SchemaType.doValidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1349:7)
+        at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2972:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:77:11) {
+      properties: [Object],
+      kind: 'enum',
+      path: 'status',
+      value: 'unread',
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    }
+  },
+  _message: 'Lead validation failed'
+}
+[TEST_LOG] Error stack: ValidationError: Lead validation failed: source: Path `source` is required., status: `unread` is not a valid enum value for path `status`.
+    at Document.invalidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:3187:32)
+    at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2980:17
+    at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1368:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
+
+EXIT CODE: 1
+
+STDERR:
+[TEST_LOG] Error in test: Error: Lead validation failed: source: Path `source` is required., status: `unread` is not a valid enum value for path `status`.
+    at ValidationError.inspect (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\error\validation.js:50:26)
+    at formatValue (node:internal/util/inspect:829:19)
+    at inspect (node:internal/util/inspect:372:10)
+    at formatWithOptionsInternal (node:internal/util/inspect:2325:40)
+    at formatWithOptions (node:internal/util/inspect:2187:10)
+    at console.value (node:internal/console/constructor:350:14)
+    at console.warn (node:internal/console/constructor:383:61)
+    at testUpcomingReminders (C:\Users\solut\Desktop\sp\easeit-backend\src\tests\testUpcomingReminders.js:126:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  errors: {
+    source: ValidatorError: Path `source` is required.
+        at validate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1365:13)
+        at SchemaType.doValidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1349:7)
+        at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2972:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:77:11) {
+      properties: [Object],
+      kind: 'required',
+      path: 'source',
+      value: undefined,
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    },
+    status: ValidatorError: `unread` is not a valid enum value for path `status`.
+        at validate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1365:13)
+        at SchemaType.doValidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1349:7)
+        at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2972:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:77:11) {
+      properties: [Object],
+      kind: 'enum',
+      path: 'status',
+      value: 'unread',
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    }
+  },
+  _message: 'Lead validation failed'
+}
+[TEST_LOG] Error stack: ValidationError: Lead validation failed: source: Path `source` is required., status: `unread` is not a valid enum value for path `status`.
+    at Document.invalidate (C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:3187:32)
+    at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\document.js:2980:17
+    at C:\Users\solut\Desktop\sp\easeit-backend\node_modules\mongoose\lib\schemaType.js:1368:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
+
+
+STDOUT:
+[TEST_LOG] Connecting to MongoDB at mongodb://localhost:27017/easeit
+[TEST_LOG] Connected to MongoDB successfully
+
+[TEST_LOG] Starting test for upcoming reminders...
+[TEST_LOG] ----------------------------------------
+[TEST_LOG] Current time: 2025-09-13T12:01:51.455Z
+[TEST_LOG] Setting reminder time to: 2025-09-13T12:10:51.455Z (9 minutes from now)
+
+TEST COMPLETED: 2025-09-13T12:01:51.633Z

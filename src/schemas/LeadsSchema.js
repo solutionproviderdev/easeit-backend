@@ -61,6 +61,10 @@ const reminderSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             required: false, // Optional field
         },
+        tenMinNotificationSent: {
+            type: Boolean,
+            default: false, // Track if 10-minute notification has been sent
+        },
     },
     { _id: true }
 );
