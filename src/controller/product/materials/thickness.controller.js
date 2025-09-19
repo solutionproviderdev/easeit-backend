@@ -66,8 +66,8 @@ const getAllThickness = async (req, res) => {
 
         const thickness = await Thickness.find(query)
             .sort(sort || { value: 1 })
-            .limit(parseInt(limit) || 10)
-            .skip(parseInt(page) ? (parseInt(page) - 1) * parseInt(limit || 10) : 0)
+            .limit(parseInt(limit) || 100)
+            .skip(parseInt(page) ? (parseInt(page) - 1) * parseInt(limit || 100) : 0)
             .select(projection);
 
         res.status(200).json(thickness);

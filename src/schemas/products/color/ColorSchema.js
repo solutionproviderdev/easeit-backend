@@ -32,7 +32,7 @@ const prefabricated = new mongoose.Schema({
         type: String,
         validate: {
             validator(v) {
-                return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+                return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|avif)$/i.test(v);
             },
             message: 'Invalid image URL format',
         },
@@ -80,7 +80,7 @@ const formicaLaminated = new mongoose.Schema({
         type: String,
         validate: {
             validator(v) {
-                return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+                return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|avif)$/i.test(v);
             },
             message: 'Invalid image URL format',
         },
@@ -127,7 +127,7 @@ const paint = new mongoose.Schema({
         type: String,
         validate: {
             validator(v) {
-                return /^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(v);
+                return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|avif)$/i.test(v);
             },
             message: 'Invalid image URL format',
         },

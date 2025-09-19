@@ -74,11 +74,13 @@ app.use(
 				'http://localhost:8080',
 				'http://localhost:8081',
 				'http://localhost:5173',
+				'http://localhost:5174',
 				'https://680390003c985823ec14ae5d--melodic-platypus-c4121d.netlify.app',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
 				'http://103.122.143.63:3000',
 				'https://easeit.vercel.app',
+				'http://192.168.68.109:8080',
 				'https://crm.solutionprovider.com.bd',
 				'http://192.168.218.103:5173',
 				'http://192.168.68.123:5173',
@@ -180,8 +182,6 @@ app.use(notFoundHandler);
 
 // Default error handling
 app.use(errorHandler);
-
-
 
 // Start the server
 if (require.main === module) {

@@ -13,7 +13,7 @@ const validatePrefabricated = [
     body('prefabricated.brandCode').trim().notEmpty().withMessage('Brand Code is required'),
     body('prefabricated.image')
         .optional()
-        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i)
+        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i)
         .withMessage('Invalid image URL format'),
 ];
 
@@ -39,7 +39,7 @@ const validateFormicaLaminated = [
         .withMessage('Price must be a positive number'),
     body('formicaLaminated.image')
         .optional()
-        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i)
+        .matches(/^https?:\/\/.+\.(jpg|jpeg|png|gif|avif|webp)$/i)
         .withMessage('Invalid image URL format'),
 ];
 
