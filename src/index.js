@@ -136,7 +136,7 @@ io.on('connection', (socket) => {
 // Set the io instance in your socket service
 setIO(io);
 
-// start baileys
+// start baileys (single WhatsApp account)
 startBaileys();
 
 // Attach io instance to the req object to access it in routes

@@ -56,6 +56,10 @@ const seriesSpecificationSchema = new Schema(
             ref: 'Hardware',
             required: true,
         },
+        hasHardware: {
+            type: Boolean,
+            required: false,
+        },
         durability: {
             type: Number,
             required: true,

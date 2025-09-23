@@ -30,6 +30,10 @@ const validateSeriesSpecification = [
         .isBoolean()
         .withMessage('hasBodyStructure must be a boolean'),
     body('specifications.*.hardware').isMongoId().withMessage('Valid hardware ID is required'),
+    body('specifications.*.hasHardware')
+        .optional()
+        .isBoolean()
+        .withMessage('hasHardware must be a boolean'),
     body('specifications.*.durability')
         .isFloat({ min: 0, max: 10 })
         .withMessage('Durability must be between 0 and 10'),
