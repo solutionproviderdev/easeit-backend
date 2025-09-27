@@ -1,5 +1,6 @@
 const Lead = require('../schemas/LeadsSchema');
 const Meeting = require('../schemas/MeetingSchema');
+const performanceCache = require('./performanceCache');
 
 // Helper function to calculate performance
 const calculatePerformance = (completed, lateCompleted, missed) => {
@@ -11,7 +12,9 @@ const calculatePerformance = (completed, lateCompleted, missed) => {
 
 const findLowestperformanceMetric = (performanceRates) => {
     // Extract metrics
-    const { NCR, MSR, MCR, MPR, MCeR } = performanceRates;
+    const {
+        NCR, MSR, MCR, MPR, MCeR,
+    } = performanceRates;
 
     // Define thresholds for low positive metrics
     const lowThresholds = {
@@ -54,6 +57,18 @@ const getCREPerformance = async (
     endDate = new Date().setHours(23, 23, 59, 59, 999)
 ) => {
     try {
+        // Generate cache key for this performance request
+        const cacheKey = performanceCache.constructor.generateCREPerformanceKey(
+            creId,
+            new Date(startDate),
+            new Date(endDate)
+        );
+
+        // Check if we have cached data
+        const cachedResult = performanceCache.get(cacheKey);
+        if (cachedResult) {
+            return cachedResult;
+        }
         // Get Total Leads in the performance window.
         const totalLeads = await Lead.countDocuments({
             createdAt: { $gte: startDate, $lte: endDate },
@@ -161,12 +176,9 @@ const getCREPerformance = async (
             },
         ]);
 
-        const lateCompleteCount =
-            reminderStatusCounts.find((item) => item.status === 'Late Complete')?.count || 0;
-        const completeCount =
-            reminderStatusCounts.find((item) => item.status === 'Complete')?.count || 0;
-        const missedCount =
-            reminderStatusCounts.find((item) => item.status === 'Missed')?.count || 0;
+        const lateCompleteCount = reminderStatusCounts.find((item) => item.status === 'Late Complete')?.count || 0;
+        const completeCount = reminderStatusCounts.find((item) => item.status === 'Complete')?.count || 0;
+        const missedCount = reminderStatusCounts.find((item) => item.status === 'Missed')?.count || 0;
 
         // Calculate follow-up performance.
         const followUpPerformance = calculatePerformance(
@@ -205,7 +217,7 @@ const getCREPerformance = async (
             MCeR,
         });
 
-        return {
+        const result = {
             creId,
             performance,
             assigned,
@@ -238,6 +250,11 @@ const getCREPerformance = async (
                 SR,
             },
         };
+
+        // Cache the result for 5 minutes (300000 ms)
+        performanceCache.set(cacheKey, result, 300000);
+
+        return result;
     } catch (error) {
         console.error('Error getting CRE performance:', error);
         return null;

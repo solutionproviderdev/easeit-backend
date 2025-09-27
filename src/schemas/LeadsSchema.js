@@ -159,6 +159,7 @@ const leadSchema = mongoose.Schema(
                 'Meeting Fixed',
                 'Meeting Complete',
                 'Sold',
+                'Quotation Sent',
                 'Prospect',
                 'Lost',
                 'Mesurement Done',

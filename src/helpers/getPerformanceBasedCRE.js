@@ -5,6 +5,7 @@ const { getLeadSettingsDoc } = require('../controller/settings/leadControlContro
 const Department = require('../schemas/auth/DepartmentSchema');
 const User = require('../schemas/auth/UserSchema');
 const getCREPerformance = require('./getCREPerformance');
+const performanceCache = require('./performanceCache');
 
 const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []) => {
     // Use a fixed base count (10) to represent the max leads considered in the "recent" window.
@@ -16,7 +17,7 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
         // Assume manualLeadAssignRate is a string like "50%"
         if (override.manualLeadAssignRate) {
             const rate = parseFloat(override.manualLeadAssignRate.replace('%', ''));
-            if (!isNaN(rate)) {
+            if (!Number.isNaN(rate)) {
                 manualMap[override.creId] = rate;
             }
         }
@@ -60,11 +61,10 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
     // The available portion of the baseCount for non-manual CREs is:
     // baseCount * ((100 - sumManual) / 100)
     const nonManualMetrics = nonManualGroup.map((metric) => {
-        const expected =
-            totalPerformanceNonManual > 0
-                ? (metric.performance / totalPerformanceNonManual) *
-                  (baseCount * ((100 - sumManual) / 100))
-                : 0;
+        const expected = totalPerformanceNonManual > 0
+            ? (metric.performance / totalPerformanceNonManual)
+                * (baseCount * ((100 - sumManual) / 100))
+            : 0;
         const gap = expected - metric.assignedRecent;
         const ratio = expected > 0 ? metric.assignedRecent / expected : 1;
         return {
@@ -92,22 +92,26 @@ const selectCREBasedOnOverFlow = (creMetrics, position = 0, manualOverrides = []
         selectedCRE = mergedMetrics[position];
     }
 
-    // (Optional) Log debug info for underQuota candidates.
-    // underQuota.forEach((cre) => {
-    //     console.log(
-    //         `CRE: ${cre.name}, AssignedRecent: ${
-    //             cre.assignedRecent
-    //         }, Expected: ${cre.expected.toFixed(2)}, Gap: ${cre.gap.toFixed(
-    //             2
-    //         )}, Ratio: ${cre.ratio.toFixed(2)}`
-    //     );
-    // });
-
     return selectedCRE;
 };
 
 const getPerformanceBasedCRE = async (position) => {
     try {
+        // Get settings first to generate cache key
+        const settingsDoc = await getLeadSettingsDoc();
+        const performanceRangeDays = settingsDoc.settingsData?.global?.performanceRangeDays || 7;
+
+        // Generate cache key for this request
+        const cacheKey = performanceCache.constructor.generatePerformanceBasedCREKey(
+            position,
+            performanceRangeDays
+        );
+
+        // Check if we have cached data
+        const cachedResult = performanceCache.get(cacheKey);
+        if (cachedResult) {
+            return cachedResult;
+        }
         // 1. Get the CRE department and roles from the Department schema.
         const creDepartment = await Department.findOne({
             departmentName: 'CRE',
@@ -138,9 +142,7 @@ const getPerformanceBasedCRE = async (position) => {
             name: cre.nameAsPerNID,
         }));
 
-        const settings = await getLeadSettingsDoc();
-        const performanceRangeDays = settings.settingsData?.global?.performanceRangeDays || 7;
-        const manualOverrides = settings?.settingsData?.creManualOverrides || [];
+        const manualOverrides = settingsDoc?.settingsData?.creManualOverrides || [];
 
         // Define the performance window start date.
         const dateRange = new Date(performanceRangeDays);
@@ -175,6 +177,10 @@ const getPerformanceBasedCRE = async (position) => {
 
         // Use the overflow management helper to select the appropriate CRE.
         const selectedCRE = selectCREBasedOnOverFlow(creMetrics, position, manualOverrides);
+        
+        // Cache the result for 2 minutes (120000 ms) - shorter than getCREPerformance since this changes more frequently
+        performanceCache.set(cacheKey, selectedCRE.creId, 120000);
+        
         // console.log('Selected CRE:', selectedCRE.name);
         return selectedCRE.creId;
     } catch (error) {
