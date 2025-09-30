@@ -2,22 +2,43 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
+const useItemsSchema = new Schema(
+    {
+        itemType: {
+            type: String,
+            required: true,
+            enum: ['Board', 'Edging', 'Hardware', 'Surface'], // all the material like, board, edging, hardware
+        },
+        item: {
+            type: Schema.Types.ObjectId,
+            required: true,
+        },
+        usetext: {
+            type: String,
+        },
+    },
+    { id: true }
+);
+
 const configSchema = new Schema(
     {
         board: {
             type: Schema.Types.ObjectId,
             ref: 'Board',
-            required: true,
+            required: false,
+            set: (value) => (value === '' ? null : value),
         },
         edging: {
             type: Schema.Types.ObjectId,
             ref: 'Edging',
-            required: true,
+            required: false,
+            set: (value) => (value === '' ? null : value),
         },
         surface: {
             type: Schema.Types.ObjectId,
             ref: 'Surface',
-            required: true,
+            required: false,
+            set: (value) => (value === '' ? null : value),
         },
     },
     { id: true }

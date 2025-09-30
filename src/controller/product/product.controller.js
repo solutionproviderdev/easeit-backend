@@ -53,7 +53,9 @@ const deleteProduct = async (req, res) => {
 };
 
 const getAllProducts = async (req, res) => {
-    const { search, series, minPrice, maxPrice, status, sort, limit, page } = req.query;
+    const {
+ search, series, minPrice, maxPrice, status, sort, limit, page 
+} = req.query;
 
     try {
         const query = {};
@@ -78,8 +80,8 @@ const getAllProducts = async (req, res) => {
 
         const products = await Product.find(query)
             .sort(sort || { createdAt: -1 })
-            .limit(parseInt(limit) || 100)
-            .skip(parseInt(page) ? (parseInt(page) - 1) * parseInt(limit || 10) : 0);
+            .limit(parseInt(limit, 10) || 100)
+            .skip(parseInt(page, 10) ? (parseInt(page, 10) - 1) * parseInt(limit || 10, 10) : 0);
 
         res.status(200).json(products);
     } catch (err) {

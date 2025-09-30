@@ -11,18 +11,157 @@ const validateSeriesSpecification = [
     body('specifications.*.surface').isMongoId().withMessage('Valid surface ID is required'),
     body('specifications.*.configs.front')
         .optional()
-        .custom((value) => {
-            if (value && !Object.keys(value).length) {
-                throw new Error('Front config cannot be empty if provided');
+        .custom((value, { req, path }) => {
+            // Extract the specification index from the path
+            const specIndex = path.split('.')[1];
+            const hasFront = req.body.specifications[specIndex]?.hasFront;
+
+            if (hasFront && (!value || !Object.keys(value).length)) {
+                throw new Error('Front config is required when hasFront is true');
             }
+
+            if (hasFront && value) {
+                if (!value.board || !value.edging || !value.surface) {
+                    throw new Error(
+                        'Front config must include board, edging, and surface when hasFront is true'
+                    );
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.front.board')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasFront = req.body.specifications[specIndex]?.hasFront;
+
+            if (hasFront && (!value || value === '')) {
+                throw new Error('Front board ID is required when hasFront is true');
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid front board ID is required');
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.front.edging')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasFront = req.body.specifications[specIndex]?.hasFront;
+
+            if (hasFront && (!value || value === '')) {
+                throw new Error('Front edging ID is required when hasFront is true');
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid front edging ID is required');
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.front.surface')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasFront = req.body.specifications[specIndex]?.hasFront;
+
+            if (hasFront && (!value || value === '')) {
+                throw new Error('Front surface ID is required when hasFront is true');
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid front surface ID is required');
+                }
+            }
+
             return true;
         }),
     body('specifications.*.configs.bodyStructure')
         .optional()
-        .custom((value) => {
-            if (value && !Object.keys(value).length) {
-                throw new Error('Body structure config cannot be empty if provided');
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasBodyStructure = req.body.specifications[specIndex]?.hasBodyStructure;
+
+            if (hasBodyStructure && (!value || !Object.keys(value).length)) {
+                throw new Error('Body structure config is required when hasBodyStructure is true');
             }
+
+            if (hasBodyStructure && value) {
+                if (!value.board || !value.edging || !value.surface) {
+                    throw new Error(
+                        'Body structure config must include board, edging, and surface when hasBodyStructure is true'
+                    );
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.bodyStructure.board')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasBodyStructure = req.body.specifications[specIndex]?.hasBodyStructure;
+
+            if (hasBodyStructure && (!value || value === '')) {
+                throw new Error(
+                    'Body structure board ID is required when hasBodyStructure is true'
+                );
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid body structure board ID is required');
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.bodyStructure.edging')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasBodyStructure = req.body.specifications[specIndex]?.hasBodyStructure;
+
+            if (hasBodyStructure && (!value || value === '')) {
+                throw new Error(
+                    'Body structure edging ID is required when hasBodyStructure is true'
+                );
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid body structure edging ID is required');
+                }
+            }
+
+            return true;
+        }),
+    body('specifications.*.configs.bodyStructure.surface')
+        .optional()
+        .custom((value, { req, path }) => {
+            const specIndex = path.split('.')[1];
+            const hasBodyStructure = req.body.specifications[specIndex]?.hasBodyStructure;
+
+            if (hasBodyStructure && (!value || value === '')) {
+                throw new Error(
+                    'Body structure surface ID is required when hasBodyStructure is true'
+                );
+            }
+
+            if (value && value !== '') {
+                if (!value.match(/^[0-9a-fA-F]{24}$/)) {
+                    throw new Error('Valid body structure surface ID is required');
+                }
+            }
+
             return true;
         }),
     body('specifications.*.hasFront').isBoolean().withMessage('hasFront must be a boolean'),

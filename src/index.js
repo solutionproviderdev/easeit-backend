@@ -75,6 +75,7 @@ app.use(
 				'http://localhost:8081',
 				'http://localhost:5173',
 				'http://localhost:5174',
+				'http://localhost:4173',
 				'https://680390003c985823ec14ae5d--melodic-platypus-c4121d.netlify.app',
 				'http://192.168.0.155:3000',
 				'http://192.168.0.155:5000',
