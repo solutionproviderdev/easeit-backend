@@ -89,13 +89,13 @@ async function checkProductAdForLeadMessages() {
         }
 
         // Log the overall counts
-        // console.log(`Total pattern matches found: ${totalPatternMatches}`);
-        // console.log(`Product names extracted but not found in DB: ${totalMissingProductAds}`);
+        console.log(`Total pattern matches found: ${totalPatternMatches}`);
+        console.log(`Product names extracted but not found in DB: ${totalMissingProductAds}`);
 
         // Log each product name count
-        // console.log('Product name counts:');
+        console.log('Product name counts:');
         for (const [product, count] of productNameCount.entries()) {
-            // console.log(`${product}: ${count}`);
+            console.log(`${product}: ${count}`);
         }
     } catch (error) {
         console.error('Error checking product ads:', error);
