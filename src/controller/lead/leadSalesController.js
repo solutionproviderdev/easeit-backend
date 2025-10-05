@@ -176,18 +176,6 @@ exports.getAllFollowUps = async (req, res) => {
     try {
         const { salesExecutiveId, dateRange, status } = req.query;
 
-        // Use today's date for testing if no dateRange provided
-        const testDateRange =
-            dateRange ||
-            `${new Date().toISOString().split('T')[0]}_${new Date().toISOString().split('T')[0]}`;
-
-        console.log('=== VERIFICATION LOG: getAllFollowUps ===');
-        console.log('Query parameters:', {
-            salesExecutiveId,
-            dateRange: testDateRange,
-            status,
-        });
-
         const filter = { salesFollowUp: { $exists: true, $not: { $size: 0 } } };
 
         // If salesExecutiveId is provided, filter leads assigned to that sales executive
@@ -197,14 +185,13 @@ exports.getAllFollowUps = async (req, res) => {
 
         // Filter by date range (applies to follow-ups inside salesFollowUp array)
         let dateFilter = null;
-        if (testDateRange) {
-            const [startDate, endDate] = testDateRange.split('_');
+        if (dateRange) {
+            const [startDate, endDate] = dateRange.split('_');
 
             if (startDate && endDate) {
                 const { start, end } = formatDateRange(startDate, endDate);
                 dateFilter = { $gte: start, $lte: end };
                 filter['salesFollowUp.time'] = dateFilter;
-                console.log('Date filter applied:', { start, end });
             }
         }
 
@@ -212,8 +199,6 @@ exports.getAllFollowUps = async (req, res) => {
         if (status) {
             filter['salesFollowUp.status'] = status;
         }
-
-        console.log('MongoDB filter:', JSON.stringify(filter, null, 2));
 
         // Query leads with follow-ups, applying filters
         const leadsWithFollowUps = await Lead.find(filter)
@@ -228,40 +213,6 @@ exports.getAllFollowUps = async (req, res) => {
             .populate('meetings', 'date slot status salesExecutive -lead') // Populate main meetings field
             .select('-messages -pageInfo -reminder');
 
-        console.log(`Found ${leadsWithFollowUps.length} leads with follow-ups`);
-
-        // VERIFICATION: Check if leads actually have follow-ups within the date range
-        let validLeadsCount = 0;
-        const verificationResults = leadsWithFollowUps.map((lead) => {
-            const followUpsInRange = lead.salesFollowUp.filter((followUp) => {
-                if (!dateFilter) return true; // No date filter, all follow-ups are valid
-
-                const followUpTime = new Date(followUp.time);
-                const isInRange =
-                    followUpTime >= dateFilter.$gte && followUpTime <= dateFilter.$lte;
-                return isInRange;
-            });
-
-            if (followUpsInRange.length > 0) {
-                validLeadsCount += 1;
-            }
-
-            return {
-                leadId: lead._id,
-                leadName: lead.name,
-                totalFollowUps: lead.salesFollowUp.length,
-                followUpsInDateRange: followUpsInRange.length,
-                followUpDates: lead.salesFollowUp.map((f) => f.time),
-                isValid: followUpsInRange.length > 0,
-            };
-        });
-
-        console.log('=== VERIFICATION RESULTS ===');
-        console.log(`Total leads returned: ${leadsWithFollowUps.length}`);
-        console.log(`Leads with follow-ups in date range: ${validLeadsCount}`);
-        console.log('Detailed verification:', verificationResults);
-        console.log('=== END VERIFICATION ===');
-
         // Filter out leads that don't have follow-ups in the specified date range
         const filteredLeads = leadsWithFollowUps.filter((lead) => {
             if (!dateFilter) return true;
@@ -271,8 +222,6 @@ exports.getAllFollowUps = async (req, res) => {
                 return followUpTime >= dateFilter.$gte && followUpTime <= dateFilter.$lte;
             });
         });
-
-        console.log(`Returning ${filteredLeads.length} leads after client-side filtering`);
 
         res.status(200).json(filteredLeads);
     } catch (error) {
