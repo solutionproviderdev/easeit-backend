@@ -13,6 +13,7 @@ const { sendAutoMessage } = require('../ongoing/sendAutoMessage');
 const { reschedulePendingReminders } = require('../ongoing/reschedulePendingReminders');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const { checkUpcomingReminders } = require('../ongoing/checkUpcomingReminders');
+const { checkUpcomingSalesFollowUps } = require('../ongoing/checkUpcomingSalesFollowUps');
 // const exportConversations = require('../bot/trainingData');
 // const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
 // const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
@@ -60,6 +61,7 @@ const initializeCronJobs = (io) => {
                 await reAssignOnNotReplied(io);
                 await reAssignOnNotSeen(io);
                 await checkUpcomingReminders(io);
+                await checkUpcomingSalesFollowUps(io);
                 await sendAutoMessage(io);
                 // processLeadsForAIResponse(io);
             } catch (error) {

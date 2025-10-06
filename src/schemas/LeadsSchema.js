@@ -82,6 +82,11 @@ const followUpSchema = new mongoose.Schema({
     },
     meetingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Meeting' },
     type: { type: String, enam: ['Call', 'Meeting'] },
+    // Track if 10-minute notification has been sent for this follow-up
+    tenMinNotificationSent: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 // Call Log Schema
