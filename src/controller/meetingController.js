@@ -22,6 +22,8 @@ exports.fixMeeting = async (req, res) => {
             requirements,
             projectStatus,
             comment,
+            title,
+            purpose,
         } = req.body;
 
         let assignedSalesExecutive = salesExecutive;
@@ -101,7 +103,7 @@ exports.fixMeeting = async (req, res) => {
         // Update the lead with the new meeting and sales executive assignment
         await Lead.findByIdAndUpdate(leadId, leadUpdate);
 
-        // Fetch lead details for activity log
+        // Fetch lead details for activity log and notification
         const lead = await Lead.findById(leadId).select('name phone source address salesExqName');
 
         // Fetch sales executive nickname
@@ -126,6 +128,28 @@ exports.fixMeeting = async (req, res) => {
                 slot,
                 salesExecutiveNickname,
             });
+        }
+
+        // Send notification to assigned sales executive
+        try {
+            const { notifyMeetingAssignment } = require('../helpers/notification/lead/meetingAssignmentTriggers');
+            await notifyMeetingAssignment(leadId, assignedSalesExecutive, newMeeting, {
+                title,
+                purpose,
+                notes: comment?.text,
+                attachments: comment?.images || [],
+            });
+
+            if (req.user && req.user._id) {
+                log(req.user._id, 'MEETING_ASSIGNED_NOTIFICATION_SENT', {
+                    meetingId: newMeeting._id,
+                    leadId,
+                    salesExecutive: assignedSalesExecutive,
+                    salesExecutiveNickname,
+                });
+            }
+        } catch (notifyErr) {
+            console.error('Failed to send meeting assignment notification:', notifyErr);
         }
 
         res.status(201).json(newMeeting);

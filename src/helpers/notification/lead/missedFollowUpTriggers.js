@@ -2,16 +2,21 @@ const Lead = require('../../../schemas/LeadsSchema');
 const Notification = require('../../../schemas/Notification');
 const { sendNotificationToUser } = require('../sendNotification');
 
-// Function to notify a user about a new lead assignment
-const notifyNewLeadAssignment = async (leadId, userId) => {
+// Notify a user when a follow-up reminder is missed
+// Mirrors the structure used in leadTriggers.js
+const notifyMissedFollowUpReminder = async (leadId, userId, reminder) => {
     try {
         const lead = await Lead.findById(leadId).select('name');
         if (!lead) {
             throw new Error('Lead not found');
         }
-        const title = 'New Lead Assigned';
-        const body = `You have been assigned a new lead: ${lead.name}`;
-        const metadata = { leadId };
+
+        const title = 'Missed Follow-Up Reminder';
+        const readableTime = new Date(reminder.time).toLocaleString('en-GB', {
+            hour12: true,
+        });
+        const body = `You missed a follow-up for ${lead.name} scheduled at ${readableTime}.`;
+        const metadata = { leadId, reminderId: reminder._id };
 
         // Save the notification to the database.
         const notificationEntry = new Notification({
@@ -21,9 +26,10 @@ const notifyNewLeadAssignment = async (leadId, userId) => {
             type: 'push',
             metadata,
         });
+
         const savedNotification = await notificationEntry.save();
 
-        // Pass savedNotification as the last argument
+        // Deliver via push and emit socket event
         const response = await sendNotificationToUser(
             userId,
             title,
@@ -34,9 +40,9 @@ const notifyNewLeadAssignment = async (leadId, userId) => {
         );
         return response;
     } catch (error) {
-        console.error('Error in notifyNewLeadAssignment:', error);
+        console.error('Error in notifyMissedFollowUpReminder:', error);
         throw error;
     }
 };
 
-module.exports = { notifyNewLeadAssignment };
+module.exports = { notifyMissedFollowUpReminder };

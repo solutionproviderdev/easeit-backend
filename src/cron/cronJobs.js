@@ -5,7 +5,6 @@ const {
 } = require('../ongoing/getConversationAndUpdateLeadOptimized');
 const { assignUnassignedLeads } = require('../ongoing/assignUnassignedLeads');
 const { checkAndUpdateMissedReminders } = require('../ongoing/checkAndUpdateMissedReminders');
-const { checkUpcomingReminders } = require('../ongoing/checkUpcomingReminders');
 const findDuplicateMessagesAndDelete = require('../ongoing/findDuplicateMesagesAndDelete');
 const checkProductAdForLeadMessages = require('../ongoing/checkProductAdForLeadMessages');
 const { reAssignOnNotReplied } = require('../helpers/reAssignOnNotReplied');
@@ -13,11 +12,12 @@ const { reAssignOnNotSeen } = require('../helpers/reAssignOnNotSeen');
 const { sendAutoMessage } = require('../ongoing/sendAutoMessage');
 const { reschedulePendingReminders } = require('../ongoing/reschedulePendingReminders');
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
-const exportConversations = require('../bot/trainingData');
-const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
-const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
-const { getSpecificMessageLog } = require('../temp/getSpecificMessageLog');
-const { processLeadsForAIResponse } = require('../ongoing/solutionBotCronJob');
+const { checkUpcomingReminders } = require('../ongoing/checkUpcomingReminders');
+// const exportConversations = require('../bot/trainingData');
+// const analyzeLeadConversations = require('../SolutionBot/analyzeLeadConversations');
+// const rewriteUnadssigneLead = require('../helpers/rewriteUnassign');
+// const { getSpecificMessageLog } = require('../temp/getSpecificMessageLog');
+// const { processLeadsForAIResponse } = require('../ongoing/solutionBotCronJob');
 
 const initializeCronJobs = (io) => {
     // Every second cron job

@@ -2,7 +2,11 @@
 /* eslint-disable no-restricted-syntax */
 
 const Lead = require('../schemas/LeadsSchema');
+const {
+    notifyMissedFollowUpReminder,
+} = require('../helpers/notification/lead/missedFollowUpTriggers');
 
+//  Check and update missed reminders
 const checkAndUpdateMissedReminders = async (io) => {
     try {
         const now = new Date();
@@ -45,10 +49,16 @@ const checkAndUpdateMissedReminders = async (io) => {
                     reminder,
                 });
 
-                // console.log(
-                //     `Emitted missedReminder event for reminder ${reminder._id} in lead ${lead._id}.`
-                // );
-                
+                // Send push notification to the assigned user
+                const recipientUserId = lead.salesExqName || lead.creName;
+                if (recipientUserId) {
+                    try {
+                        await notifyMissedFollowUpReminder(lead._id, recipientUserId, reminder);
+                    } catch (notifyError) {
+                        // eslint-disable-next-line no-console
+                        console.error('Failed to send missed follow-up notification:', notifyError);
+                    }
+                }
             }
         }
 

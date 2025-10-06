@@ -11,6 +11,9 @@ const ACTIONS = [
     'LEAD_ADD_COMMENT',
     'Updated_Password',
     'Admin_Updated_Password',
+    // Extended actions used in meeting workflows and notifications
+    'LEAD_CREATE_AND_MEETING_SET',
+    'MEETING_ASSIGNED_NOTIFICATION_SENT',
 ];
 
 const activityLogSchema = new Schema({

@@ -2,16 +2,22 @@ const Lead = require('../../../schemas/LeadsSchema');
 const Notification = require('../../../schemas/Notification');
 const { sendNotificationToUser } = require('../sendNotification');
 
-// Function to notify a user about a new lead assignment
-const notifyNewLeadAssignment = async (leadId, userId) => {
+// Notify a user when a follow-up reminder is upcoming (within configured window)
+// Mirrors the structure used in leadTriggers.js and missedFollowUpTriggers.js
+const notifyUpcomingFollowUpReminder = async (leadId, userId, reminder, timeRemaining) => {
     try {
         const lead = await Lead.findById(leadId).select('name');
         if (!lead) {
             throw new Error('Lead not found');
         }
-        const title = 'New Lead Assigned';
-        const body = `You have been assigned a new lead: ${lead.name}`;
-        const metadata = { leadId };
+
+        const title = 'Upcoming Follow-Up Reminder';
+        const readableTime = new Date(reminder.time).toLocaleString('en-GB', {
+            hour12: true,
+        });
+        const minutesText = typeof timeRemaining === 'number' ? `${timeRemaining} min` : 'soon';
+        const body = `Follow-up for ${lead.name} at ${readableTime} (${minutesText}).`;
+        const metadata = { leadId, reminderId: reminder._id, timeRemaining };
 
         // Save the notification to the database.
         const notificationEntry = new Notification({
@@ -23,7 +29,7 @@ const notifyNewLeadAssignment = async (leadId, userId) => {
         });
         const savedNotification = await notificationEntry.save();
 
-        // Pass savedNotification as the last argument
+        // Deliver via push and emit socket event
         const response = await sendNotificationToUser(
             userId,
             title,
@@ -34,9 +40,9 @@ const notifyNewLeadAssignment = async (leadId, userId) => {
         );
         return response;
     } catch (error) {
-        console.error('Error in notifyNewLeadAssignment:', error);
+        console.error('Error in notifyUpcomingFollowUpReminder:', error);
         throw error;
     }
 };
 
-module.exports = { notifyNewLeadAssignment };
+module.exports = { notifyUpcomingFollowUpReminder };
