@@ -28,7 +28,7 @@ const settingsRouter = require('./routes/settings/settingsRouter');
 
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
-const { swaggerUi } = require('../swagger');
+const { swaggerUi } = require('../scripts/swagger');
 const productRouter = require('./routes/product/product.routes');
 const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
