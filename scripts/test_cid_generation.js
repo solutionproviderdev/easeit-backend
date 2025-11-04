@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Lead = require('./src/schemas/LeadsSchema');
+const Lead = require('../src/schemas/LeadsSchema');
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/crm_test', {

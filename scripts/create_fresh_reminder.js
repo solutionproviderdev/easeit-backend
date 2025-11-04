@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Lead = require('./src/schemas/LeadsSchema');
+const Lead = require('../src/schemas/LeadsSchema');
 
 const createFreshReminder = async () => {
     try {

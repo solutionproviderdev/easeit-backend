@@ -16,7 +16,7 @@ const options = {
             },
         ],
     },
-    apis: ['./src/routes/*.js', './models/*.js'], // Path to your route files or models where you define your API endpoints
+    apis: ['../src/routes/**/*.js'], // Path to your route files where endpoints are defined
 };
 
 // Generate Swagger specification
