@@ -21,6 +21,25 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "description": "Service health check",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users/": {
       "get": {
         "description": "",

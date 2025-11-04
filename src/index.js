@@ -113,6 +113,15 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
+// health check
+app.get('/health', (req, res) => {
+    /* #swagger.tags = ['Health'] */
+    /* #swagger.summary = 'Service health check' */
+    /* #swagger.description = 'Returns 200 with {"status":"ok"}' */
+    /* #swagger.responses[200] = { description: 'OK', schema: { status: 'ok' } } */
+    res.status(200).json({ status: 'ok' });
+});
+
 // home Route
 app.get('/', (req, res) => {
 	res.send('Hello Solution Provider...!');
