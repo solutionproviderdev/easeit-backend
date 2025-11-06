@@ -4,12 +4,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
-const { default: mongoose } = require('mongoose');
 const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
  const cron = require('node-cron');
+const { connectDatabase } = require('./config/database');
 const swaggerSpec = require('../swagger_output.json');
 
 // internal imports
@@ -52,10 +52,7 @@ const io = new Server(server, {
 });
 
 // Database connection
-mongoose
-	.connect(process.env.MONGO_CONNECTION_STRING, {})
-	.then(() => console.log('🍀 Database connection successful'))
-	.catch((err) => console.log(err, 'Database connection Error'));
+connectDatabase();
 
 // Set up logging for other parts of the app
 app.use(timingMiddleware); // Add this line to use the middleware
