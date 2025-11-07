@@ -89,6 +89,7 @@ app.use(
 				'http://192.168.68.130',
 				'http://localhost:5173',
 				'https://solutionprovider.vercel.app',
+				'https://spcrm.netlify.app',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
