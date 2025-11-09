@@ -51,6 +51,9 @@ const io = new Server(server, {
 	},
 });
 
+// Security/headers
+app.disable('x-powered-by');
+
 // Database connection
 connectDatabase();
 
@@ -58,9 +61,9 @@ connectDatabase();
 app.use(timingMiddleware); // Add this line to use the middleware
 
 // request process
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static('public'));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
 	cors({
@@ -204,6 +207,11 @@ if (require.main === module) {
 		console.log(`🕒 Current Time: ${currentTime}`);
 		console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
 	});
+
+	// Harden server timeouts
+	server.keepAliveTimeout = 65000; // keep-alive timeout
+	server.headersTimeout = 66000; // headers timeout should be > keepAliveTimeout
+	server.setTimeout(60000); // socket inactivity timeout
 }
 
 module.exports = { app, io };

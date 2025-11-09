@@ -10,66 +10,60 @@ const ProductAd = require('../schemas/ProductAdSchema');
 
 async function checkProductAdForLeadMessages() {
     try {
-        // Fetch all leads from the database
-        const leads = await Lead.find({});
+        const cursor = Lead.find(
+            {
+                'messages.0': { $exists: true },
+                'pageInfo.pageId': { $exists: true, $ne: null },
+            },
+            { messages: 1, productAds: 1, pageInfo: 1 }
+        )
+            .lean()
+            .cursor();
 
-        // Cache for product ads: key is product name in lowercase, value is ProductAd document (or null if not found)
         const productAdCache = new Map();
 
-        // Regex pattern to capture:
-        // Group 1: Lead's first name (unused here)
-        // Group 2: Product name (between "with " and " Solutions?")
         const pattern =
             /^Hi\s+(.*?)!\s+Please let us know how we can help you\. with\s+(.*?)\s+Solutions\?$/i;
 
-        // Initialize counters
         let totalPatternMatches = 0;
         let totalMissingProductAds = 0;
-
-        // Map to count each extracted product name occurrence
         const productNameCount = new Map();
 
-        for (const lead of leads) {
-            let leadUpdated = false;
-            if (!Array.isArray(lead.messages)) continue;
-
-            // Get lead's pageId; if missing, skip this lead
+        for await (const lead of cursor) {
+            let relationCreated = false;
+            const messages = Array.isArray(lead.messages) ? lead.messages : [];
             const leadPageId = (lead.pageInfo && lead.pageInfo.pageId) || null;
-            if (!leadPageId) continue;
+            if (!leadPageId || messages.length === 0) continue;
 
-            // Process each message until a relation is added
-            for (const msg of lead.messages) {
+            for (const msg of messages) {
                 const content = msg.content || '';
                 const match = pattern.exec(content);
                 if (!match) continue;
 
-                totalPatternMatches++;
-
+                totalPatternMatches += 1;
                 const extractedProductName = match[2].trim();
                 const key = extractedProductName.toLowerCase();
-
-                // Count each product name occurrence
                 productNameCount.set(key, (productNameCount.get(key) || 0) + 1);
 
-                // Check cache first
                 let productAd = productAdCache.get(key);
                 if (productAd === undefined) {
                     productAd = await ProductAd.findOne({
                         name: { $regex: `^${extractedProductName}$`, $options: 'i' },
-                    });
+                    })
+                        .lean()
+                        .exec();
                     productAdCache.set(key, productAd);
                 }
 
                 if (!productAd) {
-                    totalMissingProductAds++;
+                    totalMissingProductAds += 1;
                     continue;
                 }
 
-                // Check if any image in the product ad has a matching pageId
-                const pageIdMatch = productAd.images.some((img) => img.pageId === leadPageId);
+                const pageIdMatch = Array.isArray(productAd.images)
+                    && productAd.images.some((img) => img.pageId === leadPageId);
                 if (!pageIdMatch) continue;
 
-                // Check if the relation already exists
                 const productAdIdStr = productAd._id.toString();
                 const leadProductAds = (lead.productAds || []).map((id) => id.toString());
                 if (!leadProductAds.includes(productAdIdStr)) {
@@ -77,28 +71,24 @@ async function checkProductAdForLeadMessages() {
                         { _id: lead._id },
                         { $addToSet: { productAds: productAd._id } }
                     );
-                    leadUpdated = true;
-                    // Once a relation is created for this lead, exit the inner loop.
+                    relationCreated = true;
                     break;
                 }
             }
 
-            if (leadUpdated) {
-                // console.log(`Lead ${lead.name}: Product ad for relation created/linked.`);
+            if (relationCreated) {
+                // relation created for this lead
             }
         }
 
-        // // Log the overall counts
-        // console.log(`Total pattern matches found: ${totalPatternMatches}`);
-        // console.log(`Product names extracted but not found in DB: ${totalMissingProductAds}`);
-
-        // // Log each product name count
-        // console.log('Product name counts:');
-        // for (const [product, count] of productNameCount.entries()) {
-        //     console.log(`${product}: ${count}`);
-        // }
+        return {
+            success: true,
+            totalPatternMatches,
+            totalMissingProductAds,
+        };
     } catch (error) {
         console.error('Error checking product ads:', error);
+        return { success: false, error: error.message };
     }
 }
 
