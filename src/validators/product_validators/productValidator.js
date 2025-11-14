@@ -196,6 +196,24 @@ const validateSeriesSpecification = [
         .optional()
         .isString()
         .withMessage('Each image must be a valid URL'),
+
+    // Material descriptions validation
+    body('specifications.*.materialDescriptions')
+        .optional()
+        .isArray()
+        .withMessage('Material descriptions must be an array'),
+    body('specifications.*.materialDescriptions.*.itemType')
+        .optional()
+        .isIn(['Board', 'Edging', 'Hardware', 'Surface'])
+        .withMessage('Invalid material description itemType'),
+    body('specifications.*.materialDescriptions.*.item')
+        .optional()
+        .isMongoId()
+        .withMessage('Valid material description item ID is required'),
+    body('specifications.*.materialDescriptions.*.usetext')
+        .optional()
+        .isString()
+        .withMessage('Material description text must be a string'),
 ];
 
 const validateProduct = [

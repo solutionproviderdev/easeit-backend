@@ -42,7 +42,7 @@ const reschedulePendingReminders = async (io) => {
                         }
                     });
 
-                    console.log(`Rescheduled reminder ${reminder._id} for lead ${lead._id}.`);
+                    // console.log(`Rescheduled reminder ${reminder._id} for lead ${lead._id}.`);
                 }
             });
         }

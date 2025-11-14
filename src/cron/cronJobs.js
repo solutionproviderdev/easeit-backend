@@ -14,6 +14,9 @@ const { reschedulePendingReminders } = require('../ongoing/reschedulePendingRemi
 const { getPerformanceBasedCRE } = require('../helpers/getPerformanceBasedCRE');
 const { checkUpcomingReminders } = require('../ongoing/checkUpcomingReminders');
 const { checkUpcomingSalesFollowUps } = require('../ongoing/checkUpcomingSalesFollowUps');
+const { detectAndUpdateCollectedNumbers } = require('./detectCollectedNumbers');
+
+// Number detection cron moved to ./detectCollectedNumbers.js
 
 const initializeCronJobs = (io) => {
     // Reduce per-second job to safer periodic intervals
@@ -76,6 +79,15 @@ const initializeCronJobs = (io) => {
         },
         { timezone: 'Asia/Dhaka' }
     );
+
+    // Every 5 minutes: detect collected numbers, update status, and notify CRE
+    cron.schedule(
+        '*/5 * * * *',
+        async () => {
+            await detectAndUpdateCollectedNumbers(io);
+        },
+        { timezone: 'Asia/Dhaka' }
+    );
 };
 
 const runStartupTasks = (io) => {
@@ -86,6 +98,8 @@ const runStartupTasks = (io) => {
     reAssignOnNotReplied(io);
     reAssignOnNotSeen(io);
     findDuplicateLeads();
+    // Run number detection once on startup to catch recent leads
+    detectAndUpdateCollectedNumbers(io);
     getPerformanceBasedCRE();
 };
 

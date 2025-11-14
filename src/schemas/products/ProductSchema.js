@@ -2,16 +2,17 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
-const useItemsSchema = new Schema(
+const materialDescriptionSchema = new Schema(
     {
         itemType: {
             type: String,
             required: true,
-            enum: ['Board', 'Edging', 'Hardware', 'Surface'], // all the material like, board, edging, hardware
+            enum: ['Board', 'Edging', 'Hardware', 'Surface'],
         },
         item: {
             type: Schema.Types.ObjectId,
             required: true,
+            refPath: 'itemType',
         },
         usetext: {
             type: String,
@@ -118,6 +119,7 @@ const seriesSpecificationSchema = new Schema(
         images: {
             type: [String],
         },
+        materialDescriptions: [materialDescriptionSchema],
     },
     { id: true }
 );
@@ -165,7 +167,25 @@ ProductSchema.pre(/^find/, function (next) {
         { path: 'specifications.configs.bodyStructure.board', select: '-__v' },
         { path: 'specifications.configs.bodyStructure.edging', select: '-__v' },
         { path: 'specifications.configs.bodyStructure.surface', select: '-__v' },
+        { path: 'specifications.materialDescriptions.item', select: '-__v' },
     ]);
+    next();
+});
+
+// Ensure dynamic refPath population for nested materialDescriptions
+ProductSchema.post(/^find/, async (docs, next) => {
+    try {
+        const populatePath = 'specifications.materialDescriptions.item';
+        const arr = [];
+        if (Array.isArray(docs)) {
+            arr.push(...docs);
+        } else if (docs) {
+            arr.push(docs);
+        }
+        await Promise.all(arr.map((doc) => doc.populate({ path: populatePath, select: '-__v' })));
+    } catch (err) {
+        // swallow populate errors to avoid breaking queries
+    }
     next();
 });
 

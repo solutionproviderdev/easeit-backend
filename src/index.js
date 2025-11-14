@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-tabs */
-
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -149,7 +148,7 @@ io.on('connection', (socket) => {
 setIO(io);
 
 // start baileys (single WhatsApp account)
-startBaileys();
+// startBaileys();
 
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {
