@@ -173,7 +173,7 @@ app.use('/whatsapp', whatsAppRouter);
 // product, vendor, router,discount
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
-app.use('/quotations', quotationrouter);
+app.use('/quotations', quotationrouter); // quotations router
 
 // cabint calculator
 app.use('/calculate-cabinet', calculatorRouter);
