@@ -92,6 +92,7 @@ app.use(
 				'http://localhost:5173',
 				'https://solutionprovider.vercel.app',
 				'https://spcrm.netlify.app',
+				'https://cnc-dev.solutionprovider.com.bd',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
