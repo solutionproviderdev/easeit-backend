@@ -42,7 +42,12 @@ leadRouter.use('/sales', leadSalesRouter);
 leadRouter.use('/finance', leadFinanceRouter);
 
 // Get all Leads with filter
-leadRouter.get('/', getAllLeads);
+leadRouter.get('/', 
+    /* #swagger.tags = ['Leads'] */
+    /* #swagger.summary = 'Get all leads' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    getAllLeads
+);
 
 // Get stat of unread lead and need to call leads
 leadRouter.get('/conversationstat', conversationStat);
@@ -51,10 +56,20 @@ leadRouter.get('/conversationstat', conversationStat);
 leadRouter.get('/reminders', checkAuth, getAllLeadsWithReminders);
 
 // Get single Lead Details
-leadRouter.get('/:id', getLeadById);
+leadRouter.get('/:id', 
+    /* #swagger.tags = ['Leads'] */
+    /* #swagger.summary = 'Get lead by ID' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    getLeadById
+);
 
 // New Route for creating a lead
-leadRouter.post('/', checkAuth, validateLeadCreation, createLead);
+leadRouter.post('/', 
+    /* #swagger.tags = ['Leads'] */
+    /* #swagger.summary = 'Create a new lead' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, validateLeadCreation, createLead
+);
 
 // Route for getting comments of a lead
 leadRouter.get('/:id/comments', getComments);

@@ -11,7 +11,7 @@ async function createProduct(data) {
 
 // Read - list with filters, sorting, pagination
 async function getAllProducts(params = {}) {
-    const { search, series, minPrice, maxPrice, status, sort, limit = 10, page = 1 } = params;
+    const { search, series, minPrice, maxPrice, status, sort, limit = 100, page = 1 } = params;
 
     const query = {};
 
