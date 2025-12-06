@@ -33,20 +33,17 @@ const validateBoard = [
         .withMessage('Invalid thickness ID format'),
 
     body('unitPrice')
-        .notEmpty()
-        .withMessage('Unit price is required')
+        .optional()
         .isFloat({ min: 0 })
         .withMessage('Unit price must be a positive number'),
 
     body('sqftInSingleUnit')
-        .notEmpty()
-        .withMessage('Square feet in single unit is required')
+        .optional()
         .isFloat({ min: 0 })
         .withMessage('Square feet value must be a positive number'),
 
     body('sqftPrice')
-        .notEmpty()
-        .withMessage('Square feet price is required')
+        .optional()
         .isFloat({ min: 0 })
         .withMessage('Square feet price must be a positive number'),
 
@@ -62,10 +59,7 @@ const validateBoard = [
         .isLength({ max: 1000 })
         .withMessage('Description cannot exceed 1000 characters'),
 
-    body('dimension')
-        .optional()
-        .isObject()
-        .withMessage('Dimension must be an object'),
+    body('dimension').optional().isObject().withMessage('Dimension must be an object'),
 
     body('dimension.height')
         .optional()
