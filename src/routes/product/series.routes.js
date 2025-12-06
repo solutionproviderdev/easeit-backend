@@ -20,8 +20,18 @@ const seriesRouter = express.Router();
 // Basic CRUD routes
 seriesRouter
     .route('/')
-    .get(checkAuth, seriesSearchValidation, getAllSeries)
-    .post(checkAuth, validateSeries, createSeries);
+    .get(
+        /* #swagger.tags = ['Product Series'] */
+        /* #swagger.summary = 'Get all series' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, seriesSearchValidation, getAllSeries
+    )
+    .post(
+        /* #swagger.tags = ['Product Series'] */
+        /* #swagger.summary = 'Create series' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateSeries, createSeries
+    );
 
 seriesRouter
     .route('/:id')

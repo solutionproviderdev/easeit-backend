@@ -20,8 +20,18 @@ const edgingRouter = express.Router();
 // Basic CRUD routes
 edgingRouter
     .route('/')
-    .get(checkAuth, edgingSearchValidation, getAllEdgings)
-    .post(checkAuth, validateEdging, createEdging);
+    .get(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Get all edging' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, edgingSearchValidation, getAllEdgings
+    )
+    .post(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Create edging' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateEdging, createEdging
+    );
 
 edgingRouter
     .route('/:id')

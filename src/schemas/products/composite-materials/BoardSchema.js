@@ -70,6 +70,21 @@ const BoardSchema = new Schema(
             required: true,
             default: 'sheet',
         },
+        dimension: {
+            height: {
+                type: Number,
+                min: [0, 'Height cannot be negative'],
+            },
+            width: {
+                type: Number,
+                min: [0, 'Width cannot be negative'],
+            },
+        },
+        quantity: {
+            type: Number,
+            default: 0,
+            min: [0, 'Quantity cannot be negative'],
+        },
     },
     {
         id: true,

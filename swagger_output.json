@@ -31,6 +31,22 @@
       "description": "Product inventory and management"
     },
     {
+      "name": "Product Materials",
+      "description": "Base materials, brands, surfaces, etc."
+    },
+    {
+      "name": "Composite Materials",
+      "description": "Boards, edging, glass, hardware items"
+    },
+    {
+      "name": "Product Colors",
+      "description": "Product color management"
+    },
+    {
+      "name": "Product Series",
+      "description": "Product series management"
+    },
+    {
       "name": "Health",
       "description": "System health checks"
     }
@@ -4938,6 +4954,10 @@
     },
     "/products/base-materials/": {
       "post": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Create base material",
         "description": "",
         "responses": {
           "201": {
@@ -4955,9 +4975,18 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "get": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Get all base materials",
         "description": "",
         "parameters": [
           {
@@ -4999,11 +5028,20 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/base-materials/{id}": {
       "get": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Get base material by ID",
         "description": "",
         "parameters": [
           {
@@ -5026,7 +5064,12 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "put": {
         "description": "",
@@ -5084,6 +5127,10 @@
     },
     "/products/brands/": {
       "post": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Create brand",
         "description": "",
         "responses": {
           "201": {
@@ -5101,9 +5148,18 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "get": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Get all brands",
         "description": "",
         "parameters": [
           {
@@ -5145,11 +5201,20 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/brands/{id}": {
       "get": {
+        "tags": [
+          "Product Materials"
+        ],
+        "summary": "Get brand by ID",
         "description": "",
         "parameters": [
           {
@@ -5172,7 +5237,12 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "put": {
         "description": "",
@@ -5230,68 +5300,32 @@
     },
     "/products/hardwears/": {
       "get": {
+        "summary": "Get all hardware (material)",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create hardware (material)",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/hardwears/{id}": {
@@ -5376,68 +5410,32 @@
     },
     "/products/surfaces/": {
       "get": {
+        "summary": "Get all surfaces",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create surface",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/surfaces/{id}": {
@@ -5522,68 +5520,32 @@
     },
     "/products/thickness/": {
       "get": {
+        "summary": "Get all thicknesses",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create thickness",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/thickness/{id}": {
@@ -5668,68 +5630,32 @@
     },
     "/products/surface-finishes/": {
       "get": {
+        "summary": "Get all surface finishes",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create surface finish",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/surface-finishes/{id}": {
@@ -5814,73 +5740,32 @@
     },
     "/products/edgings/": {
       "get": {
+        "summary": "Get all edging",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "catagory",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create edging",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/edgings/{id}": {
@@ -5965,92 +5850,37 @@
     },
     "/products/boards/": {
       "get": {
+        "summary": "Get all boards",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "brand",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "surfaceFinish",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "baseMaterial",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "thickness",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create board",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/boards/{id}": {
       "get": {
+        "summary": "Get board by ID",
         "description": "",
         "parameters": [
           {
@@ -6061,21 +5891,18 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "put": {
+        "summary": "Update board",
         "description": "",
         "parameters": [
           {
@@ -6086,24 +5913,18 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "delete": {
+        "summary": "Delete board",
         "description": "",
         "parameters": [
           {
@@ -6114,100 +5935,45 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/glass/": {
       "get": {
+        "summary": "Get all glass",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "color",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "thickness",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create glass",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/glass/{id}": {
@@ -6292,6 +6058,10 @@
     },
     "/products/hardware-items/": {
       "post": {
+        "tags": [
+          "Composite Materials"
+        ],
+        "summary": "Create hardware item",
         "description": "",
         "responses": {
           "201": {
@@ -6300,6 +6070,10 @@
         }
       },
       "get": {
+        "tags": [
+          "Composite Materials"
+        ],
+        "summary": "Get all hardware items",
         "description": "",
         "parameters": [
           {
@@ -6337,6 +6111,10 @@
     },
     "/products/hardware-items/low-stock": {
       "get": {
+        "tags": [
+          "Composite Materials"
+        ],
+        "summary": "Get low stock hardware items",
         "description": "",
         "responses": {
           "200": {
@@ -6347,6 +6125,10 @@
     },
     "/products/hardware-items/{id}": {
       "get": {
+        "tags": [
+          "Composite Materials"
+        ],
+        "summary": "Get hardware item by ID",
         "description": "",
         "parameters": [
           {
@@ -6397,93 +6179,32 @@
     },
     "/products/colors/": {
       "get": {
+        "summary": "Get all colors",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create color",
         "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "prefabricated": {
-                  "example": "any"
-                },
-                "formicaLaminated": {
-                  "example": "any"
-                },
-                "paint": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/colors/{id}": {
@@ -6568,68 +6289,32 @@
     },
     "/products/series/": {
       "get": {
+        "summary": "Get all series",
         "description": "",
-        "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "type": "string"
-          }
-        ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "summary": "Create series",
         "description": "",
         "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "default": {
+            "description": ""
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/products/series/{id}": {

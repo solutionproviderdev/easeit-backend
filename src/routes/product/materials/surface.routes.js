@@ -20,8 +20,18 @@ const surfaceRouter = express.Router();
 // Basic CRUD routes
 surfaceRouter
     .route('/')
-    .get(checkAuth, surfaceSearchValidation, getAllSurfaces)
-    .post(checkAuth, validateSurface, createSurface);
+    .get(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Get all surfaces' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, surfaceSearchValidation, getAllSurfaces
+    )
+    .post(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Create surface' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateSurface, createSurface
+    );
 
 surfaceRouter
     .route('/:id')

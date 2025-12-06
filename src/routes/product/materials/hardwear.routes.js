@@ -20,8 +20,18 @@ const hardwareRouter = express.Router();
 // Basic CRUD routes
 hardwareRouter
     .route('/')
-    .get(checkAuth, hardwareSearchValidation, getAllHardware)
-    .post(checkAuth, validateHardware, createHardware);
+    .get(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Get all hardware (material)' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, hardwareSearchValidation, getAllHardware
+    )
+    .post(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Create hardware (material)' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateHardware, createHardware
+    );
 
 hardwareRouter
     .route('/:id')

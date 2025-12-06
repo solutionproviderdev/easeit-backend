@@ -20,13 +20,49 @@ const boardRouter = express.Router();
 // Basic CRUD routes
 boardRouter
     .route('/')
-    .get(checkAuth, boardSearchValidation, getAllBoards)
-    .post(checkAuth, validateBoard, createBoard);
+    .get(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Get all boards' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth,
+        boardSearchValidation,
+        getAllBoards
+    )
+    .post(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Create board' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth,
+        validateBoard,
+        createBoard
+    );
 
 boardRouter
     .route('/:id')
-    .get(checkAuth, validateBoardId, getBoardById)
-    .put(checkAuth, validateBoardId, validateBoard, updateBoard)
-    .delete(checkAuth, validateBoardId, deleteBoard);
+    .get(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Get board by ID' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth,
+        validateBoardId,
+        getBoardById
+    )
+    .put(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Update board' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth,
+        validateBoardId,
+        validateBoard,
+        updateBoard
+    )
+    .delete(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Delete board' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth,
+        validateBoardId,
+        deleteBoard
+    );
 
 module.exports = boardRouter;

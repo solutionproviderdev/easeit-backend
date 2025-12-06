@@ -61,6 +61,26 @@ const validateBoard = [
         .withMessage('Description must be a string')
         .isLength({ max: 1000 })
         .withMessage('Description cannot exceed 1000 characters'),
+
+    body('dimension')
+        .optional()
+        .isObject()
+        .withMessage('Dimension must be an object'),
+
+    body('dimension.height')
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage('Height must be a positive number'),
+
+    body('dimension.width')
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage('Width must be a positive number'),
+
+    body('quantity')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Quantity must be a non-negative integer'),
 ];
 
 const boardSearchValidation = [
