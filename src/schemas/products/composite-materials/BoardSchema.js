@@ -31,17 +31,14 @@ const BoardSchema = new Schema(
         },
         unitPrice: {
             type: Number,
-            required: true,
             min: [0, 'Unit price cannot be negative'],
         },
         sqftInSingleUnit: {
             type: Number,
-            required: true,
             min: [0, 'Square feet value cannot be negative'],
         },
         sqftPrice: {
             type: Number,
-            required: true,
             min: [0, 'Square feet price cannot be negative'],
         },
         image: {
