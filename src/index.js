@@ -78,6 +78,7 @@ app.use(
 				'https://solutionprovider.vercel.app',
 				'https://cnc-dev.solutionprovider.com.bd',
 				'https://cnc.solutionprovider.com.bd',
+				'https://solutionprovider.online',
 			];
 			if (!origin || allowedOrigins.indexOf(origin) !== -1) {
 				callback(null, true);
