@@ -68,7 +68,8 @@ leadRouter.post('/',
     /* #swagger.tags = ['Leads'] */
     /* #swagger.summary = 'Create a new lead' */
     /* #swagger.security = [{ "bearerAuth": [] }] */
-    checkAuth, validateLeadCreation, createLead
+    // checkAuth, validateLeadCreation, createLead
+    validateLeadCreation, createLead
 );
 
 // Route for getting comments of a lead
