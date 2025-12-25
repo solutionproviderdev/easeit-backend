@@ -278,7 +278,8 @@ exports.getLeadById = async (req, res) => {
         const lead = await Lead.findById(req.params.id)
             .populate('creName', 'nameAsPerNID nickname profilePicture')
             .populate('salesExqName', 'nameAsPerNID nickname profilePicture')
-            .populate('comment.commentBy', 'nameAsPerNID nickname profilePicture');
+            .populate('comment.commentBy', 'nameAsPerNID nickname profilePicture')
+            .populate('productAds', 'name images');
 
         if (!lead) {
             return res.status(404).json({ msg: 'Lead not found' });
@@ -626,12 +627,12 @@ exports.addReminder = async (req, res) => {
             status: 'Pending',
             ...(commentId && { commentId }),
         };
-        
+
         lead.reminder.push(newReminder);
 
         // Save the updated lead after adding the new reminder
         await lead.save();
-        
+
         // Get the newly created reminder ID
         const createdReminder = lead.reminder[lead.reminder.length - 1];
 

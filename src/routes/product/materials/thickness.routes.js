@@ -20,8 +20,18 @@ const thicknessRouter = express.Router();
 // Basic CRUD routes
 thicknessRouter
     .route('/')
-    .get(checkAuth, thicknessSearchValidation, getAllThickness)
-    .post(checkAuth, validateThickness, createThickness);
+    .get(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Get all thicknesses' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, thicknessSearchValidation, getAllThickness
+    )
+    .post(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Create thickness' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateThickness, createThickness
+    );
 
 thicknessRouter
     .route('/:id')

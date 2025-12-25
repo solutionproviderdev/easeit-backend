@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const Product = require('../../schemas/products/ProductSchema');
+const productService = require('../../services/product.services');
 
 const createProduct = async (req, res) => {
     const errors = validationResult(req);
@@ -8,8 +8,7 @@ const createProduct = async (req, res) => {
     }
 
     try {
-        const product = new Product(req.body);
-        await product.save();
+        const product = await productService.createProduct(req.body);
         res.status(201).json(product);
     } catch (err) {
         res.status(500).json({ message: 'Failed to create product', error: err.message });
@@ -23,10 +22,7 @@ const updateProduct = async (req, res) => {
     }
 
     try {
-        const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true,
-        });
+        const product = await productService.updateProduct(req.params.id, req.body);
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -40,7 +36,7 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
+        const product = await productService.deleteProduct(req.params.id);
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -53,33 +49,19 @@ const deleteProduct = async (req, res) => {
 };
 
 const getAllProducts = async (req, res) => {
-    const { search, series, minPrice, maxPrice, status, sort, limit, page } = req.query;
+    const {
+        search,
+        series,
+        minPrice,
+        maxPrice,
+        status,
+        sort,
+        limit,
+        page,
+    } = req.query;
 
     try {
-        const query = {};
-
-        if (search) {
-            query.name = { $regex: search, $options: 'i' };
-        }
-
-        if (series) {
-            query['specifications.series'] = series;
-        }
-
-        if (minPrice || maxPrice) {
-            query['specifications.pricePerSqFt'] = {};
-            if (minPrice) query['specifications.pricePerSqFt'].$gte = parseFloat(minPrice);
-            if (maxPrice) query['specifications.pricePerSqFt'].$lte = parseFloat(maxPrice);
-        }
-
-        if (status) {
-            query.productStatus = status;
-        }
-
-        const products = await Product.find(query)
-            .sort(sort || { createdAt: -1 })
-            .limit(parseInt(limit) || 100)
-            .skip(parseInt(page) ? (parseInt(page) - 1) * parseInt(limit || 10) : 0);
+        const products = await productService.getAllProducts(req.query);
 
         res.status(200).json(products);
     } catch (err) {
@@ -89,7 +71,7 @@ const getAllProducts = async (req, res) => {
 
 const getProductById = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        const product = await productService.getProductById(req.params.id);
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });

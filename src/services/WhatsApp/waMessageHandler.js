@@ -281,15 +281,112 @@ async function upsertLeadForWAMessage(msg, io, sock) {
 
 /** Entry from Baileys: pass the socket so we can fetch profile pics */
 async function handleWhatsAppUpsert(m, sock) {
+    // console.log('[WA] Received messages.upsert:', JSON.stringify(m, null, 2));
+    // const demoMessage = {
+    //     messages: [
+    //         {
+    //             key: {
+    //                 remoteJid: '8801329709895@s.whatsapp.net',
+    //                 remoteJidAlt: '233165553692796:63@lid',
+    //                 fromMe: false,
+    //                 id: '3B62067FE3296CB72FBF',
+    //             },
+    //             messageTimestamp: 1758542399,
+    //             pushName: 'Nazmul Solution Provider',
+    //             broadcast: false,
+    //             message: {
+    //                 conversation: 'Hello',
+    //                 messageContextInfo: {
+    //                     deviceListMetadata: {
+    //                         senderKeyIndexes: [],
+    //                         recipientKeyIndexes: [],
+    //                         senderKeyHash: {
+    //                             0: 164,
+    //                             1: 70,
+    //                             2: 153,
+    //                             3: 146,
+    //                             4: 56,
+    //                             5: 255,
+    //                             6: 91,
+    //                             7: 107,
+    //                             8: 22,
+    //                             9: 149,
+    //                         },
+    //                         senderTimestamp: {
+    //                             low: 1757392248,
+    //                             high: 0,
+    //                             unsigned: true,
+    //                         },
+    //                         recipientKeyHash: {
+    //                             0: 135,
+    //                             1: 34,
+    //                             2: 52,
+    //                             3: 208,
+    //                             4: 211,
+    //                             5: 52,
+    //                             6: 25,
+    //                             7: 88,
+    //                             8: 42,
+    //                             9: 78,
+    //                         },
+    //                         recipientTimestamp: {
+    //                             low: 1758535435,
+    //                             high: 0,
+    //                             unsigned: true,
+    //                         },
+    //                     },
+    //                     deviceListMetadataVersion: 2,
+    //                     messageSecret: {
+    //                         0: 167,
+    //                         1: 159,
+    //                         2: 179,
+    //                         3: 46,
+    //                         4: 173,
+    //                         5: 184,
+    //                         6: 50,
+    //                         7: 249,
+    //                         8: 21,
+    //                         9: 175,
+    //                         10: 28,
+    //                         11: 44,
+    //                         12: 243,
+    //                         13: 160,
+    //                         14: 176,
+    //                         15: 48,
+    //                         16: 67,
+    //                         17: 247,
+    //                         18: 14,
+    //                         19: 16,
+    //                         20: 43,
+    //                         21: 202,
+    //                         22: 171,
+    //                         23: 211,
+    //                         24: 41,
+    //                         25: 26,
+    //                         26: 252,
+    //                         27: 177,
+    //                         28: 150,
+    //                         29: 110,
+    //                         30: 60,
+    //                         31: 84,
+    //                     },
+    //                 },
+    //             },
+    //             verifiedBizName: 'Nazmul Solution Provider',
+    //         },
+    //     ],
+    //     type: 'notify',
+    // };
+
+    if (!sock) {
+        console.error('[WA] No socket available for message processing');
+        return;
+    }
+
     const io = getIO();
-    if (!m || !Array.isArray(m.messages)) return;
+
     for (const msg of m.messages) {
-        if (!msg.message) continue;
-        try {
-            await upsertLeadForWAMessage(msg, io, sock);
-        } catch (err) {
-            console.error('[WA upsert] Error processing message:', err);
-        }
+        await upsertLeadForWAMessage(msg, io, sock);
     }
 }
 

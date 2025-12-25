@@ -43,16 +43,30 @@ userRouter.use('/departments', departmentRouter);
 userRouter.use('/device-token', deviceTokenRouter);
 
 // Get All Users
-userRouter.get('/', getAllUsers);
+userRouter.get('/', 
+    /* #swagger.tags = ['User'] */
+    /* #swagger.summary = 'Get all users' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    getAllUsers
+);
 
 // Get Single User
-userRouter.get('/:id', checkAuth, getUserById);
+userRouter.get('/:id', 
+    /* #swagger.tags = ['User'] */
+    /* #swagger.summary = 'Get user by ID' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, getUserById
+);
 
 // Get User Dropdown Options with Filters
 userRouter.get('/dropdown/options', checkAuth, getUserDropdownOptions);
 
 // Create a New User
-userRouter.post('/', validateUser, createUser);
+userRouter.post('/', 
+    /* #swagger.tags = ['User'] */
+    /* #swagger.summary = 'Create a new user' */
+    validateUser, createUser
+);
 
 // Update User Details
 userRouter.put('/:id', checkAuth, validateUserUpdate, updateUser);
@@ -86,7 +100,11 @@ userRouter.patch(
 userRouter.patch('/:id/cover-photo', checkAuth, validateURL('coverPhoto'), updateUserCoverPhoto);
 
 // Login User
-userRouter.post('/login', loginUser);
+userRouter.post('/login', 
+    /* #swagger.tags = ['User'] */
+    /* #swagger.summary = 'Login user' */
+    loginUser
+);
 
 // Logout User
 userRouter.post('/logout', checkAuth, logoutUser);

@@ -20,8 +20,18 @@ const colorRouter = express.Router();
 // Basic CRUD routes
 colorRouter
     .route('/')
-    .get(checkAuth, colorSearchValidation, getAllColors)
-    .post(checkAuth, validateColor, createColor);
+    .get(
+        /* #swagger.tags = ['Product Colors'] */
+        /* #swagger.summary = 'Get all colors' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, colorSearchValidation, getAllColors
+    )
+    .post(
+        /* #swagger.tags = ['Product Colors'] */
+        /* #swagger.summary = 'Create color' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateColor, createColor
+    );
 
 colorRouter
     .route('/:id')

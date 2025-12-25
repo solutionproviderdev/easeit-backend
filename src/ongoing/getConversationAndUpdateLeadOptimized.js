@@ -21,6 +21,11 @@ const MediaReplySettings = require('../schemas/settings/MediaReplySettingsSchema
 const { sendMessageToLead } = require('../helpers/sendMessageToLead');
 const { MediaBot } = require('../MediaBot/MediaBot');
 const { emitLeadMessage, emitConversationUpdate } = require('../utils/socketEmitter');
+const {
+    processConversation,
+    emitSocketEventsForNewMessage,
+    getCreInfo,
+} = require('../helpers/facebookConversations');
 
 /**
  * Converts Bengali numerals in a string to English numerals.
@@ -66,14 +71,12 @@ const extractValidPhoneNumber = (content, countryCode = 'BD') => {
 };
 
 /**
- * Processes an array of messages and returns both the
- * processed messages and any valid phone number found.
+ * Removed number extraction utilities; handled by dedicated cron
+ * in src/cron/detectCollectedNumbers.js
  * @param {Array} messages - Array of message objects.
- * @returns {Object} - Contains the processed messages and the extracted phone number.
+ * @returns {Object} - Contains the processed messages and metadata.
  */
 const processMessages = (messages) => {
-    let phoneNumber = '';
-
     let lastCustomerMessageTime = null;
 
     const lastMessage = messages[messages.length - 1];
@@ -85,13 +88,10 @@ const processMessages = (messages) => {
         /* Added to handle file types */
         const fileTypes = [];
         // ______________________________
-        // If the sender is not "Solution Provider", try to extract a phone number.
+        // If the sender is not "Solution Provider", track last customer message time.
         if (msg.from.name !== 'Solution Provider') {
             const content = msg.message || '';
-            const extractedNumber = extractValidPhoneNumber(content, 'BD');
-            if (extractedNumber) {
-                phoneNumber = extractedNumber; // Update phoneNumber if a valid one is found.
-            }
+            // Number extraction removed from ingestion; cron handles it.
             lastCustomerMessageTime = msg.created_time;
         }
 
@@ -146,7 +146,6 @@ const processMessages = (messages) => {
 
     return {
         processedMessages,
-        phoneNumber,
         lastMessageSentFromUs,
         lastCustomerMessageTime,
     };
@@ -210,361 +209,6 @@ const fetchConversationsFromFacebook = async (pageId, pageAccessToken) => {
         // logError(`Error fetching data for page ${pageId}`, error);
         return [];
     }
-};
-
-/**
- * Processes a single conversation from Facebook:
- * - Extracts participant and message information.
- * - Processes messages.
- * - Finds or creates a lead based on Facebook sender ID.
- * - Updates an existing lead with new messages or creates a new lead.
- * - Emits socket events with updated lead information.
- * @param {Object} conversation - Conversation object from Facebook.
- * @param {Object} nameToCreId - Mapping of CRE names to their IDs.
- * @param {Object} io - Socket.io instance.
- * @param {Object} pageInfo - Facebook page information.
- */
-const processConversation = async (conversation, nameToCreId, io, pageInfo) => {
-    try {
-        // Find the participant that is not the Facebook page itself.
-        const otherParticipant = conversation.participants.data.find(
-            (p) => p.name !== pageInfo.name
-        );
-        const fbSenderID = otherParticipant.id;
-        // Process the messages from the conversation.
-        const { processedMessages, phoneNumber, lastMessageSentFromUs, lastCustomerMessageTime } =
-            processMessages([...(conversation?.messages?.data ?? [])].reverse());
-        // Try to find an existing lead using the Facebook sender ID.
-        let lead = await Lead.findOne({
-            'pageInfo.fbSenderID': fbSenderID,
-            source: 'Facebook',
-        });
-
-        // check for meta convesation Delete
-        metaDeletedMessageAllart(conversation?.messages?.data, lead, io);
-
-        // If lead exists, update it with new messages.
-        if (lead) {
-            await updateExistingLead(
-                lead,
-                processedMessages,
-                phoneNumber,
-                nameToCreId,
-                io,
-                pageInfo,
-                lastMessageSentFromUs,
-                lastCustomerMessageTime
-            );
-        } else {
-            // If no lead exists, create a new lead.
-            lead = await createNewLead(
-                otherParticipant,
-                processedMessages,
-                pageInfo,
-                io,
-                lastMessageSentFromUs,
-                lastCustomerMessageTime
-            );
-        }
-
-        // Optionally, trigger the SholutionBot for specific leads.
-        // await SholutionBot(lead._id, io);
-
-        await lead.save(); // Ensure the lead document is saved.
-    } catch (error) {
-        logError('Error processing a single conversation', error);
-    }
-};
-
-/**
- * Updates an existing lead with new messages and updates its status if needed.
- * - Adds new messages if not already present.
- * - Updates the lead's last message and CRE assignment.
- * - Emits socket events with the updated lead.
- * @param {Object} lead - The lead document.
- * @param {Array} processedMessages - Array of processed messages.
- * @param {Object} phoneNumber - Extracted phone number data.
- * @param {Object} nameToCreId - Mapping of CRE names to their IDs.
- * @param {Object} io - Socket.io instance.
- * @param {Object} pageInfo - Facebook page information.
- */
-const updateExistingLead = async (
-    lead,
-    processedMessages,
-    phoneNumber,
-    nameToCreId,
-    io,
-    pageInfo,
-    lastMessageSentFromUs,
-    lastCustomerMessageTime
-) => {
-    let isNewMessageAdded = false;
-    let newCreId = lead.creName;
-    // let isNewMessagesFromUs = false;
-
-    let newMessage;
-
-    // Loop through each processed message.
-    for (const message of processedMessages) {
-        // If the message is not already in the lead's messages array.
-        if (!lead.messages.find((m) => m.messageId === message.messageId)) {
-            lead.messages.push(message);
-            newMessage = message.content;
-
-            // /** *    What  I have added here to action the media type Reply */
-
-            // // --- Media auto-reply trigger ---
-            // if (
-            //     !lastMessageSentFromUs && // <-- Only run if last message NOT sent by us
-            //     message.fileTypes &&
-            //     message.fileTypes.length > 0 &&
-            //     !message.sentByMe
-            // ) {
-            //     // Only trigger reply for the first file type
-            //     const fileType = message.fileTypes[0];
-
-            //     // 1. Get the lead owner (or org/user as needed)
-
-            //     // 2. Fetch media reply settings
-            //     const settings = await MediaReplySettings.findOne({})
-            //         .populate(`${fileType}.savedId`)
-            //         .lean();
-            //     // console.log('[AUTO-REPLY] Settings found:', settings);
-
-            //     // console.log('Enabled value:', settings[fileType]?.enabled);
-            //     if (settings && settings[fileType]?.enabled) {
-            //         // console.log(`[AUTO-REPLY] ${fileType} reply enabled`);
-
-            //         let replyText = null;
-
-            //         if (settings[fileType].aiEnabled && settings[fileType].aiPrompt) {
-            //             // Use aiPrompt as the prompt for MediaBot
-            //             // console.log('[AUTO-REPLY] AI reply enabled, generating reply...');
-            //             try {
-            //                 const mediabotResponse = await MediaBot(
-            //                     settings[fileType].aiPrompt, // Pass aiPrompt string
-            //                     'Nothing',
-            //                     message
-            //                 );
-            //                 // console.log('[AUTO-REPLY] AI reply generated:', mediabotResponse);
-            //                 replyText = mediabotResponse?.reply;
-            //             } catch (error) {
-            //                 console.error('[AUTO-REPLY] Error generating AI reply:', error);
-            //             }
-
-            //             if (lead.aiBotReply && !lastMessageSentFromUs) {
-            //                 SholutionBot(lead._id, io, replyText);
-            //             }
-            //         } else if (
-            //             settings[fileType].savedMessageEnabled &&
-            //             settings[fileType].savedId
-            //         ) {
-            //             // console.log(
-            //             //     '[AUTO-REPLY] Saved message enabled, using saved message...'
-            //             // );
-            //             replyText = settings[fileType].savedId.message;
-            //             // console.log('[AUTO-REPLY] Saved message text:', replyText);
-            //             if (replyText) {
-            //                 // console.log('[AUTO-REPLY] Sending reply...');
-            //                 // console.log(replyText);
-            //                 try {
-            //                     // await sendMessageToLead(lead._id, replyText, io);
-            //                     console.log(
-            //                         '[AUTO-REPLY] Message sent to lead successfully.'
-            //                     );
-            //                 } catch (err) {
-            //                     console.error(
-            //                         '[AUTO-REPLY] Error sending message to lead:', err
-            //                     );
-            //                 }
-            //             }
-            //         }
-
-            //         // console.log('[AUTO-REPLY] Reply text:', replyText);
-            //     }
-            // }
-            // // --- end media type auto-reply trigger ---
-
-            // // --- SholutionBot trigger ---
-            // if (
-            //     lead.aiBotReply &&
-            //     !lastMessageSentFromUs &&
-            //     (!message.fileTypes || message.fileTypes.length === 0)
-            // ) {
-            //     try {
-            //         SholutionBot(lead._id, io, newMessage);
-            //     } catch (error) {
-            //         console.error('[updateExistingLead] Error in SholutionBot:', error);
-            //     }
-            // }
-
-            // // --- end SholutionBot trigger ---
-
-            // Determine if the message is from a user (not from the Facebook page).
-            // Set messagesSeen based on whether the message is from us.
-            // Check if the message content includes any known CRE names to update assignment.
-            Object.entries(nameToCreId).forEach(([name, id]) => {
-                if (message.content.includes(name)) {
-                    newCreId = id;
-                }
-            });
-            // Emit a socket event for the new message.
-            // Import at the top of the file instead
-            emitLeadMessage({ io, leadId: lead._id, message });
-            isNewMessageAdded = true;
-        }
-    }
-
-    if (isNewMessageAdded) {
-        // Update the lead's last message and assign the new CRE if applicable.
-        lead.lastMsg = processedMessages[processedMessages.length - 1].content;
-        lead.creName = newCreId;
-        lead.messagesSeen = lastMessageSentFromUs;
-        lead.repliedFromSystem = true;
-        lead.lastMessageSentFromUs = lastMessageSentFromUs;
-
-        if (lastCustomerMessageTime) {
-            lead.lastCustomerMessageTime = lastCustomerMessageTime || null;
-        }
-        // If a valid phone number was extracted, update the lead's phone numbers.
-        if (phoneNumber?.number?.length === 14) {
-            const formattedPhoneNumber = phoneNumber.number;
-            if (!lead.phone.includes(formattedPhoneNumber)) {
-                lead.phone.push(formattedPhoneNumber);
-            }
-        }
-
-        // If lead status is not "New", update status to
-        //  "Number Collected" if a phone was collected.
-        if (phoneNumber?.number?.length === 14 && lead.status === 'New') {
-            lead.status = 'Number Provided';
-        }
-
-        const savedLead = await lead.save();
-        // Emit socket events with updated lead information.
-        emitSocketEventsForNewMessage(io, savedLead, pageInfo);
-    }
-};
-
-/**
- * Creates a new lead document from conversation data.
- * @param {Object} otherParticipant - The participant object (not the Facebook page).
- * @param {Array} processedMessages - Array of processed messages.
- * @param {Object} pageInfo - Facebook page information.
- * @param {Object} io - Socket.io instance.
- * @returns {Object} - The newly created lead document.
- */
-const createNewLead = async (
-    otherParticipant,
-    processedMessages,
-    pageInfo,
-    io,
-    lastMessageSentFromUs,
-    lastCustomerMessageTime
-) => {
-    // Get the best-performing CRE for assignment.
-    const cre = await getPerformanceBasedCRE();
-    // Use the date of the first message as the createdAt time.
-    const firstMessageTime = processedMessages[0].date;
-
-    const settings = await Settings.findOne({ name: 'ai-integration' });
-    const { facebookPages } = settings.settingsData;
-    const pageConfig = facebookPages.find((page) => page.pageId === pageInfo.pageId);
-    const { assistantId, aiEnabled } = pageConfig;
-
-    const newLead = new Lead({
-        CID: '',
-        name: otherParticipant.name,
-        lastMsg: processedMessages[processedMessages.length - 1].content,
-        status: 'New',
-        pageInfo: {
-            pageId: pageInfo.pageId,
-            pageName: pageInfo.pageName,
-            pageProfilePicture: pageInfo.pageProfilePicture,
-            fbSenderID: otherParticipant.id,
-        },
-        messages: processedMessages,
-        source: 'Facebook',
-        creName: cre,
-        createdAt: new Date(firstMessageTime),
-        messagesSeen: lastMessageSentFromUs,
-        lastAssigned: new Date(),
-        lastMessageSentFromUs,
-        lastCustomerMessageTime,
-
-        // ai bot config
-        aiBotReply: aiEnabled,
-        aiBotConfig: {
-            assistantId,
-        },
-    });
-
-    const savedNewLead = await newLead.save();
-    emitSocketEventsForNewMessage(io, savedNewLead, pageInfo);
-
-    // notify the user about the new lead
-    await notifyNewLeadAssignment(savedNewLead._id, cre._id);
-
-    return savedNewLead;
-};
-
-/**
- * Retrieves CRE (Customer Representative) details by ID.
- * @param {string} id - The CRE's user ID.
- * @returns {Object|null} - The CRE document or null if not found.
- */
-const getCreInfo = async (id) => {
-    const cre = await User.findOne({ _id: id });
-    return cre || null;
-};
-
-/**
- * Emits Socket.io events to notify clients about new or updated lead messages.
- * @param {Object} io - Socket.io instance.
- * @param {Object} savedLead - The lead document that was saved/updated.
- * @param {Object} pageInfo - Facebook page information.
- */
-const emitSocketEventsForNewMessage = async (io, savedLead, pageInfo) => {
-    // Get CRE information for the lead assignment.
-    const cre = await getCreInfo(savedLead.creName);
-
-    // Build a CRE info object if available.
-    let creName = null;
-    if (cre) {
-        creName = {
-            _id: cre._id,
-            name: cre.name,
-            profilePicture: cre.profilePicture,
-            nickName: cre.nickName,
-        };
-    }
-
-    const custommersMessages = savedLead.messages.filter((message) => message.sentByMe === false);
-    const lastCustomerMessageTime = custommersMessages[custommersMessages.length - 1]?.date;
-
-    // Construct the payload for the socket event.
-    const socketPayload = {
-        name: savedLead.name,
-        lastMessage: savedLead.messages[savedLead.messages.length - 1].content || '',
-        lastMessageTime: savedLead.messages[savedLead.messages.length - 1].date,
-        lastCustomerMessageTime,
-        sentByMe: savedLead.messages[savedLead.messages.length - 1].sentByMe,
-        createdAt: savedLead.createdAt,
-        messagesSeen: savedLead.messagesSeen,
-        creName: { ...creName },
-        pageInfo: {
-            pageName: pageInfo.pageName,
-            pageId: pageInfo.pageId,
-            pageProfilePicture: pageInfo.pageProfilePicture,
-        },
-        status: savedLead.status,
-        _id: savedLead._id,
-    };
-
-    // Emit socket events for conversation updates.
-    // Use the centralized socket emitter function for conversation updates
-    emitConversationUpdate({ io, lead: savedLead });
-    io.emit('newLead', { newLead: socketPayload });
 };
 
 /**

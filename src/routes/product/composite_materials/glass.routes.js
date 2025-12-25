@@ -19,8 +19,18 @@ const glassRouter = express.Router();
 // Basic CRUD routes
 glassRouter
     .route('/')
-    .get(checkAuth, glassSearchValidation, getAllGlass)
-    .post(checkAuth, validateGlass, createGlass);
+    .get(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Get all glass' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, glassSearchValidation, getAllGlass
+    )
+    .post(
+        /* #swagger.tags = ['Composite Materials'] */
+        /* #swagger.summary = 'Create glass' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateGlass, createGlass
+    );
 
 glassRouter
     .route('/:id')

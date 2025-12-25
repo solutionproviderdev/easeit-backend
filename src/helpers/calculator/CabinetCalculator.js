@@ -1,16 +1,14 @@
 function calculateBoard1Area(components) {
-    const {
- topPanel, bottomPanel, sidePanel, shelfArea, partitionArea, drawerArea 
-} = components;
+    const { topPanel, bottomPanel, sidePanel, shelfArea, partitionArea, drawerArea } = components;
 
     return (
-        (topPanel.area +
-            bottomPanel.area +
-            sidePanel.area +
-            shelfArea +
-            partitionArea +
-            drawerArea) /
-        144
+        (topPanel.area
+            + bottomPanel.area
+            + sidePanel.area
+            + shelfArea
+            + partitionArea
+            + drawerArea)
+        / 144
     );
 }
 
@@ -57,34 +55,103 @@ async function calculateCabinetComponents(input) {
     const backThInch = mmToInch(backThickness);
 
     const adjustedDepth = depth - frontThInch - backThInch;
+    const panels = [];
 
-    const topPanel = { width, depth: adjustedDepth, area: width * adjustedDepth };
+    // Standardize panels to have only height and depth (2D boards)
+    const topPanel = { height: width, width: adjustedDepth, area: width * adjustedDepth };
+    panels.push({
+        name: 'Top Panel',
+        height: topPanel.height,
+        width: topPanel.width,
+        quantity: 1,
+        area: topPanel.area,
+    });
     const bottomPanel = {
-        width: width - bodyThInch * 2,
-        depth: adjustedDepth,
+        height: width - bodyThInch * 2,
+        width: adjustedDepth,
         area: (width - bodyThInch * 2) * adjustedDepth,
     };
+    panels.push({
+        name: 'Bottom Panel',
+        height: bottomPanel.height,
+        width: bottomPanel.width,
+        quantity: 1,
+        area: bottomPanel.area,
+    });
     const sidePanel = {
         height: height - bodyThInch,
-        depth: adjustedDepth,
+        width: adjustedDepth,
         area: (height - bodyThInch) * adjustedDepth * 2,
     };
+    // per-piece area for a single side panel
+    const sidePanelSingleArea = (height - bodyThInch) * adjustedDepth;
+    panels.push({
+        name: 'Side Panel',
+        height: sidePanel.height,
+        width: sidePanel.width,
+        quantity: 2,
+        area: sidePanelSingleArea,
+    });
     const backPanel = {
-        width,
         height,
+        width,
         area: width * height,
     };
+    panels.push({
+        name: 'Back Panel',
+        height: backPanel.height,
+        width: backPanel.width,
+        quantity: 1,
+        area: backPanel.area,
+    });
 
     const shelfWidth = width - bodyThInch * 2;
-    const shelfArea = shelfCount * shelfWidth * adjustedDepth;
+    const shelfHeight = adjustedDepth - bodyThInch * 2;
+    const shelfAreaSingle = shelfWidth * shelfHeight;
+    const shelfArea = shelfCount * shelfAreaSingle;
+    if (shelfCount > 0) {
+        panels.push({
+            name: 'Shelf',
+            height: shelfWidth,
+            width: shelfHeight,
+            quantity: shelfCount,
+            area: shelfAreaSingle,
+        });
+    }
     const partitionCount = Math.ceil(width / 32 - 1);
-    const partitionArea = partitionCount * height * adjustedDepth;
+    const partitionAreaSingle = height * adjustedDepth;
+    const partitionArea = partitionCount * partitionAreaSingle;
+    if (partitionCount > 0) {
+        panels.push({
+            name: 'Partition',
+            height,
+            width: adjustedDepth,
+            quantity: partitionCount,
+            area: partitionAreaSingle,
+        });
+    }
     const skirtingArea = includeSkirting ? (width - 2 * bodyThInch) * 2 : 0;
+    if (includeSkirting) {
+        panels.push({
+            name: 'Skirting',
+            height: width - 2 * bodyThInch,
+            width: 1,
+            quantity: 2,
+            area: (width - 2 * bodyThInch) * 1,
+        });
+    }
 
     let glassFrontShutterArea = 0;
     if (glassFrontShutterCount > 0) {
         const singleShutterArea = height * 12;
         glassFrontShutterArea = singleShutterArea * glassFrontShutterCount;
+        panels.push({
+            name: 'Glass Front Shutter',
+            height,
+            width: 12,
+            quantity: glassFrontShutterCount,
+            area: singleShutterArea,
+        });
     }
 
     let drawerArea = 0;
@@ -94,7 +161,8 @@ async function calculateCabinetComponents(input) {
     drawerHeights.forEach((drawer, index) => {
         if (drawer.height > 0 && drawer.width > 0) {
             const drawerBottom = adjustedDepth * (drawer.width - 2);
-            const drawerSides = (adjustedDepth - 1 - bodyThInch) * (drawer.height - 2) * 2;
+            const drawerSideSingle = (adjustedDepth - 1 - bodyThInch) * (drawer.height - 2);
+            const drawerSides = drawerSideSingle * 2;
             const drawerBack = (drawer.width - 2) * (drawer.height - 2);
             const drawerBodyArea = drawerBottom + drawerSides + drawerBack;
             const drawerFrontAreaSingle = drawer.width * drawer.height;
@@ -108,6 +176,40 @@ async function calculateCabinetComponents(input) {
                 width: drawer.width,
                 bodyArea: drawerBodyArea,
                 frontArea: drawerFrontAreaSingle,
+            });
+
+            const desc = `Drawer #${index + 1}`;
+            panels.push({
+                name: 'Drawer Bottom',
+                height: adjustedDepth,
+                width: drawer.width - 2,
+                quantity: 1,
+                area: drawerBottom,
+                description: desc,
+            });
+            panels.push({
+                name: 'Drawer Side',
+                height: adjustedDepth - 1 - bodyThInch,
+                width: drawer.height - 2,
+                quantity: 2,
+                area: drawerSideSingle,
+                description: desc,
+            });
+            panels.push({
+                name: 'Drawer Back',
+                height: drawer.height - 2,
+                width: drawer.width - 2,
+                quantity: 1,
+                area: drawerBack,
+                description: desc,
+            });
+            panels.push({
+                name: 'Drawer Front',
+                height: drawer.height,
+                width: drawer.width,
+                quantity: 1,
+                area: drawerFrontAreaSingle,
+                description: desc,
             });
         }
     });
@@ -159,6 +261,7 @@ async function calculateCabinetComponents(input) {
             drawerArea,
             drawerFrontArea,
             drawerDetails,
+            panels,
         },
         materials: {
             board1Area,

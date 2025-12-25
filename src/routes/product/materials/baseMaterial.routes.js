@@ -19,13 +19,28 @@ const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const baseMaterialsRouter = express.Router();
 
 // Route to create a new base material
-baseMaterialsRouter.post('/', checkAuth, validateBaseMaterial, createBaseMaterial);
+baseMaterialsRouter.post('/', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Create base material' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, validateBaseMaterial, createBaseMaterial
+);
 
 // Route to get all base materials with query parameters
-baseMaterialsRouter.get('/', checkAuth, baseMaterialSearchValidation, getAllBaseMaterials);
+baseMaterialsRouter.get('/', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Get all base materials' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, baseMaterialSearchValidation, getAllBaseMaterials
+);
 
 // Route to get a specific base material by ID
-baseMaterialsRouter.get('/:id', checkAuth, validateBaseMaterialId, getBaseMaterialById);
+baseMaterialsRouter.get('/:id', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Get base material by ID' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, validateBaseMaterialId, getBaseMaterialById
+);
 
 // Route to update a specific base material
 baseMaterialsRouter.put(

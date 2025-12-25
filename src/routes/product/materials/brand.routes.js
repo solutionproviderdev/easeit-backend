@@ -19,13 +19,28 @@ const { checkAuth } = require('../../../middlewares/auth/checkAuth');
 const brandsRouter = express.Router();
 
 // Route to create a new brand
-brandsRouter.post('/', checkAuth, validateBrand, createBrand);
+brandsRouter.post('/', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Create brand' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, validateBrand, createBrand
+);
 
 // Route to get all brands with query parameters
-brandsRouter.get('/', checkAuth, brandSearchValidation, getAllBrands);
+brandsRouter.get('/', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Get all brands' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, brandSearchValidation, getAllBrands
+);
 
 // Route to get a specific brand by ID
-brandsRouter.get('/:id', checkAuth, validateBrandId, getBrandById);
+brandsRouter.get('/:id', 
+    /* #swagger.tags = ['Product Materials'] */
+    /* #swagger.summary = 'Get brand by ID' */
+    /* #swagger.security = [{ "bearerAuth": [] }] */
+    checkAuth, validateBrandId, getBrandById
+);
 
 // Route to update a specific brand
 brandsRouter.put('/:id', checkAuth, validateBrandId, validateBrand, updateBrand);

@@ -1,15 +1,14 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable no-tabs */
-
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
-const { default: mongoose } = require('mongoose');
 const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
  const cron = require('node-cron');
+const { connectDatabase } = require('./config/database');
 const swaggerSpec = require('../swagger_output.json');
 
 // internal imports
@@ -28,7 +27,7 @@ const settingsRouter = require('./routes/settings/settingsRouter');
 
 const notificationRouter = require('./routes/notifications/notifications');
 const { setIO } = require('./socket/socketService');
-const { swaggerUi } = require('../swagger');
+const { swaggerUi } = require('../scripts/swagger');
 const productRouter = require('./routes/product/product.routes');
 const webhookRouter = require('./routes/webhook');
 const productAdRouter = require('./routes/ad/productAd');
@@ -51,19 +50,19 @@ const io = new Server(server, {
 	},
 });
 
+// Security/headers
+app.disable('x-powered-by');
+
 // Database connection
-mongoose
-	.connect(process.env.MONGO_CONNECTION_STRING, {})
-	.then(() => console.log('🍀 Database connection successful'))
-	.catch((err) => console.log(err, 'Database connection Error'));
+connectDatabase();
 
 // Set up logging for other parts of the app
 app.use(timingMiddleware); // Add this line to use the middleware
 
 // request process
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static('public'));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
 	cors({
@@ -72,24 +71,14 @@ app.use(
 				'http://localhost:3000',
 				'http://localhost:5000',
 				'http://localhost:8080',
-				'http://localhost:8081',
 				'http://localhost:5173',
-				'http://localhost:5174',
+				'http://localhost:4173',
 				'https://680390003c985823ec14ae5d--melodic-platypus-c4121d.netlify.app',
-				'http://192.168.0.155:3000',
-				'http://192.168.0.155:5000',
-				'http://103.122.143.63:3000',
-				'https://easeit.vercel.app',
-				'http://192.168.68.109:8080',
 				'https://crm.solutionprovider.com.bd',
-				'http://192.168.218.103:5173',
-				'http://192.168.68.123:5173',
-				'http://localhost:3000',
-				'http://localhost:5000',
-				'http://192.168.68.130:3000',
-				'http://192.168.68.130:5000',
-				'http://192.168.68.130',
-				'http://localhost:5173',
+				'https://solutionprovider.vercel.app',
+				'https://cnc-dev.solutionprovider.com.bd',
+				'https://cnc.solutionprovider.com.bd',
+				'https://solutionprovider.online',
 				'http://www.solutionprovider.com.bd',
 				'http://solutionprovider.online',
 				'http://www.solutionprovider.online',
@@ -114,6 +103,15 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // set public folder
 app.use(express.static(path.join(__dirname, '../public')));
+
+// health check
+app.get('/health', (req, res) => {
+    /* #swagger.tags = ['Health'] */
+    /* #swagger.summary = 'Service health check' */
+    /* #swagger.description = 'Returns 200 with {"status":"ok"}' */
+    /* #swagger.responses[200] = { description: 'OK', schema: { status: 'ok' } } */
+    res.status(200).json({ status: 'ok' });
+});
 
 // home Route
 app.get('/', (req, res) => {
@@ -140,8 +138,8 @@ io.on('connection', (socket) => {
 // Set the io instance in your socket service
 setIO(io);
 
-// start baileys
-startBaileys();
+// start baileys (single WhatsApp account)
+// startBaileys();
 
 // Attach io instance to the req object to access it in routes
 app.use((req, res, next) => {
@@ -166,7 +164,7 @@ app.use('/whatsapp', whatsAppRouter);
 // product, vendor, router,discount
 app.use('/products', productRouter);
 app.use('/vendors', vendorRouter);
-app.use('/quotations', quotationrouter);
+app.use('/quotations', quotationrouter); // quotations router
 
 // cabint calculator
 app.use('/calculate-cabinet', calculatorRouter);
@@ -199,6 +197,11 @@ if (require.main === module) {
 		console.log(`🕒 Current Time: ${currentTime}`);
 		console.log(`🔊 App listening on port ${process.env.PORT} 🎧`);
 	});
+
+	// Harden server timeouts
+	server.keepAliveTimeout = 65000; // keep-alive timeout
+	server.headersTimeout = 66000; // headers timeout should be > keepAliveTimeout
+	server.setTimeout(60000); // socket inactivity timeout
 }
 
 module.exports = { app, io };

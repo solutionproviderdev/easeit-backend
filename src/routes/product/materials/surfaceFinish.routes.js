@@ -20,8 +20,18 @@ const surfaceFinishRouter = express.Router();
 // Basic CRUD routes
 surfaceFinishRouter
     .route('/')
-    .get(checkAuth, surfaceFinishSearchValidation, getAllSurfaceFinish)
-    .post(checkAuth, validateSurfaceFinish, createSurfaceFinish);
+    .get(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Get all surface finishes' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, surfaceFinishSearchValidation, getAllSurfaceFinish
+    )
+    .post(
+        /* #swagger.tags = ['Product Materials'] */
+        /* #swagger.summary = 'Create surface finish' */
+        /* #swagger.security = [{ "bearerAuth": [] }] */
+        checkAuth, validateSurfaceFinish, createSurfaceFinish
+    );
 
 surfaceFinishRouter
     .route('/:id')

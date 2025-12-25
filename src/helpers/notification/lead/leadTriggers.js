@@ -2,6 +2,7 @@ const Lead = require('../../../schemas/LeadsSchema');
 const Notification = require('../../../schemas/Notification');
 const { sendNotificationToUser } = require('../sendNotification');
 
+// Function to notify a user about a new lead assignment
 const notifyNewLeadAssignment = async (leadId, userId) => {
     try {
         const lead = await Lead.findById(leadId).select('name');
