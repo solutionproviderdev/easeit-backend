@@ -7,7 +7,6 @@ const { createServer } = require('http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { Server } = require('socket.io');
- const cron = require('node-cron');
 const { connectDatabase } = require('./config/database');
 const swaggerSpec = require('../swagger_output.json');
 
@@ -37,7 +36,6 @@ const discountRouter = require('./routes/discountRoutes/discountRoutes');
 const calculatorRouter = require('./routes/calculator/calculator.route');
 const ProjectStagerouter = require('./routes/projectStage.routes');
 const { timingMiddleware } = require('./config/winston');
-const { startBaileys } = require('./services/WhatsApp/whatsappClient');
 const whatsAppRouter = require('./routes/whatsapp');
 
 // Initialize app
@@ -73,7 +71,6 @@ app.use(
 				'http://localhost:8080',
 				'http://localhost:5173',
 				'http://localhost:4173',
-				'https://680390003c985823ec14ae5d--melodic-platypus-c4121d.netlify.app',
 				'https://crm.solutionprovider.com.bd',
 				'https://solutionprovider.vercel.app',
 				'https://cnc-dev.solutionprovider.com.bd',
