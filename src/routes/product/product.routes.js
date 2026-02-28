@@ -56,18 +56,8 @@ productRouter.use('/series', seriesRouter);
 // Basic CRUD routes
 productRouter
     .route('/')
-    .get(
-        /* #swagger.tags = ['Products'] */
-        /* #swagger.summary = 'Get all products' */
-        /* #swagger.security = [{ "bearerAuth": [] }] */
-        checkAuth, productSearchValidation, getAllProducts
-    )
-    .post(
-        /* #swagger.tags = ['Products'] */
-        /* #swagger.summary = 'Create a new product' */
-        /* #swagger.security = [{ "bearerAuth": [] }] */
-        checkAuth, validateProduct, createProduct
-    );
+    .get(checkAuth, getAllProducts)
+    .post(checkAuth, validateProduct, createProduct);
 
 productRouter
     .route('/:id')

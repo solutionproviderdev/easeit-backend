@@ -34,7 +34,7 @@ const initializeCronJobs = (io) => {
     cron.schedule(
         '*/2 * * * *',
         async () => {
-            await getConversationsAndUpdateLeadsUpdated(io);
+            // await getConversationsAndUpdateLeadsUpdated(io);
         },
         { timezone: 'Asia/Dhaka' }
     );
